@@ -1,175 +1,88 @@
 package com.geopslabs.geops.identity.application.services;
 
-import com.geopslabs.geops.identity.domain.ports.PasswordHasherPort;
-import com.geopslabs.geops.identity.domain.models.User;
+import com.geopslabs.geops.backend.notifications.application.internal.outboundservices.NotificationFactoryService;
 import com.geopslabs.geops.identity.application.usecases.CreateUserCommand;
 import com.geopslabs.geops.identity.application.usecases.DeleteUserCommand;
 import com.geopslabs.geops.identity.application.usecases.UpdateUserCommand;
 import com.geopslabs.geops.identity.application.usecases.UserCommandUseCase;
-import com.geopslabs.geops.identity.infrastructure.persistence.UserJpaRepository;
-import com.geopslabs.geops.backend.notifications.application.internal.outboundservices.NotificationFactoryService;
-import org.springframework.stereotype.Service;
+import com.geopslabs.geops.identity.domain.models.User;
+import com.geopslabs.geops.identity.domain.ports.PasswordHasherPort;
+import com.geopslabs.geops.identity.domain.ports.UserRepositoryPort;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
-/**
- * UserCommandService
- *
- * Implementation of the UserCommandUseCase that handles all command operations
- * for users. This service implements the business logic for creating, updating,
- * and deleting users following DDD principles
- *
- * @summary Implementation of user command service operations
- * @since 1.0
- * @author GeOps Labs
- */
-@Service
 @Transactional
 public class UserCommandService implements UserCommandUseCase {
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserCommandService.class);
+    private static final String PREMIUM_PLAN = "PREMIUM";
 
-    private final UserJpaRepository userRepository;
+    private final UserRepositoryPort userRepository;
     private final NotificationFactoryService notificationFactory;
-    private final PasswordHasherPort hashingService;
+    private final PasswordHasherPort passwordHasher;
 
-    /**
-     * Constructor for dependency injection
-     *
-     * @param userRepository The repository for user data access
-     * @param notificationFactory Service to create notifications
-     * @param hashingService Service to hash passwords
-     */
-    public UserCommandService(
-        UserJpaRepository userRepository,
-        NotificationFactoryService notificationFactory,
-        PasswordHasherPort hashingService
-    ) {
+    public UserCommandService(UserRepositoryPort userRepository, NotificationFactoryService notificationFactory,
+                              PasswordHasherPort passwordHasher) {
         this.userRepository = userRepository;
         this.notificationFactory = notificationFactory;
-        this.hashingService = hashingService;
+        this.passwordHasher = passwordHasher;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Optional<User> handle(CreateUserCommand command) {
-        try {
-            // Check if user with email already exists
-            if (userRepository.existsByEmail(command.email())) {
-                System.err.println("User with email " + command.email() + " already exists");
-                return Optional.empty();
-            }
-
-            // Check if user with phone already exists
-            if (userRepository.existsByPhone(command.phone())) {
-                System.err.println("User with phone " + command.phone() + " already exists");
-                return Optional.empty();
-            }
-
-            // Create new user
-            var user = new User(
-                command.name(),
-                command.email(),
-                command.phone(),
-                hashingService.encode(command.password()),
-                command.role(),
-                command.plan()
-            );
-
-            // Save and return the user
-            var savedUser = userRepository.save(user);
-            
-            // Create notification if user is PREMIUM
-            if ("PREMIUM".equals(command.plan())) {
-                notificationFactory.createPremiumUpgradeNotification(savedUser.getId());
-            }
-            
-            return Optional.of(savedUser);
-        } catch (Exception e) {
-            System.err.println("Error creating user: " + e.getMessage());
+        if (isEmailOrPhoneTaken(command.email(), command.phone())) {
             return Optional.empty();
         }
+        var user = new User(command.name(), command.email(), command.phone(),
+                passwordHasher.encode(command.password()), command.role(), command.plan());
+        var savedUser = userRepository.save(user);
+        if (PREMIUM_PLAN.equals(command.plan())) {
+            notificationFactory.createPremiumUpgradeNotification(savedUser.getId());
+        }
+        return Optional.of(savedUser);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Optional<User> handle(UpdateUserCommand command) {
-        try {
-            // Find the user by ID
-            var userOptional = userRepository.findById(command.id());
-
-            if (userOptional.isEmpty()) {
-                System.err.println("User with ID " + command.id() + " not found");
-                return Optional.empty();
-            }
-
-            var user = userOptional.get();
-
-            // Check if email is being changed and if it already exists
-            if (command.email() != null &&
-                !command.email().equals(user.getEmail()) &&
-                userRepository.existsByEmail(command.email())) {
-                System.err.println("Email " + command.email() + " is already in use");
-                return Optional.empty();
-            }
-
-            // Check if phone is being changed and if it already exists
-            if (command.phone() != null &&
-                !command.phone().equals(user.getPhone()) &&
-                userRepository.existsByPhone(command.phone())) {
-                System.err.println("Phone " + command.phone() + " is already in use");
-                return Optional.empty();
-            }
-
-            // Update user information
-            user.updateUser(
-                command.name(),
-                command.email(),
-                command.phone(),
-                command.role(),
-                command.plan()
-            );
-
-            // Save and return the updated user
-            var updatedUser = userRepository.save(user);
-            
-            // Create notification for profile update
-            notificationFactory.createProfileUpdateNotification(updatedUser.getId());
-            
-            // Create notification if user upgraded to PREMIUM
-            if ("PREMIUM".equals(command.plan()) && !"PREMIUM".equals(user.getPlan())) {
-                notificationFactory.createPremiumUpgradeNotification(updatedUser.getId());
-            }
-            
-            return Optional.of(updatedUser);
-        } catch (Exception e) {
-            System.err.println("Error updating user: " + e.getMessage());
+        var userOptional = userRepository.findById(command.id());
+        if (userOptional.isEmpty() || isUpdateConflicting(command, userOptional.get())) {
             return Optional.empty();
         }
+        var user = userOptional.get();
+        user.updateUser(command.name(), command.email(), command.phone(), command.role(), command.plan());
+        var updatedUser = userRepository.save(user);
+        notificationFactory.createProfileUpdateNotification(updatedUser.getId());
+        if (PREMIUM_PLAN.equals(command.plan()) && !PREMIUM_PLAN.equals(user.getPlan())) {
+            notificationFactory.createPremiumUpgradeNotification(updatedUser.getId());
+        }
+        return Optional.of(updatedUser);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean handle(DeleteUserCommand command) {
-        try {
-            // Check if user exists
-            if (!userRepository.existsById(command.id())) {
-                System.err.println("User with ID " + command.id() + " not found");
-                return false;
-            }
-
-            // Delete the user
-            userRepository.deleteById(command.id());
-            return true;
-        } catch (Exception e) {
-            System.err.println("Error deleting user: " + e.getMessage());
+        if (!userRepository.existsById(command.id())) {
+            LOGGER.warn("User {} not found", command.id());
             return false;
         }
+        userRepository.deleteById(command.id());
+        return true;
+    }
+
+    private boolean isEmailOrPhoneTaken(String email, String phone) {
+        var taken = userRepository.existsByEmail(email) || userRepository.existsByPhone(phone);
+        if (taken) {
+            LOGGER.warn("Email or phone already registered");
+        }
+        return taken;
+    }
+
+    private boolean isUpdateConflicting(UpdateUserCommand command, User user) {
+        var emailTaken = command.email() != null && !command.email().equals(user.getEmail())
+                && userRepository.existsByEmail(command.email());
+        var phoneTaken = command.phone() != null && !command.phone().equals(user.getPhone())
+                && userRepository.existsByPhone(command.phone());
+        return emailTaken || phoneTaken;
     }
 }
-

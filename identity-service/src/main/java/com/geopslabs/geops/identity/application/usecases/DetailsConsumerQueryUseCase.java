@@ -1,6 +1,6 @@
 package com.geopslabs.geops.identity.application.usecases;
 
-import com.geopslabs.geops.identity.domain.models.DetailsConsumer;
+import com.geopslabs.geops.identity.domain.models.ConsumerProfile;
 
 import java.util.Optional;
 
@@ -23,6 +23,6 @@ public interface DetailsConsumerQueryUseCase {
      * @param query The GetDetailsConsumerByUserIdQuery containing the user ID
      * @return An Optional containing the consumer details if found, empty otherwise
      */
-    Optional<DetailsConsumer> handle(GetDetailsConsumerByUserIdQuery query);
+    Optional<ConsumerProfile> handle(GetDetailsConsumerByUserIdQuery query);
 }
 

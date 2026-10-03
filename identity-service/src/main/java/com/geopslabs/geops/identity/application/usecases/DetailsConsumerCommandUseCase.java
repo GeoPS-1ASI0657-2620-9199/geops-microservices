@@ -1,6 +1,6 @@
 package com.geopslabs.geops.identity.application.usecases;
 
-import com.geopslabs.geops.identity.domain.models.DetailsConsumer;
+import com.geopslabs.geops.identity.domain.models.ConsumerProfile;
 
 import java.util.Optional;
 
@@ -23,7 +23,7 @@ public interface DetailsConsumerCommandUseCase {
      * @param command The CreateDetailsConsumerCommand containing consumer details data
      * @return An Optional containing the created consumer details if successful, empty otherwise
      */
-    Optional<DetailsConsumer> handle(CreateDetailsConsumerCommand command);
+    Optional<ConsumerProfile> handle(CreateDetailsConsumerCommand command);
 
     /**
      * Handles the command to update existing consumer details
@@ -31,6 +31,6 @@ public interface DetailsConsumerCommandUseCase {
      * @param command The UpdateDetailsConsumerCommand containing updated consumer details data
      * @return An Optional containing the updated consumer details if successful, empty otherwise
      */
-    Optional<DetailsConsumer> handle(UpdateDetailsConsumerCommand command);
+    Optional<ConsumerProfile> handle(UpdateDetailsConsumerCommand command);
 }
 

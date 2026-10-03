@@ -1,77 +1,21 @@
 package com.geopslabs.geops.identity.domain.models;
 
-import com.geopslabs.geops.identity.shared.AuditableAbstractAggregateRoot;
-import jakarta.persistence.*;
-import lombok.Getter;
+import java.util.Date;
 
-/**
- * User Aggregate Root
- *
- * This aggregate represents a user in the GeOps platform.
- * It manages user identity information including credentials,
- * role, and subscription plan
- *
- * @summary Manages user identity and authentication
- * @since 1.0
- * @author GeOps Labs
- */
-@Entity
-@Table(name = "users")
-@Getter
-public class User extends AuditableAbstractAggregateRoot<User> {
+public class User {
+    private static final String PREMIUM_PLAN = "PREMIUM";
+    private static final String ADMIN_ROLE = "ADMIN";
 
-    /**
-     * Full name of the user
-     */
-    @Column(name = "name", nullable = false, length = 255)
+    private Long id;
     private String name;
-
-    /**
-     * Email address of the user (unique identifier)
-     */
-    @Column(name = "email", nullable = false, unique = true, length = 255)
     private String email;
-
-    /**
-     * Phone number of the user (unique identifier)
-     */
-    @Column(name = "phone", nullable = false, unique = true, length = 20)
     private String phone;
-
-    /**
-     * Encrypted password for authentication
-     */
-    @Column(name = "password", nullable = false, length = 255)
     private String password;
-
-    /**
-     * Role of the user in the system (e.g., CONSUMER, ADMIN)
-     */
-    @Column(name = "role", nullable = false, length = 50)
     private String role;
-
-    /**
-     * Subscription plan of the user (e.g., BASIC, PREMIUM)
-     */
-    @Column(name = "plan", nullable = false, length = 50)
     private String plan;
+    private Date createdAt;
+    private Date updatedAt;
 
-    /**
-     * Default constructor for JPA
-     */
-    protected User() {
-    }
-
-    /**
-     * Creates a new User
-     *
-     * @param name The user's full name
-     * @param email The user's email address
-     * @param phone The user's phone number
-     * @param password The user's encrypted password
-     * @param role The user's role
-     * @param plan The user's subscription plan
-     */
     public User(String name, String email, String phone, String password, String role, String plan) {
         this.name = name;
         this.email = email;
@@ -81,60 +25,70 @@ public class User extends AuditableAbstractAggregateRoot<User> {
         this.plan = plan;
     }
 
-    /**
-     * Updates user information
-     *
-     * @param name The updated name
-     * @param email The updated email
-     * @param phone The updated phone
-     * @param role The updated role
-     * @param plan The updated plan
-     */
+    public User(Long id, User data, Date createdAt, Date updatedAt) {
+        this(data.name, data.email, data.phone, data.password, data.role, data.plan);
+        this.id = id;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
     public void updateUser(String name, String email, String phone, String role, String plan) {
-        if (name != null && !name.isBlank()) {
-            this.name = name;
-        }
-        if (email != null && !email.isBlank()) {
-            this.email = email;
-        }
-        if (phone != null && !phone.isBlank()) {
-            this.phone = phone;
-        }
-        if (role != null && !role.isBlank()) {
-            this.role = role;
-        }
-        if (plan != null && !plan.isBlank()) {
-            this.plan = plan;
-        }
+        this.name = valueOrCurrent(name, this.name);
+        this.email = valueOrCurrent(email, this.email);
+        this.phone = valueOrCurrent(phone, this.phone);
+        this.role = valueOrCurrent(role, this.role);
+        this.plan = valueOrCurrent(plan, this.plan);
     }
 
-    /**
-     * Updates user password
-     *
-     * @param encryptedPassword The new encrypted password
-     */
     public void updatePassword(String encryptedPassword) {
-        if (encryptedPassword != null && !encryptedPassword.isBlank()) {
-            this.password = encryptedPassword;
-        }
+        this.password = valueOrCurrent(encryptedPassword, this.password);
     }
 
-    /**
-     * Checks if the user has a premium plan
-     *
-     * @return true if the user's plan is premium, false otherwise
-     */
     public boolean isPremium() {
-        return "PREMIUM".equalsIgnoreCase(this.plan);
+        return PREMIUM_PLAN.equalsIgnoreCase(plan);
     }
 
-    /**
-     * Checks if the user is an admin
-     *
-     * @return true if the user's role is admin, false otherwise
-     */
     public boolean isAdmin() {
-        return "ADMIN".equalsIgnoreCase(this.role);
+        return ADMIN_ROLE.equalsIgnoreCase(role);
+    }
+
+    private static String valueOrCurrent(String candidate, String current) {
+        return candidate != null && !candidate.isBlank() ? candidate : current;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public String getPlan() {
+        return plan;
+    }
+
+    public Date getCreatedAt() {
+        return createdAt;
+    }
+
+    public Date getUpdatedAt() {
+        return updatedAt;
     }
 }
-

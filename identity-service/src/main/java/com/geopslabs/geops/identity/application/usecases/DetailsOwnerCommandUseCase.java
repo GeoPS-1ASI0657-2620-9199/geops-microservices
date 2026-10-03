@@ -1,6 +1,6 @@
 package com.geopslabs.geops.identity.application.usecases;
 
-import com.geopslabs.geops.identity.domain.models.DetailsOwner;
+import com.geopslabs.geops.identity.domain.models.BusinessProfile;
 
 import java.util.Optional;
 
@@ -23,7 +23,7 @@ public interface DetailsOwnerCommandUseCase {
      * @param command The CreateDetailsOwnerCommand containing owner details data
      * @return An Optional containing the created owner details if successful, empty otherwise
      */
-    Optional<DetailsOwner> handle(CreateDetailsOwnerCommand command);
+    Optional<BusinessProfile> handle(CreateDetailsOwnerCommand command);
 
     /**
      * Handles the command to update existing owner details
@@ -31,6 +31,6 @@ public interface DetailsOwnerCommandUseCase {
      * @param command The UpdateDetailsOwnerCommand containing updated owner details data
      * @return An Optional containing the updated owner details if successful, empty otherwise
      */
-    Optional<DetailsOwner> handle(UpdateDetailsOwnerCommand command);
+    Optional<BusinessProfile> handle(UpdateDetailsOwnerCommand command);
 }
 

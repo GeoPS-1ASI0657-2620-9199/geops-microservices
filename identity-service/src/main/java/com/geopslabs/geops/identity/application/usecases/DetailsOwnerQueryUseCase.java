@@ -1,6 +1,6 @@
 package com.geopslabs.geops.identity.application.usecases;
 
-import com.geopslabs.geops.identity.domain.models.DetailsOwner;
+import com.geopslabs.geops.identity.domain.models.BusinessProfile;
 
 import java.util.Optional;
 
@@ -23,6 +23,6 @@ public interface DetailsOwnerQueryUseCase {
      * @param query The GetDetailsOwnerByUserIdQuery containing the user ID
      * @return An Optional containing the owner details if found, empty otherwise
      */
-    Optional<DetailsOwner> handle(GetDetailsOwnerByUserIdQuery query);
+    Optional<BusinessProfile> handle(GetDetailsOwnerByUserIdQuery query);
 }
 

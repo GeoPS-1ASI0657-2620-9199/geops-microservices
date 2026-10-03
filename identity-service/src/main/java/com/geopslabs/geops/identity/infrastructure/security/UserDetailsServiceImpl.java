@@ -1,6 +1,6 @@
 package com.geopslabs.geops.identity.infrastructure.security;
 
-import com.geopslabs.geops.identity.infrastructure.persistence.UserJpaRepository;
+import com.geopslabs.geops.identity.domain.ports.UserRepositoryPort;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -13,9 +13,9 @@ import org.springframework.stereotype.Service;
 @Service(value = "defaultUserDetailsService")
 public class UserDetailsServiceImpl implements UserDetailsService {
 
-    private final UserJpaRepository userRepository;
+    private final UserRepositoryPort userRepository;
 
-    public UserDetailsServiceImpl(UserJpaRepository userRepository) {
+    public UserDetailsServiceImpl(UserRepositoryPort userRepository) {
         this.userRepository = userRepository;
     }
 
