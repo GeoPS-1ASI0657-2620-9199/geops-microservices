@@ -82,6 +82,10 @@ services:
       <<: *service-env
       SERVER_PORT: 8081
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/identity_db
+      JWT_PRIVATE_KEY_PATH: /run/keys/jwt-private.pem
+      JWT_PUBLIC_KEY_PATH: /run/keys/jwt-public.pem
+    volumes:
+      - ./keys:/run/keys:ro
     healthcheck:
       <<: *health
       test: ["CMD", "curl", "-fs", "http://localhost:8081/actuator/health"]
