@@ -24,9 +24,6 @@ public class ConsumerProfileJpaEntity extends AuditableAbstractAggregateRoot<Con
     @Column(name = "categorias_favoritas", length = TEXT_LENGTH)
     private String categoriasFavoritas;
 
-    @Column(name = "recibir_notificaciones", nullable = false)
-    private Boolean recibirNotificaciones;
-
     @Column(name = "permiso_ubicacion", nullable = false)
     private Boolean permisoUbicacion;
 
@@ -46,10 +43,9 @@ public class ConsumerProfileJpaEntity extends AuditableAbstractAggregateRoot<Con
         this.user = user;
     }
 
-    public void update(String categoriasFavoritas, Boolean recibirNotificaciones, Boolean permisoUbicacion,
+    public void update(String categoriasFavoritas, Boolean permisoUbicacion,
                        String direccionCasa, String direccionTrabajo, String direccionUniversidad) {
         this.categoriasFavoritas = categoriasFavoritas;
-        this.recibirNotificaciones = recibirNotificaciones;
         this.permisoUbicacion = permisoUbicacion;
         this.direccionCasa = direccionCasa;
         this.direccionTrabajo = direccionTrabajo;

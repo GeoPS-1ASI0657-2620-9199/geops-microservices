@@ -28,8 +28,8 @@ public class DetailsConsumerCommandService implements DetailsConsumerCommandUseC
         }
         return userRepository.findById(command.userId())
                 .map(user -> new ConsumerProfile(user, command.categoriasFavoritas(),
-                        command.recibirNotificaciones(), command.permisoUbicacion(), command.direccionCasa(),
-                        command.direccionTrabajo(), command.direccionUniversidad()))
+                        command.permisoUbicacion(), command.direccionCasa(), command.direccionTrabajo(),
+                        command.direccionUniversidad()))
                 .map(consumerProfileRepository::save);
     }
 
@@ -41,9 +41,8 @@ public class DetailsConsumerCommandService implements DetailsConsumerCommandUseC
     }
 
     private ConsumerProfile update(ConsumerProfile profile, UpdateDetailsConsumerCommand command) {
-        profile.updateConsumerDetails(command.categoriasFavoritas(), command.recibirNotificaciones(),
-                command.permisoUbicacion(), command.direccionCasa(), command.direccionTrabajo(),
-                command.direccionUniversidad());
+        profile.updateConsumerDetails(command.categoriasFavoritas(), command.permisoUbicacion(),
+                command.direccionCasa(), command.direccionTrabajo(), command.direccionUniversidad());
         return profile;
     }
 }

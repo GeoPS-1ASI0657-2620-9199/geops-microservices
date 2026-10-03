@@ -1,6 +1,5 @@
 package com.geopslabs.geops.identity.application.services;
 
-import com.geopslabs.geops.backend.notifications.application.internal.outboundservices.NotificationFactoryService;
 import com.geopslabs.geops.identity.application.usecases.CreateUserCommand;
 import com.geopslabs.geops.identity.application.usecases.DeleteUserCommand;
 import com.geopslabs.geops.identity.application.usecases.UpdateUserCommand;
@@ -17,16 +16,12 @@ import java.util.Optional;
 @Transactional
 public class UserCommandService implements UserCommandUseCase {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserCommandService.class);
-    private static final String PREMIUM_PLAN = "PREMIUM";
 
     private final UserRepositoryPort userRepository;
-    private final NotificationFactoryService notificationFactory;
     private final PasswordHasherPort passwordHasher;
 
-    public UserCommandService(UserRepositoryPort userRepository, NotificationFactoryService notificationFactory,
-                              PasswordHasherPort passwordHasher) {
+    public UserCommandService(UserRepositoryPort userRepository, PasswordHasherPort passwordHasher) {
         this.userRepository = userRepository;
-        this.notificationFactory = notificationFactory;
         this.passwordHasher = passwordHasher;
     }
 
@@ -36,12 +31,8 @@ public class UserCommandService implements UserCommandUseCase {
             return Optional.empty();
         }
         var user = new User(command.name(), command.email(), command.phone(),
-                passwordHasher.encode(command.password()), command.role(), command.plan());
-        var savedUser = userRepository.save(user);
-        if (PREMIUM_PLAN.equals(command.plan())) {
-            notificationFactory.createPremiumUpgradeNotification(savedUser.getId());
-        }
-        return Optional.of(savedUser);
+                passwordHasher.encode(command.password()), command.role());
+        return Optional.of(userRepository.save(user));
     }
 
     @Override
@@ -51,13 +42,8 @@ public class UserCommandService implements UserCommandUseCase {
             return Optional.empty();
         }
         var user = userOptional.get();
-        user.updateUser(command.name(), command.email(), command.phone(), command.role(), command.plan());
-        var updatedUser = userRepository.save(user);
-        notificationFactory.createProfileUpdateNotification(updatedUser.getId());
-        if (PREMIUM_PLAN.equals(command.plan()) && !PREMIUM_PLAN.equals(user.getPlan())) {
-            notificationFactory.createPremiumUpgradeNotification(updatedUser.getId());
-        }
-        return Optional.of(updatedUser);
+        user.updateUser(command.name(), command.email(), command.phone(), command.role());
+        return Optional.of(userRepository.save(user));
     }
 
     @Override

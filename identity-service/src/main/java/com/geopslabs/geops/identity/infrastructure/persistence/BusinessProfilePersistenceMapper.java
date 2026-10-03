@@ -7,7 +7,7 @@ public final class BusinessProfilePersistenceMapper {
     }
 
     public static BusinessProfile toDomain(BusinessProfileJpaEntity entity) {
-        var data = new BusinessProfile(UserPersistenceMapper.toDomain(entity.getUser()),
+        var data = new BusinessProfile(entity.getUser().getId(),
                 entity.getBusinessName(), entity.getBusinessType(), entity.getTaxId(), entity.getWebsite(),
                 entity.getDescription(), entity.getAddress(), entity.getHorarioAtencion());
         return new BusinessProfile(entity.getId(), data, entity.getCreatedAt(), entity.getUpdatedAt());

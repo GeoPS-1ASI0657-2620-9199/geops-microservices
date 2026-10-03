@@ -20,35 +20,16 @@ import org.springframework.web.bind.annotation.*;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
-/**
- * AuthenticationController
- *
- * REST controller that exposes authentication endpoints for the GeOps platform
- * This controller handles user sign-up and sign-in operations
- *
- * @summary REST controller for authentication operations
- * @since 1.0
- * @author GeOps Labs
- */
 @Tag(name = "Authentication", description = "User authentication and registration operations")
 @RestController
 @RequestMapping(value = "/api/v1/authentication", produces = APPLICATION_JSON_VALUE)
 @CrossOrigin(origins = "*")
 public class AuthenticationController {
-
     private final UserCommandUseCase userCommandService;
     private final UserQueryUseCase userQueryService;
     private final PasswordHasherPort hashingService;
     private final TokenIssuerPort tokenService;
 
-    /**
-     * Constructor for dependency injection
-     *
-     * @param userCommandService Service for handling user commands
-     * @param userQueryService Service for handling user queries
-     * @param hashingService Service for hashing passwords
-     * @param tokenService Service for generating tokens
-     */
     public AuthenticationController(UserCommandUseCase userCommandService,
                                    UserQueryUseCase userQueryService,
                                    PasswordHasherPort hashingService,
@@ -59,13 +40,7 @@ public class AuthenticationController {
         this.tokenService = tokenService;
     }
 
-    /**
-     * Register a new user in the system
-     *
-     * @param resource The sign-up request containing user registration data
-     * @return ResponseEntity containing the authentication data or error status
-     */
-    @Operation(summary = "Register a new user", description = "Creates a new user account with specified role and plan (defaults: CONSUMER role, BASIC plan)")
+    @Operation(summary = "Register a new user", description = "Creates a new user account with the specified role (defaults to CONSUMER)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "User registered successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid input data"),
@@ -73,7 +48,6 @@ public class AuthenticationController {
     })
     @PostMapping("/sign-up")
     public ResponseEntity<AuthenticationResource> signUp(@RequestBody SignUpResource resource) {
-        // Validate input
         if (resource.name() == null || resource.name().isBlank()) {
             return ResponseEntity.badRequest().build();
         }
@@ -87,34 +61,26 @@ public class AuthenticationController {
             return ResponseEntity.badRequest().build();
         }
 
-        // Check if email already exists
         var emailQuery = new GetUserByEmailQuery(resource.email());
         if (userQueryService.handle(emailQuery).isPresent()) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
 
-        // Check if phone already exists
         var phoneQuery = new GetUserByPhoneQuery(resource.phone());
         if (userQueryService.handle(phoneQuery).isPresent()) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
 
-        // Use role and plan from request, or default values if not provided
         String role = (resource.role() != null && !resource.role().isBlank())
             ? resource.role()
             : "CONSUMER";
-        String plan = (resource.plan() != null && !resource.plan().isBlank())
-            ? resource.plan()
-            : "BASIC";
 
-        // Create user with provided or default role and plan
         var createUserCommand = new CreateUserCommand(
             resource.name(),
             resource.email(),
             resource.phone(),
-            resource.password(), // In production, this should be hashed
-            role,
-            plan
+            resource.password(),
+            role
         );
 
         var userOptional = userCommandService.handle(createUserCommand);
@@ -131,7 +97,6 @@ public class AuthenticationController {
             user.getEmail(),
             user.getPhone(),
             user.getRole(),
-            user.getPlan(),
             token,
             "User registered successfully"
         );
@@ -139,12 +104,6 @@ public class AuthenticationController {
         return ResponseEntity.status(HttpStatus.CREATED).body(authResource);
     }
 
-    /**
-     * Authenticate a user with email and password
-     *
-     * @param resource The sign-in request containing user credentials
-     * @return ResponseEntity containing the authentication data or error status
-     */
     @Operation(summary = "Authenticate a user", description = "Validates user credentials and returns user information")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "User authenticated successfully"),
@@ -153,7 +112,6 @@ public class AuthenticationController {
     })
     @PostMapping("/sign-in")
     public ResponseEntity<AuthenticationResource> signIn(@RequestBody SignInResource resource) {
-        // Validate input
         if (resource.email() == null || resource.email().isBlank()) {
             return ResponseEntity.badRequest().build();
         }
@@ -161,7 +119,6 @@ public class AuthenticationController {
             return ResponseEntity.badRequest().build();
         }
 
-        // Find user by email
         var query = new GetUserByEmailQuery(resource.email());
         var userOptional = userQueryService.handle(query);
 
@@ -171,7 +128,6 @@ public class AuthenticationController {
 
         var user = userOptional.get();
 
-        // Validate password
         if (!hashingService.matches(resource.password(), user.getPassword())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -184,7 +140,6 @@ public class AuthenticationController {
             user.getEmail(),
             user.getPhone(),
             user.getRole(),
-            user.getPlan(),
             token,
             "User authenticated successfully"
         );
@@ -192,4 +147,3 @@ public class AuthenticationController {
         return ResponseEntity.ok(authResource);
     }
 }
-

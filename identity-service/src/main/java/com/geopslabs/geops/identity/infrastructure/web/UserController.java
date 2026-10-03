@@ -17,41 +17,18 @@ import org.springframework.web.bind.annotation.*;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
-/**
- * UserController
- *
- * REST controller that exposes user endpoints for the GeOps platform
- * This controller handles HTTP requests for user query operations
- *
- * @summary REST controller for user operations
- * @since 1.0
- * @author GeOps Labs
- */
 @Tag(name = "Users", description = "User identity operations and management")
 @RestController
 @RequestMapping(value = "/api/v1/users", produces = APPLICATION_JSON_VALUE)
 public class UserController {
-
     private final UserQueryUseCase userQueryService;
     private final UserCommandUseCase userCommandService;
 
-    /**
-     * Constructor for dependency injection
-     *
-     * @param userQueryService Service for handling user queries
-     * @param userCommandService Service for handling user commands (create/update/delete)
-     */
     public UserController(UserQueryUseCase userQueryService, UserCommandUseCase userCommandService) {
         this.userQueryService = userQueryService;
         this.userCommandService = userCommandService;
     }
 
-    /**
-     * Retrieves a user by their unique identifier
-     *
-     * @param id The unique identifier of the user
-     * @return ResponseEntity containing the user data or not found status
-     */
     @Operation(summary = "Get user by ID")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "User found"),
@@ -72,17 +49,6 @@ public class UserController {
         return ResponseEntity.ok(userResource);
     }
 
-    /**
-     * Retrieves the currently authenticated user's information
-     *
-     * Note: This is a simplified implementation. In a production environment,
-     * you would extract the user's email from the security context/JWT token
-     *
-     * For demonstration purposes, this expects an email query parameter or header
-     *
-     * @param email The email of the authenticated user (should come from security context)
-     * @return ResponseEntity containing the current user's data or not found status
-     */
     @Operation(summary = "Get current authenticated user")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "User found"),
@@ -93,7 +59,6 @@ public class UserController {
     public ResponseEntity<UserResource> getMe(
             @Parameter(description = "Email of authenticated user")
             @RequestParam(required = false) String email) {
-
         if (email == null || email.isBlank()) {
             return ResponseEntity.badRequest().build();
         }
@@ -109,19 +74,6 @@ public class UserController {
         return ResponseEntity.ok(userResource);
     }
 
-    /**
-     * Update an existing user
-     *
-     * Receives the updated user representation in the request body and delegates
-     * the update operation to the command service. Returns the updated resource.
-     *
-     * The controller maps the incoming `UserResource` to an `UpdateUserCommand`
-     * which is the expected input of the `UserCommandUseCase`.
-     *
-     * @param id The id of the user to update
-     * @param userResource The user data to update (in request body)
-     * @return ResponseEntity with updated user or not found
-     */
     @Operation(summary = "Update user")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "User updated"),
@@ -132,26 +84,22 @@ public class UserController {
     public ResponseEntity<UserResource> updateUser(
             @Parameter(description = "User unique identifier") @PathVariable Long id,
             @RequestBody UserResource userResource) {
-
         var query = new GetUserByIdQuery(id);
         var existing = userQueryService.handle(query);
         if (existing.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
-        // Map incoming resource to domain command and delegate to service
         var cmd = new UpdateUserCommand(
             id,
             userResource.name(),
             userResource.email(),
             userResource.phone(),
-            userResource.role(),
-            userResource.plan()
+            userResource.role()
         );
 
         var updatedOpt = userCommandService.handle(cmd);
         if (updatedOpt.isEmpty()) {
-            // Service decided the update couldn't be performed
             return ResponseEntity.notFound().build();
         }
 
@@ -160,4 +108,3 @@ public class UserController {
         return ResponseEntity.ok(resource);
     }
 }
-

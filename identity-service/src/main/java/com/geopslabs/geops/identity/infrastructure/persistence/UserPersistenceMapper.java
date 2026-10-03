@@ -8,17 +8,17 @@ public final class UserPersistenceMapper {
 
     public static User toDomain(UserJpaEntity entity) {
         var data = new User(entity.getName(), entity.getEmail(), entity.getPhone(), entity.getPassword(),
-                entity.getRole(), entity.getPlan());
+                entity.getRole());
         return new User(entity.getId(), data, entity.getCreatedAt(), entity.getUpdatedAt());
     }
 
     public static UserJpaEntity toNewEntity(User user) {
         return new UserJpaEntity(user.getName(), user.getEmail(), user.getPhone(), user.getPassword(),
-                user.getRole(), user.getPlan());
+                user.getRole());
     }
 
     public static void copyToEntity(User user, UserJpaEntity entity) {
         entity.update(user.getName(), user.getEmail(), user.getPhone(), user.getPassword(),
-                user.getRole(), user.getPlan());
+                user.getRole());
     }
 }

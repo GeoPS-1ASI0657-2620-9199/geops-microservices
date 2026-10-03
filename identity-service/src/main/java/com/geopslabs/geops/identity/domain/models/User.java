@@ -3,7 +3,6 @@ package com.geopslabs.geops.identity.domain.models;
 import java.util.Date;
 
 public class User {
-    private static final String PREMIUM_PLAN = "PREMIUM";
     private static final String ADMIN_ROLE = "ADMIN";
 
     private Long id;
@@ -12,40 +11,33 @@ public class User {
     private String phone;
     private String password;
     private String role;
-    private String plan;
     private Date createdAt;
     private Date updatedAt;
 
-    public User(String name, String email, String phone, String password, String role, String plan) {
+    public User(String name, String email, String phone, String password, String role) {
         this.name = name;
         this.email = email;
         this.phone = phone;
         this.password = password;
         this.role = role;
-        this.plan = plan;
     }
 
     public User(Long id, User data, Date createdAt, Date updatedAt) {
-        this(data.name, data.email, data.phone, data.password, data.role, data.plan);
+        this(data.name, data.email, data.phone, data.password, data.role);
         this.id = id;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
 
-    public void updateUser(String name, String email, String phone, String role, String plan) {
+    public void updateUser(String name, String email, String phone, String role) {
         this.name = valueOrCurrent(name, this.name);
         this.email = valueOrCurrent(email, this.email);
         this.phone = valueOrCurrent(phone, this.phone);
         this.role = valueOrCurrent(role, this.role);
-        this.plan = valueOrCurrent(plan, this.plan);
     }
 
     public void updatePassword(String encryptedPassword) {
         this.password = valueOrCurrent(encryptedPassword, this.password);
-    }
-
-    public boolean isPremium() {
-        return PREMIUM_PLAN.equalsIgnoreCase(plan);
     }
 
     public boolean isAdmin() {
@@ -78,10 +70,6 @@ public class User {
 
     public String getRole() {
         return role;
-    }
-
-    public String getPlan() {
-        return plan;
     }
 
     public Date getCreatedAt() {

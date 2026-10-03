@@ -26,11 +26,13 @@ public class DetailsOwnerCommandService implements DetailsOwnerCommandUseCase {
         if (businessProfileRepository.existsByUserId(command.userId())) {
             return Optional.empty();
         }
-        return userRepository.findById(command.userId())
-                .map(user -> new BusinessProfile(user, command.businessName(), command.businessType(),
-                        command.taxId(), command.website(), command.description(), command.address(),
-                        command.horarioAtencion()))
-                .map(businessProfileRepository::save);
+        if (!userRepository.existsById(command.userId())) {
+            return Optional.empty();
+        }
+        var businessProfile = new BusinessProfile(command.userId(), command.businessName(), command.businessType(),
+                command.taxId(), command.website(), command.description(), command.address(),
+                command.horarioAtencion());
+        return Optional.of(businessProfileRepository.save(businessProfile));
     }
 
     @Override

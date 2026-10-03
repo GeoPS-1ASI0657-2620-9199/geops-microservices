@@ -35,6 +35,6 @@ public class BusinessProfileJpaAdapter implements BusinessProfileRepositoryPort 
     }
 
     private BusinessProfileJpaEntity newEntity(BusinessProfile businessProfile) {
-        return new BusinessProfileJpaEntity(userRepository.getReferenceById(businessProfile.getUser().getId()));
+        return new BusinessProfileJpaEntity(userRepository.getReferenceById(businessProfile.getUserId()));
     }
 }

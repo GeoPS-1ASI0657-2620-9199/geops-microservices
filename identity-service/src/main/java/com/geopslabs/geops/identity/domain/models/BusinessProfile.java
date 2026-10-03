@@ -4,7 +4,7 @@ import java.util.Date;
 
 public class BusinessProfile {
     private Long id;
-    private User user;
+    private Long userId;
     private String businessName;
     private String businessType;
     private String taxId;
@@ -15,9 +15,9 @@ public class BusinessProfile {
     private Date createdAt;
     private Date updatedAt;
 
-    public BusinessProfile(User user, String businessName, String businessType, String taxId,
+    public BusinessProfile(Long userId, String businessName, String businessType, String taxId,
                            String website, String description, String address, String horarioAtencion) {
-        this.user = user;
+        this.userId = userId;
         this.businessName = businessName;
         this.businessType = businessType;
         this.taxId = taxId;
@@ -28,7 +28,7 @@ public class BusinessProfile {
     }
 
     public BusinessProfile(Long id, BusinessProfile data, Date createdAt, Date updatedAt) {
-        this(data.user, data.businessName, data.businessType, data.taxId, data.website,
+        this(data.userId, data.businessName, data.businessType, data.taxId, data.website,
                 data.description, data.address, data.horarioAtencion);
         this.id = id;
         this.createdAt = createdAt;
@@ -55,8 +55,8 @@ public class BusinessProfile {
         return id;
     }
 
-    public User getUser() {
-        return user;
+    public Long getUserId() {
+        return userId;
     }
 
     public String getBusinessName() {

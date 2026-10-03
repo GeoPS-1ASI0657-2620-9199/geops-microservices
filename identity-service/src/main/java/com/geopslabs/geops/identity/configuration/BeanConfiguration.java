@@ -1,6 +1,5 @@
 package com.geopslabs.geops.identity.configuration;
 
-import com.geopslabs.geops.backend.notifications.application.internal.outboundservices.NotificationFactoryService;
 import com.geopslabs.geops.identity.application.services.DetailsConsumerCommandService;
 import com.geopslabs.geops.identity.application.services.DetailsConsumerQueryService;
 import com.geopslabs.geops.identity.application.services.DetailsOwnerCommandService;
@@ -25,9 +24,8 @@ public class BeanConfiguration {
 
     @Bean
     public UserCommandUseCase userCommandUseCase(UserRepositoryPort userRepository,
-                                                 NotificationFactoryService notificationFactory,
                                                  PasswordHasherPort passwordHasher) {
-        return new UserCommandService(userRepository, notificationFactory, passwordHasher);
+        return new UserCommandService(userRepository, passwordHasher);
     }
 
     @Bean

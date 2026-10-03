@@ -15,7 +15,6 @@ public class UserJpaEntity extends AuditableAbstractAggregateRoot<UserJpaEntity>
     private static final int PHONE_LENGTH = 20;
     private static final int PASSWORD_LENGTH = 255;
     private static final int ROLE_LENGTH = 50;
-    private static final int PLAN_LENGTH = 50;
 
     @Column(name = "name", nullable = false, length = NAME_LENGTH)
     private String name;
@@ -32,27 +31,22 @@ public class UserJpaEntity extends AuditableAbstractAggregateRoot<UserJpaEntity>
     @Column(name = "role", nullable = false, length = ROLE_LENGTH)
     private String role;
 
-    @Column(name = "plan", nullable = false, length = PLAN_LENGTH)
-    private String plan;
-
     protected UserJpaEntity() {
     }
 
-    public UserJpaEntity(String name, String email, String phone, String password, String role, String plan) {
+    public UserJpaEntity(String name, String email, String phone, String password, String role) {
         this.name = name;
         this.email = email;
         this.phone = phone;
         this.password = password;
         this.role = role;
-        this.plan = plan;
     }
 
-    public void update(String name, String email, String phone, String password, String role, String plan) {
+    public void update(String name, String email, String phone, String password, String role) {
         this.name = name;
         this.email = email;
         this.phone = phone;
         this.password = password;
         this.role = role;
-        this.plan = plan;
     }
 }
