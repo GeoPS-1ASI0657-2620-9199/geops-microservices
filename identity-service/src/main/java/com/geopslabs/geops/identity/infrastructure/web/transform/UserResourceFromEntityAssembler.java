@@ -1,0 +1,37 @@
+package com.geopslabs.geops.identity.infrastructure.web.transform;
+
+import com.geopslabs.geops.identity.domain.models.User;
+import com.geopslabs.geops.identity.infrastructure.web.resources.UserResource;
+
+/**
+ * UserResourceFromEntityAssembler
+ *
+ * Assembler class that transforms User entities to UserResource Resources
+ * This class follows the Assembler pattern to separate domain objects from REST representations
+ *
+ * @summary Transforms User entities to resource Resources
+ * @since 1.0
+ * @author GeOps Labs
+ */
+public class UserResourceFromEntityAssembler {
+
+    /**
+     * Transforms a User entity to a UserResource
+     *
+     * @param entity The User entity to transform
+     * @return The corresponding UserResource Resource
+     */
+    public static UserResource toResourceFromEntity(User entity) {
+        return new UserResource(
+            entity.getId(),
+            entity.getName(),
+            entity.getEmail(),
+            entity.getPhone(),
+            entity.getRole(),
+            entity.getPlan(),
+            entity.getCreatedAt(),
+            entity.getUpdatedAt()
+        );
+    }
+}
+
