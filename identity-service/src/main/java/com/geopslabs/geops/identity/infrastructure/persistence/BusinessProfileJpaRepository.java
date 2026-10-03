@@ -10,4 +10,6 @@ public interface BusinessProfileJpaRepository extends JpaRepository<BusinessProf
     Optional<BusinessProfileJpaEntity> findByUserId(Long userId);
 
     boolean existsByUserId(Long userId);
+
+    boolean existsByRuc(String ruc);
 }

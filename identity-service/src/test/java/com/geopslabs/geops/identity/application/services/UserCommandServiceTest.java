@@ -7,6 +7,7 @@ import com.geopslabs.geops.identity.domain.models.PhoneAlreadyRegisteredExceptio
 import com.geopslabs.geops.identity.domain.models.Role;
 import com.geopslabs.geops.identity.domain.models.RoleNotAllowedException;
 import com.geopslabs.geops.identity.domain.models.User;
+import com.geopslabs.geops.identity.domain.ports.BusinessProfileRepositoryPort;
 import com.geopslabs.geops.identity.domain.ports.ConsumerProfileRepositoryPort;
 import com.geopslabs.geops.identity.domain.ports.PasswordHasherPort;
 import com.geopslabs.geops.identity.domain.ports.UserRepositoryPort;
@@ -43,13 +44,16 @@ class UserCommandServiceTest {
     @Mock
     private ConsumerProfileRepositoryPort consumerProfileRepository;
     @Mock
+    private BusinessProfileRepositoryPort businessProfileRepository;
+    @Mock
     private PasswordHasherPort passwordHasher;
 
     private UserCommandService service;
 
     @BeforeEach
     void setUp() {
-        service = new UserCommandService(userRepository, consumerProfileRepository, passwordHasher);
+        service = new UserCommandService(userRepository, consumerProfileRepository, businessProfileRepository,
+                passwordHasher);
     }
 
     @Test
@@ -136,6 +140,6 @@ class UserCommandServiceTest {
     }
 
     private static RegisterUserCommand command(Role role, String email) {
-        return new RegisterUserCommand(role, FULL_NAME, email, PHONE, PASSWORD);
+        return new RegisterUserCommand(role, FULL_NAME, email, PHONE, PASSWORD, null);
     }
 }

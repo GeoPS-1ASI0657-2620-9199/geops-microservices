@@ -2,6 +2,7 @@ package com.geopslabs.geops.identity.infrastructure.web;
 
 import com.geopslabs.geops.identity.application.usecases.RegisterUserCommand;
 import com.geopslabs.geops.identity.domain.models.Role;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -14,7 +15,8 @@ public record RegisterUserRequest(
         @NotBlank @Email @Size(max = RegisterUserRequest.EMAIL_MAX_LENGTH) String email,
         @NotBlank @Pattern(regexp = RegisterUserRequest.PHONE_PATTERN) String phone,
         @NotBlank @Size(min = RegisterUserRequest.PASSWORD_MIN_LENGTH,
-                max = RegisterUserRequest.PASSWORD_MAX_LENGTH) String password) {
+                max = RegisterUserRequest.PASSWORD_MAX_LENGTH) String password,
+        @Valid BusinessProfileRequest businessProfile) {
 
     static final int FULL_NAME_MAX_LENGTH = 255;
     static final int EMAIL_MAX_LENGTH = 255;
@@ -23,6 +25,7 @@ public record RegisterUserRequest(
     static final int PASSWORD_MAX_LENGTH = 72;
 
     public RegisterUserCommand toCommand() {
-        return new RegisterUserCommand(role, fullName.strip(), email, phone, password);
+        var businessProfileData = businessProfile != null ? businessProfile.toData() : null;
+        return new RegisterUserCommand(role, fullName.strip(), email, phone, password, businessProfileData);
     }
 }

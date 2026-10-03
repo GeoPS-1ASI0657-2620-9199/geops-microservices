@@ -1,6 +1,7 @@
 package com.geopslabs.geops.identity.domain.ports;
 
 import com.geopslabs.geops.identity.domain.models.BusinessProfile;
+import com.geopslabs.geops.identity.domain.models.Ruc;
 
 import java.util.Optional;
 
@@ -10,4 +11,6 @@ public interface BusinessProfileRepositoryPort {
     Optional<BusinessProfile> findByUserId(Long userId);
 
     boolean existsByUserId(Long userId);
+
+    boolean existsByRuc(Ruc ruc);
 }
