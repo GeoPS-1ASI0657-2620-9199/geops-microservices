@@ -50,11 +50,10 @@ class RsaTokenIssuerAdapterTest {
         assertThat(claims.getIssuer()).isEqualTo(ISSUER);
         assertThat(claims.getAudience()).containsExactly(AUDIENCE);
         assertThat(claims.getSubject()).isEqualTo(String.valueOf(USER_ID));
-        assertThat(claims.getStringClaim("role")).isEqualTo(Role.CONSUMER.name());
-        assertThat(claims.getLongClaim("consumerId")).isEqualTo(USER_ID);
+        assertThat(claims.getStringListClaim("roles")).containsExactly("ROLE_CONSUMER");
+        assertThat(claims.getClaims()).doesNotContainKeys("businessId", "consumerId", "jti");
         assertThat(claims.getIssueTime()).isEqualTo(Date.from(NOW));
         assertThat(claims.getExpirationTime()).isEqualTo(Date.from(NOW.plus(TOKEN_LIFETIME)));
-        assertThat(claims.getJWTID()).isNotBlank();
         assertThat(issued.lifetime()).isEqualTo(TOKEN_LIFETIME);
     }
 

@@ -18,16 +18,15 @@ import org.springframework.stereotype.Component;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
 
 @Component
 public class RsaTokenIssuerAdapter implements TokenIssuerPort {
     private static final Duration TOKEN_LIFETIME = Duration.ofMinutes(60);
-    private static final String ROLE_CLAIM = "role";
-    private static final Map<Role, String> PROFILE_CLAIMS =
-            Map.of(Role.CONSUMER, "consumerId", Role.BUSINESS_OWNER, "businessId");
+    private static final String ROLES_CLAIM = "roles";
+    private static final String ROLE_PREFIX = "ROLE_";
+    private static final String BUSINESS_ID_CLAIM = "businessId";
 
     private final RsaKeyProvider keyProvider;
     private final JWSSigner signer;
@@ -62,12 +61,12 @@ public class RsaTokenIssuerAdapter implements TokenIssuerPort {
                 .issuer(properties.issuer())
                 .audience(properties.audience())
                 .subject(String.valueOf(user.getId()))
-                .claim(ROLE_CLAIM, user.getRole().name())
+                .claim(ROLES_CLAIM, List.of(ROLE_PREFIX + user.getRole().name()))
                 .issueTime(Date.from(issuedAt))
-                .expirationTime(Date.from(issuedAt.plus(TOKEN_LIFETIME)))
-                .jwtID(UUID.randomUUID().toString());
-        Optional.ofNullable(PROFILE_CLAIMS.get(user.getRole()))
-                .ifPresent(claimName -> builder.claim(claimName, profileId));
+                .expirationTime(Date.from(issuedAt.plus(TOKEN_LIFETIME)));
+        if (user.getRole() == Role.BUSINESS_OWNER) {
+            builder.claim(BUSINESS_ID_CLAIM, profileId);
+        }
         return builder.build();
     }
 
