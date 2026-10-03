@@ -11,12 +11,12 @@ public class User {
     private Instant emailConfirmedAt;
     private String phone;
     private String passwordHash;
-    private String role;
+    private Role role;
     private int failedLoginAttempts;
     private Instant lockedUntil;
     private Instant createdAt;
 
-    public User(String fullName, String email, String phone, String passwordHash, String role) {
+    public User(String fullName, String email, String phone, String passwordHash, Role role) {
         this.fullName = fullName;
         this.email = email;
         this.phone = phone;
@@ -34,6 +34,10 @@ public class User {
         this.failedLoginAttempts = failedLoginAttempts;
         this.lockedUntil = lockedUntil;
         this.createdAt = createdAt;
+    }
+
+    public static User register(String fullName, Email email, String phone, String passwordHash, Role role) {
+        return new User(fullName, email.value(), phone, passwordHash, role);
     }
 
     public Long getId() {
@@ -60,7 +64,7 @@ public class User {
         return passwordHash;
     }
 
-    public String getRole() {
+    public Role getRole() {
         return role;
     }
 
