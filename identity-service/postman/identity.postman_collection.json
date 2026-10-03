@@ -297,6 +297,160 @@
           }
         }
       ]
+    },
+    {
+      "name": "US22",
+      "item": [
+        {
+          "name": "Register business owner",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"business profile created and unverified\", function () {",
+                  "    pm.expect(pm.response.json().role).to.eql(\"BUSINESS_OWNER\");",
+                  "    pm.expect(pm.response.json().businessProfileId).to.be.a(\"number\");",
+                  "    pm.expect(pm.response.json().verificationStatus).to.eql(\"UNVERIFIED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"BUSINESS_OWNER\",\n  \"fullName\": \"Rosa Quispe Mamani\",\n  \"email\": \"rosa.quispe@ejemplo.pe\",\n  \"phone\": \"987654321\",\n  \"password\": \"Bodega#2026\",\n  \"businessProfile\": {\n    \"businessName\": \"Bodega Doña Rosa\",\n    \"businessType\": \"Bodega\",\n    \"ruc\": \"10456789019\",\n    \"address\": \"Jr. Huánuco 1250, La Victoria\",\n    \"latitude\": -12.0681,\n    \"longitude\": -77.035,\n    \"openingHours\": \"Lun-Sáb 07:00-22:00\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Register business with repeated RUC",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test(\"code is RUC_ALREADY_REGISTERED\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"RUC_ALREADY_REGISTERED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"BUSINESS_OWNER\",\n  \"fullName\": \"Jorge Ramos Díaz\",\n  \"email\": \"jorge.ramos@ejemplo.pe\",\n  \"phone\": \"987654322\",\n  \"password\": \"Bodega#2026\",\n  \"businessProfile\": {\n    \"businessName\": \"Minimarket Ramos\",\n    \"businessType\": \"Minimarket\",\n    \"ruc\": \"10456789019\",\n    \"address\": \"Av. Iquitos 820, La Victoria\",\n    \"latitude\": -12.0702,\n    \"longitude\": -77.0298,\n    \"openingHours\": \"Lun-Dom 08:00-21:00\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Register business with invalid latitude",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"code is INVALID_LOCATION\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_LOCATION\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"BUSINESS_OWNER\",\n  \"fullName\": \"Rosa Quispe Mamani\",\n  \"email\": \"rosa.bodega@ejemplo.pe\",\n  \"phone\": \"987654323\",\n  \"password\": \"Bodega#2026\",\n  \"businessProfile\": {\n    \"businessName\": \"Bodega Doña Rosa\",\n    \"businessType\": \"Bodega\",\n    \"ruc\": \"10456789027\",\n    \"address\": \"Jr. Huánuco 1250, La Victoria\",\n    \"latitude\": 95.0,\n    \"longitude\": -77.035,\n    \"openingHours\": \"Lun-Sáb 07:00-22:00\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   ],
   "variable": [
