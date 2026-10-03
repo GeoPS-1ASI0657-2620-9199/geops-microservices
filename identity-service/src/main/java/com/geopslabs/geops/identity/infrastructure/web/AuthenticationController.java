@@ -112,7 +112,7 @@ public class AuthenticationController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        var token = tokenService.generateToken(user.getEmail());
+        var token = tokenService.issue(user, user.getId()).value();
 
         var authResource = new AuthenticationResource(
             user.getId(),
