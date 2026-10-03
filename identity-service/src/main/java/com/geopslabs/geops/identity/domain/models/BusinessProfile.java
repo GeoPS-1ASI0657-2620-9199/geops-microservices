@@ -35,17 +35,6 @@ public class BusinessProfile {
         this.verificationStatus = verificationStatus;
     }
 
-    public void updateOwnerDetails(String businessName, String businessType, String address, String openingHours) {
-        this.businessName = businessName != null && !businessName.isBlank() ? businessName : this.businessName;
-        this.businessType = valueOrCurrent(businessType, this.businessType);
-        this.address = valueOrCurrent(address, this.address);
-        this.openingHours = valueOrCurrent(openingHours, this.openingHours);
-    }
-
-    private static String valueOrCurrent(String candidate, String current) {
-        return candidate != null ? candidate : current;
-    }
-
     public Long getId() {
         return id;
     }

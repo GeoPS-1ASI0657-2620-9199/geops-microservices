@@ -1,15 +1,12 @@
 package com.geopslabs.geops.identity.application.services;
 
-import com.geopslabs.geops.identity.application.usecases.GetAllUsersQuery;
 import com.geopslabs.geops.identity.application.usecases.GetUserByEmailQuery;
-import com.geopslabs.geops.identity.application.usecases.GetUserByIdQuery;
 import com.geopslabs.geops.identity.application.usecases.GetUserByPhoneQuery;
 import com.geopslabs.geops.identity.application.usecases.UserQueryUseCase;
 import com.geopslabs.geops.identity.domain.models.User;
 import com.geopslabs.geops.identity.domain.ports.UserRepositoryPort;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Optional;
 
 @Transactional(readOnly = true)
@@ -18,16 +15,6 @@ public class UserQueryService implements UserQueryUseCase {
 
     public UserQueryService(UserRepositoryPort userRepository) {
         this.userRepository = userRepository;
-    }
-
-    @Override
-    public List<User> handle(GetAllUsersQuery query) {
-        return userRepository.findAll();
-    }
-
-    @Override
-    public Optional<User> handle(GetUserByIdQuery query) {
-        return userRepository.findById(query.id());
     }
 
     @Override

@@ -22,13 +22,6 @@ public class ConsumerProfile {
         this.id = id;
     }
 
-    public void updateConsumerDetails(Boolean locationPermission, Integer searchRadiusMinutes,
-                                      String defaultDistrict) {
-        this.locationPermission = locationPermission != null ? locationPermission : this.locationPermission;
-        this.searchRadiusMinutes = searchRadiusMinutes != null ? searchRadiusMinutes : this.searchRadiusMinutes;
-        this.defaultDistrict = defaultDistrict != null ? defaultDistrict : this.defaultDistrict;
-    }
-
     public Long getId() {
         return id;
     }
