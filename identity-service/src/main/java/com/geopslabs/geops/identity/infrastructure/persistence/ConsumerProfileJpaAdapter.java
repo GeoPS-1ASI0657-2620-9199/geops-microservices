@@ -9,19 +9,15 @@ import java.util.Optional;
 @Component
 public class ConsumerProfileJpaAdapter implements ConsumerProfileRepositoryPort {
     private final ConsumerProfileJpaRepository repository;
-    private final UserJpaRepository userRepository;
 
-    public ConsumerProfileJpaAdapter(ConsumerProfileJpaRepository repository, UserJpaRepository userRepository) {
+    public ConsumerProfileJpaAdapter(ConsumerProfileJpaRepository repository) {
         this.repository = repository;
-        this.userRepository = userRepository;
     }
 
     @Override
     public ConsumerProfile save(ConsumerProfile consumerProfile) {
-        var entity = consumerProfile.getId() == null ? newEntity(consumerProfile)
-                : repository.getReferenceById(consumerProfile.getId());
-        ConsumerProfilePersistenceMapper.copyToEntity(consumerProfile, entity);
-        return ConsumerProfilePersistenceMapper.toDomain(repository.save(entity));
+        var saved = repository.save(ConsumerProfilePersistenceMapper.toEntity(consumerProfile));
+        return ConsumerProfilePersistenceMapper.toDomain(saved);
     }
 
     @Override
@@ -32,9 +28,5 @@ public class ConsumerProfileJpaAdapter implements ConsumerProfileRepositoryPort 
     @Override
     public boolean existsByUserId(Long userId) {
         return repository.existsByUserId(userId);
-    }
-
-    private ConsumerProfileJpaEntity newEntity(ConsumerProfile consumerProfile) {
-        return new ConsumerProfileJpaEntity(userRepository.getReferenceById(consumerProfile.getUser().getId()));
     }
 }

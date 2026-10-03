@@ -23,7 +23,6 @@ import java.util.List;
 @Configuration
 @EnableMethodSecurity
 public class WebSecurityConfiguration {
-
     private final UserDetailsService userDetailsService;
     private final BearerTokenService tokenService;
     private final BCryptHashingService hashingService;
@@ -67,6 +66,7 @@ public class WebSecurityConfiguration {
                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
                         .requestMatchers(
                                 "/api/v1/**",
+                                "/actuator/health",
                                 "/v3/api-docs/**",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",

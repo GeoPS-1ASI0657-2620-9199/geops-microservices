@@ -2,11 +2,9 @@ package com.geopslabs.geops.identity.application.usecases;
 
 public record CreateDetailsConsumerCommand(
     Long userId,
-    String categoriasFavoritas,
-    Boolean permisoUbicacion,
-    String direccionCasa,
-    String direccionTrabajo,
-    String direccionUniversidad
+    Boolean locationPermission,
+    Integer searchRadiusMinutes,
+    String defaultDistrict
 ) {
     public CreateDetailsConsumerCommand {
         if (userId == null || userId <= 0) {

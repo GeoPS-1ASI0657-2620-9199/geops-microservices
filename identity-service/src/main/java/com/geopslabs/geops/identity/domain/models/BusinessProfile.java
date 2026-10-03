@@ -1,50 +1,45 @@
 package com.geopslabs.geops.identity.domain.models;
 
-import java.util.Date;
-
 public class BusinessProfile {
     private Long id;
     private Long userId;
     private String businessName;
     private String businessType;
-    private String taxId;
-    private String website;
-    private String description;
+    private String ruc;
     private String address;
-    private String horarioAtencion;
-    private Date createdAt;
-    private Date updatedAt;
+    private Double latitude;
+    private Double longitude;
+    private String openingHours;
+    private AccountStatus accountStatus;
+    private VerificationStatus verificationStatus;
 
-    public BusinessProfile(Long userId, String businessName, String businessType, String taxId,
-                           String website, String description, String address, String horarioAtencion) {
+    public BusinessProfile(Long userId, String businessName, String businessType, String ruc, String address,
+                           String openingHours) {
         this.userId = userId;
         this.businessName = businessName;
         this.businessType = businessType;
-        this.taxId = taxId;
-        this.website = website;
-        this.description = description;
+        this.ruc = ruc;
         this.address = address;
-        this.horarioAtencion = horarioAtencion;
+        this.openingHours = openingHours;
+        this.accountStatus = AccountStatus.ACTIVE;
+        this.verificationStatus = VerificationStatus.UNVERIFIED;
     }
 
-    public BusinessProfile(Long id, BusinessProfile data, Date createdAt, Date updatedAt) {
-        this(data.userId, data.businessName, data.businessType, data.taxId, data.website,
-                data.description, data.address, data.horarioAtencion);
+    public BusinessProfile(Long id, BusinessProfile data, Double latitude, Double longitude,
+                           AccountStatus accountStatus, VerificationStatus verificationStatus) {
+        this(data.userId, data.businessName, data.businessType, data.ruc, data.address, data.openingHours);
         this.id = id;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.accountStatus = accountStatus;
+        this.verificationStatus = verificationStatus;
     }
 
-    public void updateOwnerDetails(String businessName, String businessType, String taxId,
-                                   String website, String description, String address,
-                                   String horarioAtencion) {
+    public void updateOwnerDetails(String businessName, String businessType, String address, String openingHours) {
         this.businessName = businessName != null && !businessName.isBlank() ? businessName : this.businessName;
         this.businessType = valueOrCurrent(businessType, this.businessType);
-        this.taxId = valueOrCurrent(taxId, this.taxId);
-        this.website = valueOrCurrent(website, this.website);
-        this.description = valueOrCurrent(description, this.description);
         this.address = valueOrCurrent(address, this.address);
-        this.horarioAtencion = valueOrCurrent(horarioAtencion, this.horarioAtencion);
+        this.openingHours = valueOrCurrent(openingHours, this.openingHours);
     }
 
     private static String valueOrCurrent(String candidate, String current) {
@@ -67,31 +62,31 @@ public class BusinessProfile {
         return businessType;
     }
 
-    public String getTaxId() {
-        return taxId;
-    }
-
-    public String getWebsite() {
-        return website;
-    }
-
-    public String getDescription() {
-        return description;
+    public String getRuc() {
+        return ruc;
     }
 
     public String getAddress() {
         return address;
     }
 
-    public String getHorarioAtencion() {
-        return horarioAtencion;
+    public Double getLatitude() {
+        return latitude;
     }
 
-    public Date getCreatedAt() {
-        return createdAt;
+    public Double getLongitude() {
+        return longitude;
     }
 
-    public Date getUpdatedAt() {
-        return updatedAt;
+    public String getOpeningHours() {
+        return openingHours;
+    }
+
+    public AccountStatus getAccountStatus() {
+        return accountStatus;
+    }
+
+    public VerificationStatus getVerificationStatus() {
+        return verificationStatus;
     }
 }

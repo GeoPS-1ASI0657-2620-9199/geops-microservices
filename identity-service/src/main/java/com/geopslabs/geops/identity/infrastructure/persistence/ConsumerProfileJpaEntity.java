@@ -1,54 +1,39 @@
 package com.geopslabs.geops.identity.infrastructure.persistence;
 
-import com.geopslabs.geops.identity.shared.AuditableAbstractAggregateRoot;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.MapsId;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
-@Table(name = "details_consumer")
+@Table(name = "consumer_profiles")
 @Getter
-public class ConsumerProfileJpaEntity extends AuditableAbstractAggregateRoot<ConsumerProfileJpaEntity> {
-    private static final int TEXT_LENGTH = 255;
+@Setter
+@NoArgsConstructor
+public class ConsumerProfileJpaEntity {
+    private static final int DEFAULT_DISTRICT_LENGTH = 100;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @MapsId
-    @JoinColumn(name = "usuario_id", nullable = false)
-    private UserJpaEntity user;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @Column(name = "categorias_favoritas", length = TEXT_LENGTH)
-    private String categoriasFavoritas;
+    @Column(name = "user_id", nullable = false, unique = true)
+    private Long userId;
 
-    @Column(name = "permiso_ubicacion", nullable = false)
-    private Boolean permisoUbicacion;
+    @Column(name = "location_permission", nullable = false)
+    private Boolean locationPermission;
 
-    @Column(name = "direccion_casa", length = TEXT_LENGTH)
-    private String direccionCasa;
+    @JdbcTypeCode(SqlTypes.SMALLINT)
+    @Column(name = "search_radius_minutes", nullable = false)
+    private Integer searchRadiusMinutes;
 
-    @Column(name = "direccion_trabajo", length = TEXT_LENGTH)
-    private String direccionTrabajo;
-
-    @Column(name = "direccion_universidad", length = TEXT_LENGTH)
-    private String direccionUniversidad;
-
-    protected ConsumerProfileJpaEntity() {
-    }
-
-    public ConsumerProfileJpaEntity(UserJpaEntity user) {
-        this.user = user;
-    }
-
-    public void update(String categoriasFavoritas, Boolean permisoUbicacion,
-                       String direccionCasa, String direccionTrabajo, String direccionUniversidad) {
-        this.categoriasFavoritas = categoriasFavoritas;
-        this.permisoUbicacion = permisoUbicacion;
-        this.direccionCasa = direccionCasa;
-        this.direccionTrabajo = direccionTrabajo;
-        this.direccionUniversidad = direccionUniversidad;
-    }
+    @Column(name = "default_district", length = DEFAULT_DISTRICT_LENGTH)
+    private String defaultDistrict;
 }

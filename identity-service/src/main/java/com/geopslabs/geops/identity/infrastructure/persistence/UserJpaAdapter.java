@@ -17,8 +17,7 @@ public class UserJpaAdapter implements UserRepositoryPort {
 
     @Override
     public User save(User user) {
-        var entity = user.getId() == null ? UserPersistenceMapper.toNewEntity(user) : updatedEntity(user);
-        return UserPersistenceMapper.toDomain(repository.save(entity));
+        return UserPersistenceMapper.toDomain(repository.save(UserPersistenceMapper.toEntity(user)));
     }
 
     @Override
@@ -59,11 +58,5 @@ public class UserJpaAdapter implements UserRepositoryPort {
     @Override
     public void deleteById(Long id) {
         repository.deleteById(id);
-    }
-
-    private UserJpaEntity updatedEntity(User user) {
-        var entity = repository.getReferenceById(user.getId());
-        UserPersistenceMapper.copyToEntity(user, entity);
-        return entity;
     }
 }

@@ -7,12 +7,11 @@ public class UserResourceFromEntityAssembler {
     public static UserResource toResourceFromEntity(User entity) {
         return new UserResource(
             entity.getId(),
-            entity.getName(),
+            entity.getFullName(),
             entity.getEmail(),
             entity.getPhone(),
             entity.getRole(),
-            entity.getCreatedAt(),
-            entity.getUpdatedAt()
+            entity.getCreatedAt()
         );
     }
 }

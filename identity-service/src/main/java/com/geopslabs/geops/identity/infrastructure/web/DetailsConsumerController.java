@@ -64,11 +64,9 @@ public class DetailsConsumerController {
             @RequestBody CreateDetailsConsumerResource resource) {
         var command = new CreateDetailsConsumerCommand(
             userId,
-            resource.categoriasFavoritas(),
-            resource.permisoUbicacion(),
-            resource.direccionCasa(),
-            resource.direccionTrabajo(),
-            resource.direccionUniversidad()
+            resource.locationPermission(),
+            resource.searchRadiusMinutes(),
+            resource.defaultDistrict()
         );
 
         var createdOpt = detailsConsumerCommandService.handle(command);
@@ -93,11 +91,9 @@ public class DetailsConsumerController {
             @RequestBody CreateDetailsConsumerResource resource) {
         var command = new UpdateDetailsConsumerCommand(
             userId,
-            resource.categoriasFavoritas(),
-            resource.permisoUbicacion(),
-            resource.direccionCasa(),
-            resource.direccionTrabajo(),
-            resource.direccionUniversidad()
+            resource.locationPermission(),
+            resource.searchRadiusMinutes(),
+            resource.defaultDistrict()
         );
 
         var updatedOpt = detailsConsumerCommandService.handle(command);

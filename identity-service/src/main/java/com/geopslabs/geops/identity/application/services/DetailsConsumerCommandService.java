@@ -26,11 +26,12 @@ public class DetailsConsumerCommandService implements DetailsConsumerCommandUseC
         if (consumerProfileRepository.existsByUserId(command.userId())) {
             return Optional.empty();
         }
-        return userRepository.findById(command.userId())
-                .map(user -> new ConsumerProfile(user, command.categoriasFavoritas(),
-                        command.permisoUbicacion(), command.direccionCasa(), command.direccionTrabajo(),
-                        command.direccionUniversidad()))
-                .map(consumerProfileRepository::save);
+        if (!userRepository.existsById(command.userId())) {
+            return Optional.empty();
+        }
+        var consumerProfile = new ConsumerProfile(command.userId(), command.locationPermission(),
+                command.searchRadiusMinutes(), command.defaultDistrict());
+        return Optional.of(consumerProfileRepository.save(consumerProfile));
     }
 
     @Override
@@ -41,8 +42,8 @@ public class DetailsConsumerCommandService implements DetailsConsumerCommandUseC
     }
 
     private ConsumerProfile update(ConsumerProfile profile, UpdateDetailsConsumerCommand command) {
-        profile.updateConsumerDetails(command.categoriasFavoritas(), command.permisoUbicacion(),
-                command.direccionCasa(), command.direccionTrabajo(), command.direccionUniversidad());
+        profile.updateConsumerDetails(command.locationPermission(), command.searchRadiusMinutes(),
+                command.defaultDistrict());
         return profile;
     }
 }

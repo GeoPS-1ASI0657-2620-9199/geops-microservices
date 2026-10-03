@@ -30,8 +30,7 @@ public class DetailsOwnerCommandService implements DetailsOwnerCommandUseCase {
             return Optional.empty();
         }
         var businessProfile = new BusinessProfile(command.userId(), command.businessName(), command.businessType(),
-                command.taxId(), command.website(), command.description(), command.address(),
-                command.horarioAtencion());
+                command.ruc(), command.address(), command.openingHours());
         return Optional.of(businessProfileRepository.save(businessProfile));
     }
 
@@ -43,8 +42,8 @@ public class DetailsOwnerCommandService implements DetailsOwnerCommandUseCase {
     }
 
     private BusinessProfile update(BusinessProfile profile, UpdateDetailsOwnerCommand command) {
-        profile.updateOwnerDetails(command.businessName(), command.businessType(), command.taxId(),
-                command.website(), command.description(), command.address(), command.horarioAtencion());
+        profile.updateOwnerDetails(command.businessName(), command.businessType(), command.address(),
+                command.openingHours());
         return profile;
     }
 }

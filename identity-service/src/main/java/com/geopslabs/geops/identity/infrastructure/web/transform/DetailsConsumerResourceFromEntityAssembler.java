@@ -7,14 +7,10 @@ public class DetailsConsumerResourceFromEntityAssembler {
     public static DetailsConsumerResource toResourceFromEntity(ConsumerProfile entity) {
         return new DetailsConsumerResource(
             entity.getId(),
-            entity.getUser().getId(),
-            entity.getCategoriasFavoritas(),
-            entity.getPermisoUbicacion(),
-            entity.getDireccionCasa(),
-            entity.getDireccionTrabajo(),
-            entity.getDireccionUniversidad(),
-            entity.getCreatedAt(),
-            entity.getUpdatedAt()
+            entity.getUserId(),
+            entity.isLocationPermission(),
+            entity.getSearchRadiusMinutes(),
+            entity.getDefaultDistrict()
         );
     }
 }

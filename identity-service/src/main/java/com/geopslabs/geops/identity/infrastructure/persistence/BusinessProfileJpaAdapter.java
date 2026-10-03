@@ -9,19 +9,15 @@ import java.util.Optional;
 @Component
 public class BusinessProfileJpaAdapter implements BusinessProfileRepositoryPort {
     private final BusinessProfileJpaRepository repository;
-    private final UserJpaRepository userRepository;
 
-    public BusinessProfileJpaAdapter(BusinessProfileJpaRepository repository, UserJpaRepository userRepository) {
+    public BusinessProfileJpaAdapter(BusinessProfileJpaRepository repository) {
         this.repository = repository;
-        this.userRepository = userRepository;
     }
 
     @Override
     public BusinessProfile save(BusinessProfile businessProfile) {
-        var entity = businessProfile.getId() == null ? newEntity(businessProfile)
-                : repository.getReferenceById(businessProfile.getId());
-        BusinessProfilePersistenceMapper.copyToEntity(businessProfile, entity);
-        return BusinessProfilePersistenceMapper.toDomain(repository.save(entity));
+        var saved = repository.save(BusinessProfilePersistenceMapper.toEntity(businessProfile));
+        return BusinessProfilePersistenceMapper.toDomain(saved);
     }
 
     @Override
@@ -32,9 +28,5 @@ public class BusinessProfileJpaAdapter implements BusinessProfileRepositoryPort 
     @Override
     public boolean existsByUserId(Long userId) {
         return repository.existsByUserId(userId);
-    }
-
-    private BusinessProfileJpaEntity newEntity(BusinessProfile businessProfile) {
-        return new BusinessProfileJpaEntity(userRepository.getReferenceById(businessProfile.getUserId()));
     }
 }

@@ -93,7 +93,7 @@ public class AuthenticationController {
         var token = tokenService.generateToken(user.getEmail());
         var authResource = new AuthenticationResource(
             user.getId(),
-            user.getName(),
+            user.getFullName(),
             user.getEmail(),
             user.getPhone(),
             user.getRole(),
@@ -128,7 +128,7 @@ public class AuthenticationController {
 
         var user = userOptional.get();
 
-        if (!hashingService.matches(resource.password(), user.getPassword())) {
+        if (!hashingService.matches(resource.password(), user.getPasswordHash())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
@@ -136,7 +136,7 @@ public class AuthenticationController {
 
         var authResource = new AuthenticationResource(
             user.getId(),
-            user.getName(),
+            user.getFullName(),
             user.getEmail(),
             user.getPhone(),
             user.getRole(),

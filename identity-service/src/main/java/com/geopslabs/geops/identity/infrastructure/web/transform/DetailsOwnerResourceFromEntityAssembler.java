@@ -10,13 +10,13 @@ public class DetailsOwnerResourceFromEntityAssembler {
             entity.getUserId(),
             entity.getBusinessName(),
             entity.getBusinessType(),
-            entity.getTaxId(),
-            entity.getWebsite(),
-            entity.getDescription(),
+            entity.getRuc(),
             entity.getAddress(),
-            entity.getHorarioAtencion(),
-            entity.getCreatedAt(),
-            entity.getUpdatedAt()
+            entity.getLatitude(),
+            entity.getLongitude(),
+            entity.getOpeningHours(),
+            entity.getAccountStatus().name(),
+            entity.getVerificationStatus().name()
         );
     }
 }
