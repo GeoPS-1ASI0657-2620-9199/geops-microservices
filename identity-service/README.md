@@ -56,6 +56,22 @@ PostgreSQL en Testcontainers.
 | US22 Registrar un negocio | `US22-register-business.feature` | 4 |
 | US23 Iniciar sesión como negocio | `US23-log-in-as-business.feature` | 1 |
 
+## Llaves de firma
+
+Identity firma el token con un par RSA de 2048 bits que nunca se sube al repositorio
+(`platform/keys/` y `*.pem` están en `.gitignore`). La llave privada va en PKCS#8 y la pública en
+X.509, que son los formatos que lee `RsaKeyProvider`. Se generan una vez desde la raíz del repo:
+
+| Git Bash | PowerShell |
+|---|---|
+| `mkdir -p platform/keys` | `New-Item -ItemType Directory -Force platform\keys` |
+| `openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out platform/keys/jwt-private.pem` | `& "C:\Program Files\Git\usr\bin\openssl.exe" genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out platform\keys\jwt-private.pem` |
+| `openssl pkey -in platform/keys/jwt-private.pem -pubout -out platform/keys/jwt-public.pem` | `& "C:\Program Files\Git\usr\bin\openssl.exe" pkey -in platform\keys\jwt-private.pem -pubout -out platform\keys\jwt-public.pem` |
+
+Con `docker compose` el servicio las lee de `/run/keys`. Al correrlo con el wrapper, en
+`platform/.env` van `JWT_PRIVATE_KEY_PATH=../platform/keys/jwt-private.pem` y
+`JWT_PUBLIC_KEY_PATH=../platform/keys/jwt-public.pem`.
+
 ## Ejecución local
 
 Con la infraestructura de `platform/` levantada:
