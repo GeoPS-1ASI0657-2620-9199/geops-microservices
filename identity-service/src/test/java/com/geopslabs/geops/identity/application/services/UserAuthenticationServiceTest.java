@@ -1,11 +1,15 @@
 package com.geopslabs.geops.identity.application.services;
 
 import com.geopslabs.geops.identity.application.usecases.LogInCommand;
+import com.geopslabs.geops.identity.domain.models.BusinessProfile;
 import com.geopslabs.geops.identity.domain.models.Email;
+import com.geopslabs.geops.identity.domain.models.GeoPoint;
 import com.geopslabs.geops.identity.domain.models.InvalidCredentialsException;
 import com.geopslabs.geops.identity.domain.models.IssuedToken;
 import com.geopslabs.geops.identity.domain.models.Role;
+import com.geopslabs.geops.identity.domain.models.Ruc;
 import com.geopslabs.geops.identity.domain.models.User;
+import com.geopslabs.geops.identity.domain.ports.BusinessProfileRepositoryPort;
 import com.geopslabs.geops.identity.domain.ports.PasswordHasherPort;
 import com.geopslabs.geops.identity.domain.ports.TokenIssuerPort;
 import com.geopslabs.geops.identity.domain.ports.UserRepositoryPort;
@@ -22,6 +26,7 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -44,9 +49,14 @@ class UserAuthenticationServiceTest {
     private static final String PASSWORD_HASH = "$2a$10$stored";
     private static final String FILLER_HASH = "$2a$10$filler";
     private static final String TOKEN = "header.payload.signature";
+    private static final Long OWNER_ID = 42L;
+    private static final Long BUSINESS_ID = 7L;
+    private static final String OWNER_EMAIL = "rosa.quispe@ejemplo.pe";
 
     @Mock
     private UserRepositoryPort userRepository;
+    @Mock
+    private BusinessProfileRepositoryPort businessProfileRepository;
     @Mock
     private PasswordHasherPort passwordHasher;
     @Mock
@@ -57,7 +67,7 @@ class UserAuthenticationServiceTest {
     @BeforeEach
     void setUp() {
         when(passwordHasher.encode(anyString())).thenReturn(FILLER_HASH);
-        service = new UserAuthenticationService(userRepository, passwordHasher, tokenIssuer,
+        service = new UserAuthenticationService(userRepository, businessProfileRepository, passwordHasher, tokenIssuer,
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
@@ -66,13 +76,42 @@ class UserAuthenticationServiceTest {
         var user = consumer(NO_FAILED_ATTEMPTS, null);
         givenStoredUser(user);
         when(passwordHasher.matches(PASSWORD, PASSWORD_HASH)).thenReturn(true);
-        when(tokenIssuer.issue(user, USER_ID)).thenReturn(new IssuedToken(TOKEN, TOKEN_LIFETIME));
+        when(tokenIssuer.issue(user, null)).thenReturn(new IssuedToken(TOKEN, TOKEN_LIFETIME));
 
         var result = service.logIn(new LogInCommand(EMAIL, PASSWORD));
 
         assertThat(result.token().value()).isEqualTo(TOKEN);
         assertThat(result.role()).isEqualTo(Role.CONSUMER);
         assertThat(result.consumerId()).isEqualTo(USER_ID);
+        assertThat(result.businessId()).isNull();
+        verify(businessProfileRepository, never()).findByUserId(any());
+    }
+
+    @Test
+    void issuesTokenWithBusinessIdForBusinessOwner() {
+        var owner = businessOwner();
+        when(userRepository.findByEmail(OWNER_EMAIL)).thenReturn(Optional.of(owner));
+        when(passwordHasher.matches(PASSWORD, PASSWORD_HASH)).thenReturn(true);
+        when(businessProfileRepository.findByUserId(OWNER_ID)).thenReturn(Optional.of(businessProfile()));
+        when(tokenIssuer.issue(owner, BUSINESS_ID)).thenReturn(new IssuedToken(TOKEN, TOKEN_LIFETIME));
+
+        var result = service.logIn(new LogInCommand(OWNER_EMAIL, PASSWORD));
+
+        assertThat(result.token().value()).isEqualTo(TOKEN);
+        assertThat(result.role()).isEqualTo(Role.BUSINESS_OWNER);
+        assertThat(result.businessId()).isEqualTo(BUSINESS_ID);
+        assertThat(result.consumerId()).isNull();
+    }
+
+    @Test
+    void refusesToIssueTokenForBusinessOwnerWithoutBusinessProfile() {
+        when(userRepository.findByEmail(OWNER_EMAIL)).thenReturn(Optional.of(businessOwner()));
+        when(passwordHasher.matches(PASSWORD, PASSWORD_HASH)).thenReturn(true);
+        when(businessProfileRepository.findByUserId(OWNER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.logIn(new LogInCommand(OWNER_EMAIL, PASSWORD)))
+                .isInstanceOf(IllegalStateException.class);
+        verify(tokenIssuer, never()).issue(any(), any());
     }
 
     @Test
@@ -150,6 +189,18 @@ class UserAuthenticationServiceTest {
 
     private void givenStoredUser(User user) {
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
+    }
+
+    private static User businessOwner() {
+        var data = User.register("Rosa Quispe Mamani", new Email(OWNER_EMAIL), "987654321", PASSWORD_HASH,
+                Role.BUSINESS_OWNER);
+        return new User(OWNER_ID, data, null, NO_FAILED_ATTEMPTS, null, NOW);
+    }
+
+    private static BusinessProfile businessProfile() {
+        var data = BusinessProfile.register("Bodega Doña Rosa", "Bodega", new Ruc("10456789019"),
+                "Jr. Huánuco 1250, La Victoria", new GeoPoint(-12.0681, -77.0350), "Lun-Sáb 07:00-22:00");
+        return new BusinessProfile(BUSINESS_ID, OWNER_ID, data, data.getAccountStatus(), data.getVerificationStatus());
     }
 
     private static User consumer(int failedAttempts, Instant lockedUntil) {

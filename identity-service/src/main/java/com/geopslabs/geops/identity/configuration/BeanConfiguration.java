@@ -36,9 +36,11 @@ public class BeanConfiguration {
     }
 
     @Bean
-    public LogInUseCase logInUseCase(UserRepositoryPort userRepository, PasswordHasherPort passwordHasher,
-                                     TokenIssuerPort tokenIssuer, Clock clock) {
-        return new UserAuthenticationService(userRepository, passwordHasher, tokenIssuer, clock);
+    public LogInUseCase logInUseCase(UserRepositoryPort userRepository,
+                                     BusinessProfileRepositoryPort businessProfileRepository,
+                                     PasswordHasherPort passwordHasher, TokenIssuerPort tokenIssuer, Clock clock) {
+        return new UserAuthenticationService(userRepository, businessProfileRepository, passwordHasher, tokenIssuer,
+                clock);
     }
 
     @Bean

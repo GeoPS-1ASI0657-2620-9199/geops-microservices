@@ -27,6 +27,8 @@ class RsaTokenIssuerAdapterTest {
     private static final String ISSUER = "geops-identity";
     private static final String AUDIENCE = "geops-api";
     private static final Long USER_ID = 41L;
+    private static final Long OWNER_ID = 42L;
+    private static final Long BUSINESS_ID = 7L;
 
     private final JwtProperties properties =
             new JwtProperties(TestKeys.privateKeyPath(), TestKeys.publicKeyPath(), ISSUER, AUDIENCE);
@@ -35,7 +37,7 @@ class RsaTokenIssuerAdapterTest {
 
     @Test
     void signsWithRs256AndThePublishedKid() throws ParseException, JOSEException {
-        var jwt = SignedJWT.parse(adapter.issue(consumer(), USER_ID).value());
+        var jwt = SignedJWT.parse(adapter.issue(consumer(), null).value());
         var publishedKey = JWKSet.parse(adapter.publicKeys()).getKeyByKeyId(jwt.getHeader().getKeyID());
 
         assertThat(jwt.getHeader().getAlgorithm()).isEqualTo(JWSAlgorithm.RS256);
@@ -44,7 +46,7 @@ class RsaTokenIssuerAdapterTest {
 
     @Test
     void carriesTheClaimsAgreedWithTheGateway() throws ParseException {
-        var issued = adapter.issue(consumer(), USER_ID);
+        var issued = adapter.issue(consumer(), null);
         var claims = SignedJWT.parse(issued.value()).getJWTClaimsSet();
 
         assertThat(claims.getIssuer()).isEqualTo(ISSUER);
@@ -55,6 +57,23 @@ class RsaTokenIssuerAdapterTest {
         assertThat(claims.getIssueTime()).isEqualTo(Date.from(NOW));
         assertThat(claims.getExpirationTime()).isEqualTo(Date.from(NOW.plus(TOKEN_LIFETIME)));
         assertThat(issued.lifetime()).isEqualTo(TOKEN_LIFETIME);
+    }
+
+    @Test
+    void carriesRoleAndBusinessIdForBusinessOwner() throws ParseException {
+        var claims = SignedJWT.parse(adapter.issue(businessOwner(), BUSINESS_ID).value()).getJWTClaimsSet();
+
+        assertThat(claims.getClaims().keySet())
+                .containsExactlyInAnyOrder("iss", "aud", "sub", "roles", "businessId", "iat", "exp");
+        assertThat(claims.getSubject()).isEqualTo(String.valueOf(OWNER_ID));
+        assertThat(claims.getStringListClaim("roles")).containsExactly("ROLE_BUSINESS_OWNER");
+        assertThat(claims.getLongClaim("businessId")).isEqualTo(BUSINESS_ID);
+    }
+
+    private static User businessOwner() {
+        var data = User.register("Rosa Quispe Mamani", new Email("rosa.quispe@ejemplo.pe"), "987654321",
+                "$2a$10$stored", Role.BUSINESS_OWNER);
+        return new User(OWNER_ID, data, null, 0, null, NOW);
     }
 
     private static User consumer() {
