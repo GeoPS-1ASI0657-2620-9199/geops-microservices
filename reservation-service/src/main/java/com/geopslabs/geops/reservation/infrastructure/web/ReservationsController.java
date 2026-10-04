@@ -1,237 +1,82 @@
 package com.geopslabs.geops.reservation.infrastructure.web;
 
-import com.geopslabs.geops.reservation.domain.models.queries.GetReservationsByConsumerIdQuery;
-import com.geopslabs.geops.reservation.domain.models.queries.GetReservationByCodeQuery;
-import com.geopslabs.geops.reservation.domain.models.queries.GetReservationByIdQuery;
 import com.geopslabs.geops.reservation.application.usecases.ReservationCommandUseCase;
 import com.geopslabs.geops.reservation.application.usecases.ReservationQueryUseCase;
-import com.geopslabs.geops.reservation.domain.models.commands.UpdateReservationCommand;
+import com.geopslabs.geops.reservation.domain.models.queries.GetReservationByCodeQuery;
+import com.geopslabs.geops.reservation.domain.models.queries.GetReservationByIdQuery;
+import com.geopslabs.geops.reservation.domain.models.queries.GetReservationsByConsumerIdQuery;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
-@Tag(name = "Reservations", description = "Reservation operations and management")
+@Tag(name = "Reservations", description = "Reservations of offers paid at the business")
 @RestController
 @RequestMapping(value = "/api/v1/reservations", produces = APPLICATION_JSON_VALUE)
 public class ReservationsController {
-
     private final ReservationCommandUseCase reservationCommandService;
     private final ReservationQueryUseCase reservationQueryService;
 
     public ReservationsController(ReservationCommandUseCase reservationCommandService,
-                           ReservationQueryUseCase reservationQueryService) {
+                                  ReservationQueryUseCase reservationQueryService) {
         this.reservationCommandService = reservationCommandService;
         this.reservationQueryService = reservationQueryService;
     }
 
-    @Operation(summary = "Create new reservation")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Reservation created successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid request data"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Operation(summary = "Create a reservation")
     @PostMapping
     public ResponseEntity<ReservationResponse> create(@RequestBody CreateReservationRequest resource) {
         var command = CreateReservationCommandAssembler.toCommandFromResource(resource);
         var reservation = reservationCommandService.handle(command);
-
-        if (reservation.isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        var reservationResource = ReservationResponseAssembler.toResourceFromEntity(reservation.get());
-        return new ResponseEntity<>(reservationResource, CREATED);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ReservationResponseAssembler.toResourceFromEntity(reservation));
     }
 
-    @Operation(summary = "Get reservation by ID")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Reservation found"),
-        @ApiResponse(responseCode = "404", description = "Reservation not found"),
-        @ApiResponse(responseCode = "400", description = "Invalid reservation ID")
-    })
+    @Operation(summary = "Get a reservation by id")
     @GetMapping("/{id}")
-    public ResponseEntity<ReservationResponse> getById(
-            @Parameter(description = "Reservation unique identifier") @PathVariable String id) {
-        try {
-            Long reservationId = Long.parseLong(id);
-            var query = new GetReservationByIdQuery(reservationId);
-            var reservation = reservationQueryService.handle(query);
-
-            if (reservation.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-
-            var reservationResource = ReservationResponseAssembler.toResourceFromEntity(reservation.get());
-            return ResponseEntity.ok(reservationResource);
-        } catch (NumberFormatException e) {
-            return ResponseEntity.badRequest().build();
-        }
+    public ReservationResponse getById(@PathVariable Long id) {
+        var reservation = reservationQueryService.handle(new GetReservationByIdQuery(id));
+        return ReservationResponseAssembler.toResourceFromEntity(reservation);
     }
 
-    @Operation(summary = "Get all reservations with optional filtering and relations")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Reservations retrieved successfully")
-    })
+    @Operation(summary = "List reservations, optionally of one consumer")
     @GetMapping
-    public ResponseEntity<List<ReservationResponse>> getAll(
-            @Parameter(description = "Optional user ID filter") @RequestParam(required = false) String consumerId,
-            @Parameter(description = "Relationships to expand (comma-separated)") @RequestParam(name = "_expand", required = false) String expand,
-            @Parameter(description = "Relationships to embed (comma-separated)") @RequestParam(name = "_embed", required = false) String embed) {
-
-        List<com.geopslabs.geops.reservation.domain.models.Reservation> reservations;
-
-        if (consumerId != null && !consumerId.isBlank()) {
-            var query = new GetReservationsByConsumerIdQuery(Long.valueOf(consumerId));
-            reservations = reservationQueryService.handle(query);
-        } else {
-            reservations = reservationQueryService.getAllReservations();
-        }
-
-        var reservationResources = reservations.stream()
-                .map(ReservationResponseAssembler::toResourceFromEntity)
-                .toList();
-
-        return ResponseEntity.ok(reservationResources);
+    public List<ReservationResponse> getAll(@RequestParam(required = false) Long consumerId) {
+        var reservations = consumerId == null
+                ? reservationQueryService.getAllReservations()
+                : reservationQueryService.handle(new GetReservationsByConsumerIdQuery(consumerId));
+        return reservations.stream().map(ReservationResponseAssembler::toResourceFromEntity).toList();
     }
 
-    @Operation(summary = "Update reservation")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Reservation updated successfully"),
-        @ApiResponse(responseCode = "404", description = "Reservation not found"),
-        @ApiResponse(responseCode = "400", description = "Invalid request data")
-    })
-    @PutMapping("/{id}")
-    public ResponseEntity<ReservationResponse> update(
-            @Parameter(description = "Reservation unique identifier") @PathVariable String id,
-            @RequestBody CreateReservationRequest resource) {
-        try {
-            Long reservationId = Long.parseLong(id);
-
-            var existingReservationQuery = new GetReservationByIdQuery(reservationId);
-            var existingReservation = reservationQueryService.handle(existingReservationQuery);
-
-            if (existingReservation.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-
-            var updateCommand = new UpdateReservationCommand(
-                reservationId, resource.offerId(),
-                resource.code(), resource.expiresAt());
-            var reservation = reservationCommandService.handle(updateCommand);
-
-            if (reservation.isEmpty()) {
-                return ResponseEntity.badRequest().build();
-            }
-
-            var reservationResource = ReservationResponseAssembler.toResourceFromEntity(reservation.get());
-            return ResponseEntity.ok(reservationResource);
-        } catch (NumberFormatException e) {
-            return ResponseEntity.badRequest().build();
-        }
-    }
-
-    @Operation(summary = "Delete reservation")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "204", description = "Reservation deleted successfully"),
-        @ApiResponse(responseCode = "404", description = "Reservation not found"),
-        @ApiResponse(responseCode = "400", description = "Invalid reservation ID")
-    })
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(
-            @Parameter(description = "Reservation unique identifier") @PathVariable String id) {
-        try {
-            Long reservationId = Long.parseLong(id);
-
-            var deleted = reservationCommandService.deleteReservation(reservationId);
-
-            if (deleted) {
-                return ResponseEntity.noContent().build();
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (NumberFormatException e) {
-            return ResponseEntity.badRequest().build();
-        }
-    }
-
-    @Operation(summary = "Get reservations by user ID with optional relations")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "User reservations retrieved successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid user ID")
-    })
+    @Operation(summary = "List the reservations of a consumer")
     @GetMapping("/user/{consumerId}")
-    public ResponseEntity<List<ReservationResponse>> getReservationsByUser(
-            @Parameter(description = "User unique identifier") @PathVariable String consumerId,
-            @Parameter(description = "Relationships to expand") @RequestParam(name = "_expand", required = false) String expand,
-            @Parameter(description = "Relationships to embed") @RequestParam(name = "_embed", required = false) String embed) {
-
-        var query = new GetReservationsByConsumerIdQuery(Long.valueOf(consumerId));
-        var reservations = reservationQueryService.handle(query);
-        var reservationResources = reservations.stream()
-                .map(ReservationResponseAssembler::toResourceFromEntity)
-                .toList();
-
-        return ResponseEntity.ok(reservationResources);
+    public List<ReservationResponse> getByConsumer(@PathVariable Long consumerId) {
+        var reservations = reservationQueryService.handle(new GetReservationsByConsumerIdQuery(consumerId));
+        return reservations.stream().map(ReservationResponseAssembler::toResourceFromEntity).toList();
     }
 
-    @Operation(summary = "Get reservation by redemption code")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Reservation found"),
-        @ApiResponse(responseCode = "404", description = "Reservation not found"),
-        @ApiResponse(responseCode = "400", description = "Invalid reservation code")
-    })
+    @Operation(summary = "Get a reservation by its code")
     @GetMapping("/code/{code}")
-    public ResponseEntity<ReservationResponse> getReservationByCode(
-            @Parameter(description = "Reservation redemption code") @PathVariable String code) {
-
-        var query = new GetReservationByCodeQuery(code);
-        var reservation = reservationQueryService.handle(query);
-
-        if (reservation.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        var reservationResource = ReservationResponseAssembler.toResourceFromEntity(reservation.get());
-        return ResponseEntity.ok(reservationResource);
+    public ReservationResponse getByCode(@PathVariable String code) {
+        var reservation = reservationQueryService.handle(new GetReservationByCodeQuery(code));
+        return ReservationResponseAssembler.toResourceFromEntity(reservation);
     }
 
-    @Operation(summary = "Get valid reservations by user ID")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Valid user reservations retrieved successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid user ID")
-    })
+    @Operation(summary = "List the reservations of a consumer that have not expired")
     @GetMapping("/user/{consumerId}/valid")
-    public ResponseEntity<List<ReservationResponse>> getValidReservationsByUser(
-            @Parameter(description = "User unique identifier") @PathVariable Long consumerId) {
-
+    public List<ReservationResponse> getValidByConsumer(@PathVariable Long consumerId) {
         var reservations = reservationQueryService.getValidReservationsByConsumerId(consumerId);
-        var reservationResources = reservations.stream()
-                .map(ReservationResponseAssembler::toResourceFromEntity)
-                .toList();
-
-        return ResponseEntity.ok(reservationResources);
-    }
-
-    @Operation(summary = "Get expired reservations")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Expired reservations retrieved successfully")
-    })
-    @GetMapping("/expired")
-    public ResponseEntity<List<ReservationResponse>> getExpiredReservations() {
-        var reservations = reservationQueryService.getExpiredReservations();
-        var reservationResources = reservations.stream()
-                .map(ReservationResponseAssembler::toResourceFromEntity)
-                .toList();
-
-        return ResponseEntity.ok(reservationResources);
+        return reservations.stream().map(ReservationResponseAssembler::toResourceFromEntity).toList();
     }
 }

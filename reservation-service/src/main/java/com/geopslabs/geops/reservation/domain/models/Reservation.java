@@ -1,7 +1,6 @@
 package com.geopslabs.geops.reservation.domain.models;
 
 import com.geopslabs.geops.reservation.domain.models.commands.CreateReservationCommand;
-import com.geopslabs.geops.reservation.domain.models.commands.UpdateReservationCommand;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -47,29 +46,6 @@ public class Reservation {
 
     public LocalDateTime getExpiresAt() {
         return expiresAt;
-    }
-
-    public void updateReservation(UpdateReservationCommand command) {
-        if (command.offerId() != null) {
-            this.offerId = command.offerId();
-        }
-        if (command.code() != null) {
-            this.code = command.code();
-        }
-        if (command.expiresAt() != null) {
-            this.expiresAt = toUtc(command.expiresAt());
-        }
-    }
-
-    public boolean isExpired() {
-        if (this.expiresAt == null) {
-            return false;
-        }
-        return this.expiresAt.isBefore(LocalDateTime.now(ZoneOffset.UTC));
-    }
-
-    public boolean isValid() {
-        return !isExpired() && this.code != null && !this.code.isBlank();
     }
 
     private static LocalDateTime toUtc(String instant) {

@@ -21,9 +21,6 @@ public interface ReservationJpaRepository extends JpaRepository<ReservationJpaEn
     List<ReservationJpaEntity> findValidReservationsByConsumerId(@Param("consumerId") Long consumerId,
                                          @Param("currentTime") Instant currentTime);
 
-    @Query("SELECT c FROM ReservationJpaEntity c WHERE c.expiresAt IS NOT NULL AND c.expiresAt <= :currentTime")
-    List<ReservationJpaEntity> findExpiredReservations(@Param("currentTime") Instant currentTime);
-
     boolean existsByCode(String code);
 
 }

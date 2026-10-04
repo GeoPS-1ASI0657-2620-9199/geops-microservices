@@ -50,18 +50,8 @@ public class ReservationJpaAdapter implements ReservationRepositoryPort {
     }
 
     @Override
-    public List<Reservation> findExpiredReservations(LocalDateTime currentTime) {
-        return toDomain(repository.findExpiredReservations(currentTime.toInstant(ZoneOffset.UTC)));
-    }
-
-    @Override
     public boolean existsByCode(String code) {
         return repository.existsByCode(code);
-    }
-
-    @Override
-    public void deleteById(Long id) {
-        repository.deleteById(id);
     }
 
     private static List<Reservation> toDomain(List<ReservationJpaEntity> entities) {

@@ -19,9 +19,6 @@ public interface ReservationRepositoryPort {
 
     List<Reservation> findValidReservationsByConsumerId(Long consumerId, LocalDateTime currentTime);
 
-    List<Reservation> findExpiredReservations(LocalDateTime currentTime);
-
     boolean existsByCode(String code);
 
-    void deleteById(Long id);
 }
