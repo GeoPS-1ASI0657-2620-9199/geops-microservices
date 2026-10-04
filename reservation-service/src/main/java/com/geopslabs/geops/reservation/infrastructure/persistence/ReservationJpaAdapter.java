@@ -4,6 +4,8 @@ import com.geopslabs.geops.reservation.domain.models.Reservation;
 import com.geopslabs.geops.reservation.domain.ports.ReservationRepositoryPort;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,38 +45,13 @@ public class ReservationJpaAdapter implements ReservationRepositoryPort {
     }
 
     @Override
-    public List<Reservation> findByPaymentId(Long paymentId) {
-        return toDomain(repository.findByPaymentId(paymentId));
+    public List<Reservation> findValidReservationsByConsumerId(Long consumerId, LocalDateTime currentTime) {
+        return toDomain(repository.findValidReservationsByConsumerId(consumerId, currentTime.toInstant(ZoneOffset.UTC)));
     }
 
     @Override
-    public List<Reservation> findByPaymentCode(String paymentCode) {
-        return toDomain(repository.findByPaymentCode(paymentCode));
-    }
-
-    @Override
-    public List<Reservation> findByOfferId(Long offerId) {
-        return toDomain(repository.findByOfferId(offerId));
-    }
-
-    @Override
-    public List<Reservation> findByProductType(String productType) {
-        return toDomain(repository.findByProductType(productType));
-    }
-
-    @Override
-    public List<Reservation> findValidReservationsByConsumerId(Long consumerId, String currentTime) {
-        return toDomain(repository.findValidReservationsByConsumerId(consumerId, currentTime));
-    }
-
-    @Override
-    public List<Reservation> findExpiredReservations(String currentTime) {
-        return toDomain(repository.findExpiredReservations(currentTime));
-    }
-
-    @Override
-    public long countByConsumerId(Long consumerId) {
-        return repository.countByConsumerId(consumerId);
+    public List<Reservation> findExpiredReservations(LocalDateTime currentTime) {
+        return toDomain(repository.findExpiredReservations(currentTime.toInstant(ZoneOffset.UTC)));
     }
 
     @Override

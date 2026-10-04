@@ -2,6 +2,7 @@ package com.geopslabs.geops.reservation.domain.ports;
 
 import com.geopslabs.geops.reservation.domain.models.Reservation;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,19 +17,9 @@ public interface ReservationRepositoryPort {
 
     List<Reservation> findByConsumerId(Long consumerId);
 
-    List<Reservation> findByPaymentId(Long paymentId);
+    List<Reservation> findValidReservationsByConsumerId(Long consumerId, LocalDateTime currentTime);
 
-    List<Reservation> findByPaymentCode(String paymentCode);
-
-    List<Reservation> findByOfferId(Long offerId);
-
-    List<Reservation> findByProductType(String productType);
-
-    List<Reservation> findValidReservationsByConsumerId(Long consumerId, String currentTime);
-
-    List<Reservation> findExpiredReservations(String currentTime);
-
-    long countByConsumerId(Long consumerId);
+    List<Reservation> findExpiredReservations(LocalDateTime currentTime);
 
     boolean existsByCode(String code);
 

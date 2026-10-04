@@ -3,33 +3,27 @@ package com.geopslabs.geops.reservation.domain.models;
 import com.geopslabs.geops.reservation.domain.models.commands.CreateReservationCommand;
 import com.geopslabs.geops.reservation.domain.models.commands.UpdateReservationCommand;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+
 public class Reservation {
     private Long id;
     private Long consumerId;
-    private Long paymentId;
-    private String paymentCode;
-    private String productType;
     private Long offerId;
     private String code;
-    private String expiresAt;
+    private LocalDateTime expiresAt;
 
     public Reservation(CreateReservationCommand command) {
         this.consumerId = command.consumerId();
-        this.paymentId = command.paymentId();
-        this.paymentCode = command.paymentCode();
-        this.productType = command.productType();
         this.offerId = command.offerId();
         this.code = command.code();
-        this.expiresAt = command.expiresAt();
+        this.expiresAt = toUtc(command.expiresAt());
     }
 
-    public Reservation(Long id, Long consumerId, Long paymentId, String paymentCode, String productType,
-                       Long offerId, String code, String expiresAt) {
+    public Reservation(Long id, Long consumerId, Long offerId, String code, LocalDateTime expiresAt) {
         this.id = id;
         this.consumerId = consumerId;
-        this.paymentId = paymentId;
-        this.paymentCode = paymentCode;
-        this.productType = productType;
         this.offerId = offerId;
         this.code = code;
         this.expiresAt = expiresAt;
@@ -43,18 +37,6 @@ public class Reservation {
         return consumerId;
     }
 
-    public Long getPaymentId() {
-        return paymentId;
-    }
-
-    public String getPaymentCode() {
-        return paymentCode;
-    }
-
-    public String getProductType() {
-        return productType;
-    }
-
     public Long getOfferId() {
         return offerId;
     }
@@ -63,14 +45,11 @@ public class Reservation {
         return code;
     }
 
-    public String getExpiresAt() {
+    public LocalDateTime getExpiresAt() {
         return expiresAt;
     }
 
     public void updateReservation(UpdateReservationCommand command) {
-        if (command.productType() != null) {
-            this.productType = command.productType();
-        }
         if (command.offerId() != null) {
             this.offerId = command.offerId();
         }
@@ -78,7 +57,7 @@ public class Reservation {
             this.code = command.code();
         }
         if (command.expiresAt() != null) {
-            this.expiresAt = command.expiresAt();
+            this.expiresAt = toUtc(command.expiresAt());
         }
     }
 
@@ -86,10 +65,14 @@ public class Reservation {
         if (this.expiresAt == null) {
             return false;
         }
-        return this.expiresAt.compareTo(java.time.Instant.now().toString()) < 0;
+        return this.expiresAt.isBefore(LocalDateTime.now(ZoneOffset.UTC));
     }
 
     public boolean isValid() {
         return !isExpired() && this.code != null && !this.code.isBlank();
+    }
+
+    private static LocalDateTime toUtc(String instant) {
+        return instant == null ? null : LocalDateTime.ofInstant(Instant.parse(instant), ZoneOffset.UTC);
     }
 }
