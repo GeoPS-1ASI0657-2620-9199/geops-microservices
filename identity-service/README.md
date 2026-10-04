@@ -51,10 +51,10 @@ PostgreSQL en Testcontainers.
 
 | Historia | Archivo | Escenarios |
 |---|---|---|
-| US20 Registrar usuario consumidor | `US20-registrar-usuario-consumidor.feature` | 2 |
-| US21 Iniciar sesión como usuario | `US21-iniciar-sesion-como-usuario.feature` | 3 |
-| US22 Registrar un negocio | `US22-registrar-un-negocio.feature` | 4 |
-| US23 Iniciar sesión como negocio | `US23-iniciar-sesion-como-negocio.feature` | 1 |
+| US20 Registrar usuario consumidor | `US20-register-consumer-account.feature` | 2 |
+| US21 Iniciar sesión como usuario | `US21-log-in-as-user.feature` | 3 |
+| US22 Registrar un negocio | `US22-register-business.feature` | 4 |
+| US23 Iniciar sesión como negocio | `US23-log-in-as-business.feature` | 1 |
 
 ## Ejecución local
 

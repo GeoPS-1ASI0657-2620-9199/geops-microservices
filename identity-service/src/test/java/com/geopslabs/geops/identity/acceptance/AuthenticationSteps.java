@@ -18,9 +18,9 @@ import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import io.cucumber.java.es.Cuando;
-import io.cucumber.java.es.Dado;
-import io.cucumber.java.es.Y;
+import io.cucumber.java.en.And;
+import io.cucumber.java.en.Given;
+import io.cucumber.java.en.When;
 
 import java.text.ParseException;
 import java.time.Duration;
@@ -62,14 +62,14 @@ public class AuthenticationSteps {
         this.passwordHasher = passwordHasher;
     }
 
-    @Dado("que existe el consumidor {string} con contraseña {string}")
+    @Given("a consumer {string} exists with password {string}")
     public void aConsumerExists(String email, String password) {
         var user = userRepository.save(User.register(CONSUMER_NAME, new Email(email), CONSUMER_PHONE,
                 passwordHasher.encode(password), Role.CONSUMER));
         consumerProfileRepository.save(ConsumerProfile.createFor(user.getId()));
     }
 
-    @Dado("que existe el negocio {string} del dueño {string} con contraseña {string}")
+    @Given("the business {string} owned by {string} exists with password {string}")
     public void aBusinessExists(String businessName, String email, String password) {
         var owner = userRepository.save(User.register(OWNER_NAME, new Email(email), OWNER_PHONE,
                 passwordHasher.encode(password), Role.BUSINESS_OWNER));
@@ -78,12 +78,12 @@ public class AuthenticationSteps {
         businessIds.put(businessName, businessProfileRepository.save(profile.ownedBy(owner.getId())).getId());
     }
 
-    @Cuando("inicia sesión con {string} y {string}")
+    @When("they log in with {string} and {string}")
     public void logsIn(String email, String password) {
         http.post(LOGIN_PATH, Map.of("email", email, "password", password));
     }
 
-    @Y("la firma del token se valida con la clave publicada en {string}")
+    @And("the token signature is validated with the key published at {string}")
     public void theTokenSignatureIsValidatedWithThePublishedKey(String jwksPath)
             throws JsonProcessingException, ParseException, JOSEException {
         var token = SignedJWT.parse(http.field(ACCESS_TOKEN));
@@ -95,24 +95,24 @@ public class AuthenticationSteps {
         assertThat(token.verify(new RSASSAVerifier(publishedKey.toRSAKey()))).isTrue();
     }
 
-    @Y("el campo {string} es el id del negocio {string}")
+    @And("the field {string} is the id of the business {string}")
     public void theFieldIsTheBusinessId(String field, String businessName) throws JsonProcessingException {
         assertThat(http.field(field)).isEqualTo(String.valueOf(businessIds.get(businessName)));
     }
 
-    @Y("el token lleva el claim {string} con el id del negocio {string}")
+    @And("the token carries the claim {string} with the id of the business {string}")
     public void theTokenCarriesTheBusinessId(String claim, String businessName)
             throws JsonProcessingException, ParseException {
         assertThat(tokenClaims().getLongClaim(claim)).isEqualTo(businessIds.get(businessName));
     }
 
-    @Y("el token lleva el claim {string} con el id de la cuenta {string}")
+    @And("the token carries the claim {string} with the id of the account {string}")
     public void theTokenCarriesTheUserId(String claim, String email) throws JsonProcessingException, ParseException {
         var user = userRepository.findByEmail(new Email(email).value()).orElseThrow();
         assertThat(tokenClaims().getStringClaim(claim)).isEqualTo(String.valueOf(user.getId()));
     }
 
-    @Y("el token lleva el claim {string} con {string}")
+    @And("the token carries the claim {string} with {string}")
     public void theTokenCarriesTheClaim(String claim, String value) throws JsonProcessingException, ParseException {
         var actual = tokenClaims().getClaim(claim);
         if (actual instanceof List<?> values) {
@@ -122,17 +122,17 @@ public class AuthenticationSteps {
         assertThat(actual).isEqualTo(value);
     }
 
-    @Y("el token lleva solo los claims {string}")
+    @And("the token carries only the claims {string}")
     public void theTokenCarriesOnlyTheClaims(String claims) throws JsonProcessingException, ParseException {
         assertThat(tokenClaims().getClaims().keySet()).containsExactlyInAnyOrderElementsOf(namesIn(claims));
     }
 
-    @Y("el token no lleva los claims {string}")
+    @And("the token does not carry the claims {string}")
     public void theTokenDoesNotCarryTheClaims(String claims) throws JsonProcessingException, ParseException {
         assertThat(tokenClaims().getClaims().keySet()).doesNotContainAnyElementsOf(namesIn(claims));
     }
 
-    @Y("el token vence una hora después de emitido")
+    @And("the token expires one hour after it is issued")
     public void theTokenExpiresOneHourAfterIssue() throws JsonProcessingException, ParseException {
         var claims = tokenClaims();
         var lifetime = Duration.between(claims.getIssueTime().toInstant(), claims.getExpirationTime().toInstant());
