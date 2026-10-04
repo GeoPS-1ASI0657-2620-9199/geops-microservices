@@ -1,7 +1,5 @@
 package com.geopslabs.geops.reservation.infrastructure.web;
 
-import com.geopslabs.geops.backend.offers.interfaces.rest.resources.OfferResource;
-
 /**
  * ReservationResponse
  *
@@ -12,7 +10,7 @@ import com.geopslabs.geops.backend.offers.interfaces.rest.resources.OfferResourc
  *
  * @summary Response resource for reservation data
  * @param id The unique identifier of the reservation
- * @param userId The unique identifier of the user who owns the reservation
+ * @param consumerId The unique identifier of the user who owns the reservation
  * @param paymentId The payment identifier that generated this reservation
  * @param paymentCode The payment code generated at payment time
  * @param productType The product type copied from payment (optional)
@@ -28,16 +26,13 @@ import com.geopslabs.geops.backend.offers.interfaces.rest.resources.OfferResourc
  */
 public record ReservationResponse(
     Long id,
-    Long userId,
+    Long consumerId,
     Long paymentId,
     String paymentCode,
     String productType,
     Long offerId,
-    OfferResource offer,
     String code,
-    String expiresAt,
-    String createdAt,
-    String updatedAt
+    String expiresAt
 ) {
     // This record doesn't need validation in the compact constructor
     // as it's used for response data that should already be validated

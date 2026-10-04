@@ -6,8 +6,6 @@ import com.geopslabs.geops.reservation.domain.models.commands.CreateManyReservat
 import com.geopslabs.geops.reservation.domain.models.commands.UpdateReservationCommand;
 import com.geopslabs.geops.reservation.application.usecases.ReservationCommandUseCase;
 import com.geopslabs.geops.reservation.domain.ports.ReservationRepositoryPort;
-import com.geopslabs.geops.backend.identity.infrastructure.persistence.jpa.UserRepository;
-import com.geopslabs.geops.backend.payments.infrastructure.persistence.jpa.PaymentRepository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -29,22 +27,14 @@ import java.util.Optional;
 public class ReservationCommandService implements ReservationCommandUseCase {
 
     private final ReservationRepositoryPort reservationRepository;
-    private final UserRepository userRepository;
-    private final PaymentRepository paymentRepository;
 
     /**
      * Constructor for dependency injection
      *
      * @param reservationRepository The repository for reservation data access
-     * @param userRepository The repository for user data access
-     * @param paymentRepository The repository for payment data access
      */
-    public ReservationCommandService(ReservationRepositoryPort reservationRepository,
-                                    UserRepository userRepository,
-                                    PaymentRepository paymentRepository) {
+    public ReservationCommandService(ReservationRepositoryPort reservationRepository) {
         this.reservationRepository = reservationRepository;
-        this.userRepository = userRepository;
-        this.paymentRepository = paymentRepository;
     }
 
     /**
@@ -58,19 +48,7 @@ public class ReservationCommandService implements ReservationCommandUseCase {
                 throw new IllegalArgumentException("Reservation code already exists: " + command.code());
             }
 
-            // Fetch user and payment entities
-            var userOptional = userRepository.findById(command.userId());
-            var paymentOptional = paymentRepository.findById(command.paymentId());
-
-            if (userOptional.isEmpty()) {
-                throw new IllegalArgumentException("User not found: " + command.userId());
-            }
-            if (paymentOptional.isEmpty()) {
-                throw new IllegalArgumentException("Payment not found: " + command.paymentId());
-            }
-
-            // Create new reservation from command with entities
-            var reservation = new Reservation(command, userOptional.get(), paymentOptional.get());
+            var reservation = new Reservation(command);
 
             // Save the reservation to the repository
             var savedReservation = reservationRepository.save(reservation);
@@ -97,17 +75,9 @@ public class ReservationCommandService implements ReservationCommandUseCase {
                 try {
                     // Check if reservation code already exists
                     if (!reservationRepository.existsByCode(reservationCommand.code())) {
-                        // Fetch user and payment entities
-                        var userOptional = userRepository.findById(reservationCommand.userId());
-                        var paymentOptional = paymentRepository.findById(reservationCommand.paymentId());
-
-                        if (userOptional.isPresent() && paymentOptional.isPresent()) {
-                            var reservation = new Reservation(reservationCommand, userOptional.get(), paymentOptional.get());
-                            var savedReservation = reservationRepository.save(reservation);
-                            createdReservations.add(savedReservation);
-                        } else {
-                            System.err.println("User or Payment not found for reservation: " + reservationCommand.code());
-                        }
+                        var reservation = new Reservation(reservationCommand);
+                        var savedReservation = reservationRepository.save(reservation);
+                        createdReservations.add(savedReservation);
                     } else {
                         // Log duplicate code warning but continue processing
                         System.err.println("Skipping duplicate reservation code: " + reservationCommand.code());

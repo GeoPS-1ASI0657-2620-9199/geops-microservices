@@ -8,20 +8,20 @@ package com.geopslabs.geops.reservation.domain.models.queries;
  * and providing comprehensive reservation information for a particular user.
  *
  * @summary Query to retrieve all reservations for a specific user
- * @param userId The unique identifier of the user whose reservations to retrieve
+ * @param consumerId The unique identifier of the user whose reservations to retrieve
  *
  * @since 1.0
  * @author GeOps Labs
  */
-public record GetReservationsByConsumerIdQuery(String userId) {
+public record GetReservationsByConsumerIdQuery(Long consumerId) {
     /**
      * Compact constructor that validates the query parameters
      *
      * @throws IllegalArgumentException if validation fails
      */
     public GetReservationsByConsumerIdQuery {
-        if (userId == null || userId.isBlank()) {
-            throw new IllegalArgumentException("userId cannot be null or empty");
+        if (consumerId == null || consumerId <= 0) {
+            throw new IllegalArgumentException("consumerId cannot be null or empty");
         }
     }
 }

@@ -7,10 +7,6 @@ import com.geopslabs.geops.reservation.domain.models.queries.GetReservationsByPa
 import com.geopslabs.geops.reservation.application.usecases.ReservationCommandUseCase;
 import com.geopslabs.geops.reservation.application.usecases.ReservationQueryUseCase;
 import com.geopslabs.geops.reservation.domain.models.commands.UpdateReservationCommand;
-import com.geopslabs.geops.backend.offers.domain.services.OfferQueryService;
-import com.geopslabs.geops.backend.offers.domain.model.queries.GetOfferByIdQuery;
-import com.geopslabs.geops.backend.offers.domain.model.queries.GetOffersByIdsQuery;
-import com.geopslabs.geops.backend.offers.domain.model.aggregates.Offer;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -20,10 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
@@ -52,21 +44,17 @@ public class ReservationsController {
 
     private final ReservationCommandUseCase reservationCommandService;
     private final ReservationQueryUseCase reservationQueryService;
-    private final OfferQueryService offerQueryService;
 
     /**
      * Constructor for dependency injection
      *
      * @param reservationCommandService Service for handling reservation commands
      * @param reservationQueryService Service for handling reservation queries
-     * @param offerQueryService Service for handling offer queries (used to embed offer data)
      */
     public ReservationsController(ReservationCommandUseCase reservationCommandService,
-                           ReservationQueryUseCase reservationQueryService,
-                           OfferQueryService offerQueryService) {
+                           ReservationQueryUseCase reservationQueryService) {
         this.reservationCommandService = reservationCommandService;
         this.reservationQueryService = reservationQueryService;
-        this.offerQueryService = offerQueryService;
     }
 
     /**
@@ -93,7 +81,7 @@ public class ReservationsController {
             return ResponseEntity.badRequest().build();
         }
 
-        var reservationResource = mapWithOffer(reservation.get());
+        var reservationResource = ReservationResponseAssembler.toResourceFromEntity(reservation.get());
         return new ResponseEntity<>(reservationResource, CREATED);
     }
 
@@ -120,7 +108,7 @@ public class ReservationsController {
             var reservations = reservationCommandService.handle(command);
 
             var reservationResources = reservations.stream()
-                    .map(this::mapWithOffer)
+                    .map(ReservationResponseAssembler::toResourceFromEntity)
                     .toList();
 
             return new ResponseEntity<>(reservationResources, CREATED);
@@ -150,7 +138,7 @@ public class ReservationsController {
         var reservations = reservationCommandService.handle(command);
 
         var reservationResources = reservations.stream()
-                .map(this::mapWithOffer)
+                .map(ReservationResponseAssembler::toResourceFromEntity)
                 .toList();
 
         return new ResponseEntity<>(reservationResources, CREATED);
@@ -183,7 +171,7 @@ public class ReservationsController {
                 return ResponseEntity.notFound().build();
             }
 
-            var reservationResource = mapWithOffer(reservation.get());
+            var reservationResource = ReservationResponseAssembler.toResourceFromEntity(reservation.get());
             return ResponseEntity.ok(reservationResource);
         } catch (NumberFormatException e) {
             return ResponseEntity.badRequest().build();
@@ -197,7 +185,7 @@ public class ReservationsController {
      * Supports query parameters for filtering and relations (_expand, _embed)
      * Compatible with JSON Server style parameters used by the frontend
      *
-     * @param userId Optional user ID filter parameter
+     * @param consumerId Optional user ID filter parameter
      * @param expand Optional list of single relationships to expand (comma-separated)
      * @param embed Optional list of array relationships to embed (comma-separated)
      * @return ResponseEntity containing the list of reservations
@@ -208,24 +196,21 @@ public class ReservationsController {
     })
     @GetMapping
     public ResponseEntity<List<ReservationResponse>> getAll(
-            @Parameter(description = "Optional user ID filter") @RequestParam(required = false) String userId,
+            @Parameter(description = "Optional user ID filter") @RequestParam(required = false) String consumerId,
             @Parameter(description = "Relationships to expand (comma-separated)") @RequestParam(name = "_expand", required = false) String expand,
             @Parameter(description = "Relationships to embed (comma-separated)") @RequestParam(name = "_embed", required = false) String embed) {
 
         List<com.geopslabs.geops.reservation.domain.models.Reservation> reservations;
 
-        if (userId != null && !userId.isBlank()) {
-            var query = new GetReservationsByConsumerIdQuery(userId);
+        if (consumerId != null && !consumerId.isBlank()) {
+            var query = new GetReservationsByConsumerIdQuery(Long.valueOf(consumerId));
             reservations = reservationQueryService.handle(query);
         } else {
             reservations = reservationQueryService.getAllReservations();
         }
 
-        // Batch fetch offers to avoid N+1 queries
-        var offerMap = batchFetchOffersForReservations(reservations);
-
         var reservationResources = reservations.stream()
-                .map(c -> mapWithOffer(c, offerMap.get(c.getOfferId())))
+                .map(ReservationResponseAssembler::toResourceFromEntity)
                 .toList();
 
         return ResponseEntity.ok(reservationResources);
@@ -272,7 +257,7 @@ public class ReservationsController {
                 return ResponseEntity.badRequest().build();
             }
 
-            var reservationResource = mapWithOffer(reservation.get());
+            var reservationResource = ReservationResponseAssembler.toResourceFromEntity(reservation.get());
             return ResponseEntity.ok(reservationResource);
         } catch (NumberFormatException e) {
             return ResponseEntity.badRequest().build();
@@ -319,7 +304,7 @@ public class ReservationsController {
      * This endpoint supports the frontend's getReservationsByUser() method
      * and can include relations using _expand and _embed parameters
      *
-     * @param userId The unique identifier of the user
+     * @param consumerId The unique identifier of the user
      * @param expand Optional list of single relationships to expand
      * @param embed Optional list of array relationships to embed
      * @return ResponseEntity containing the list of user reservations
@@ -329,18 +314,16 @@ public class ReservationsController {
         @ApiResponse(responseCode = "200", description = "User reservations retrieved successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid user ID")
     })
-    @GetMapping("/user/{userId}")
+    @GetMapping("/user/{consumerId}")
     public ResponseEntity<List<ReservationResponse>> getReservationsByUser(
-            @Parameter(description = "User unique identifier") @PathVariable String userId,
+            @Parameter(description = "User unique identifier") @PathVariable String consumerId,
             @Parameter(description = "Relationships to expand") @RequestParam(name = "_expand", required = false) String expand,
             @Parameter(description = "Relationships to embed") @RequestParam(name = "_embed", required = false) String embed) {
 
-        var query = new GetReservationsByConsumerIdQuery(userId);
+        var query = new GetReservationsByConsumerIdQuery(Long.valueOf(consumerId));
         var reservations = reservationQueryService.handle(query);
-
-        var offerMap = batchFetchOffersForReservations(reservations);
         var reservationResources = reservations.stream()
-                .map(c -> mapWithOffer(c, offerMap.get(c.getOfferId())))
+                .map(ReservationResponseAssembler::toResourceFromEntity)
                 .toList();
 
         return ResponseEntity.ok(reservationResources);
@@ -363,10 +346,8 @@ public class ReservationsController {
 
         var query = new GetReservationsByPaymentIdQuery(paymentId);
         var reservations = reservationQueryService.handle(query);
-
-        var offerMap = batchFetchOffersForReservations(reservations);
         var reservationResources = reservations.stream()
-                .map(c -> mapWithOffer(c, offerMap.get(c.getOfferId())))
+                .map(ReservationResponseAssembler::toResourceFromEntity)
                 .toList();
 
         return ResponseEntity.ok(reservationResources);
@@ -395,14 +376,14 @@ public class ReservationsController {
             return ResponseEntity.notFound().build();
         }
 
-        var reservationResource = mapWithOffer(reservation.get());
+        var reservationResource = ReservationResponseAssembler.toResourceFromEntity(reservation.get());
         return ResponseEntity.ok(reservationResource);
     }
 
     /**
      * Retrieves valid (non-expired) reservations for a specific user
      *
-     * @param userId The unique identifier of the user
+     * @param consumerId The unique identifier of the user
      * @return ResponseEntity containing the list of valid user reservations
      */
     @Operation(summary = "Get valid reservations by user ID")
@@ -410,15 +391,13 @@ public class ReservationsController {
         @ApiResponse(responseCode = "200", description = "Valid user reservations retrieved successfully"),
         @ApiResponse(responseCode = "400", description = "Invalid user ID")
     })
-    @GetMapping("/user/{userId}/valid")
+    @GetMapping("/user/{consumerId}/valid")
     public ResponseEntity<List<ReservationResponse>> getValidReservationsByUser(
-            @Parameter(description = "User unique identifier") @PathVariable Long userId) {
+            @Parameter(description = "User unique identifier") @PathVariable Long consumerId) {
 
-        var reservations = reservationQueryService.getValidReservationsByUserId(userId);
-
-        var offerMap = batchFetchOffersForReservations(reservations);
+        var reservations = reservationQueryService.getValidReservationsByConsumerId(consumerId);
         var reservationResources = reservations.stream()
-                .map(c -> mapWithOffer(c, offerMap.get(c.getOfferId())))
+                .map(ReservationResponseAssembler::toResourceFromEntity)
                 .toList();
 
         return ResponseEntity.ok(reservationResources);
@@ -436,69 +415,10 @@ public class ReservationsController {
     @GetMapping("/expired")
     public ResponseEntity<List<ReservationResponse>> getExpiredReservations() {
         var reservations = reservationQueryService.getExpiredReservations();
-
-        var offerMap = batchFetchOffersForReservations(reservations);
         var reservationResources = reservations.stream()
-                .map(c -> mapWithOffer(c, offerMap.get(c.getOfferId())))
+                .map(ReservationResponseAssembler::toResourceFromEntity)
                 .toList();
 
         return ResponseEntity.ok(reservationResources);
-    }
-
-    /**
-     * Helper: Maps a Reservation entity to a ReservationResponse and attempts to load the related Offer
-     * when reservation.offerId is present. If fetching the Offer fails or is not present, the
-     * returned resource will have a null offer field.
-     *
-     * @param reservation Reservation domain entity
-     * @return ReservationResponse including optional embedded OfferResource
-     */
-    private ReservationResponse mapWithOffer(com.geopslabs.geops.reservation.domain.models.Reservation reservation) {
-        if (reservation.getOfferId() == null) {
-            return ReservationResponseAssembler.toResourceFromEntity(reservation);
-        }
-
-        try {
-            Optional<Offer> offerOpt = offerQueryService.handle(new GetOfferByIdQuery(reservation.getOfferId()));
-            return ReservationResponseAssembler.toResourceFromEntityWithOffer(reservation, offerOpt.orElse(null));
-        } catch (Exception e) {
-            // If offer lookup fails, return reservation without embedded offer to avoid breaking client
-            System.err.println("Failed to load offer for reservation " + reservation.getId() + ": " + e.getMessage());
-            return ReservationResponseAssembler.toResourceFromEntity(reservation);
-        }
-    }
-
-    /**
-     * Overload that maps reservation using a pre-fetched Offer (may be null).
-     * This helper is used by list endpoints after batch fetching offers.
-     */
-    private ReservationResponse mapWithOffer(com.geopslabs.geops.reservation.domain.models.Reservation reservation, Offer offer) {
-        if (reservation.getOfferId() == null) {
-            return ReservationResponseAssembler.toResourceFromEntity(reservation);
-        }
-        return ReservationResponseAssembler.toResourceFromEntityWithOffer(reservation, offer);
-    }
-
-    /**
-     * Batch fetch offers for a list of reservations and return a map offerId -> Offer.
-     * If no offer ids are present or an error occurs, returns an empty map.
-     */
-    private Map<Long, Offer> batchFetchOffersForReservations(List<com.geopslabs.geops.reservation.domain.models.Reservation> reservations) {
-        try {
-            Set<Long> ids = reservations.stream()
-                    .map(com.geopslabs.geops.reservation.domain.models.Reservation::getOfferId)
-                    .filter(id -> id != null && id > 0)
-                    .collect(Collectors.toSet());
-
-            if (ids.isEmpty()) {
-                return Map.of();
-            }
-
-            var offers = offerQueryService.handle(new GetOffersByIdsQuery(ids.stream().toList()));
-            return offers.stream().collect(Collectors.toMap(Offer::getId, o -> o));
-        } catch (Exception e) {
-            System.err.println("Failed to batch fetch offers: " + e.getMessage());
-            return Map.of();
-        }
     }
 }

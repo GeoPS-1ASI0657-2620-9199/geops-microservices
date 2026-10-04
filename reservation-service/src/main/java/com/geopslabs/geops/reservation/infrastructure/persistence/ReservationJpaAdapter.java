@@ -38,13 +38,13 @@ public class ReservationJpaAdapter implements ReservationRepositoryPort {
     }
 
     @Override
-    public List<Reservation> findByUserId(Long userId) {
-        return toDomain(repository.findByUser_Id(userId));
+    public List<Reservation> findByConsumerId(Long consumerId) {
+        return toDomain(repository.findByConsumerId(consumerId));
     }
 
     @Override
     public List<Reservation> findByPaymentId(Long paymentId) {
-        return toDomain(repository.findByPayment_Id(paymentId));
+        return toDomain(repository.findByPaymentId(paymentId));
     }
 
     @Override
@@ -63,8 +63,8 @@ public class ReservationJpaAdapter implements ReservationRepositoryPort {
     }
 
     @Override
-    public List<Reservation> findValidReservationsByUserId(Long userId, String currentTime) {
-        return toDomain(repository.findValidReservationsByUserId(userId, currentTime));
+    public List<Reservation> findValidReservationsByConsumerId(Long consumerId, String currentTime) {
+        return toDomain(repository.findValidReservationsByConsumerId(consumerId, currentTime));
     }
 
     @Override
@@ -73,8 +73,8 @@ public class ReservationJpaAdapter implements ReservationRepositoryPort {
     }
 
     @Override
-    public long countByUserId(Long userId) {
-        return repository.countByUser_Id(userId);
+    public long countByConsumerId(Long consumerId) {
+        return repository.countByConsumerId(consumerId);
     }
 
     @Override

@@ -58,7 +58,7 @@ public class ReservationQueryService implements ReservationQueryUseCase {
     @Override
     public List<Reservation> handle(GetReservationsByConsumerIdQuery query) {
         try {
-            return reservationRepository.findByUserId(Long.valueOf(query.userId()));
+            return reservationRepository.findByConsumerId(query.consumerId());
         } catch (Exception e) {
             // Log the error (in a real application, use proper logging framework)
             System.err.println("Error retrieving reservations by user ID: " + e.getMessage());
@@ -112,14 +112,14 @@ public class ReservationQueryService implements ReservationQueryUseCase {
      * {@inheritDoc}
      */
     @Override
-    public List<Reservation> getValidReservationsByUserId(Long userId) {
-        if (userId == null) {
-            throw new IllegalArgumentException("userId cannot be null or empty");
+    public List<Reservation> getValidReservationsByConsumerId(Long consumerId) {
+        if (consumerId == null) {
+            throw new IllegalArgumentException("consumerId cannot be null or empty");
         }
 
         try {
             String currentTime = Instant.now().toString();
-            return reservationRepository.findValidReservationsByUserId(userId, currentTime);
+            return reservationRepository.findValidReservationsByConsumerId(consumerId, currentTime);
         } catch (Exception e) {
             // Log the error (in a real application, use proper logging framework)
             System.err.println("Error retrieving valid reservations by user ID: " + e.getMessage());
@@ -220,17 +220,17 @@ public class ReservationQueryService implements ReservationQueryUseCase {
      * This method provides a quick count of reservations belonging to a user,
      * useful for analytics and user interface purposes.
      *
-     * @param userId The unique identifier of the user
+     * @param consumerId The unique identifier of the user
      * @return The count of reservations for the specified user
-     * @throws IllegalArgumentException if userId is null or empty
+     * @throws IllegalArgumentException if consumerId is null or empty
      */
-    public long getReservationCountByUserId(Long userId) {
-        if (userId == null) {
-            throw new IllegalArgumentException("userId cannot be null or empty");
+    public long getReservationCountByConsumerId(Long consumerId) {
+        if (consumerId == null) {
+            throw new IllegalArgumentException("consumerId cannot be null or empty");
         }
 
         try {
-            return reservationRepository.countByUserId(userId);
+            return reservationRepository.countByConsumerId(consumerId);
         } catch (Exception e) {
             // Log the error (in a real application, use proper logging framework)
             System.err.println("Error counting reservations by user ID: " + e.getMessage());

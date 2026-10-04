@@ -28,7 +28,7 @@ public class CreateReservationCommandAssembler {
      */
     public static CreateReservationCommand toCommandFromResource(CreateReservationRequest resource) {
         return new CreateReservationCommand(
-            resource.userId(),
+            resource.consumerId(),
             resource.paymentId(),
             resource.paymentCode(),
             resource.productType(),

@@ -9,7 +9,7 @@ package com.geopslabs.geops.reservation.infrastructure.web;
  * Based on the frontend Reservation entity structure.
  *
  * @summary Request resource for creating reservations
- * @param userId The unique identifier of the user who owns the reservation
+ * @param consumerId The unique identifier of the user who owns the reservation
  * @param paymentId The payment identifier that generated this reservation
  * @param paymentCode The payment code generated at payment time
  * @param productType The product type copied from payment (optional)
@@ -21,7 +21,7 @@ package com.geopslabs.geops.reservation.infrastructure.web;
  * @author GeOps Labs
  */
 public record CreateReservationRequest(
-    Long userId,
+    Long consumerId,
     Long paymentId,
     String paymentCode,
     String productType,
@@ -35,8 +35,8 @@ public record CreateReservationRequest(
      * @throws IllegalArgumentException if validation fails
      */
     public CreateReservationRequest {
-        if (userId == null) {
-            throw new IllegalArgumentException("userId cannot be null or empty");
+        if (consumerId == null) {
+            throw new IllegalArgumentException("consumerId cannot be null or empty");
         }
 
         if (paymentId == null) {

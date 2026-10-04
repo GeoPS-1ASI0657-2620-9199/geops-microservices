@@ -25,10 +25,10 @@ public interface ReservationJpaRepository extends JpaRepository<ReservationJpaEn
     /**
      * Finds all reservations for a specific user.
      *
-     * @param userId The unique identifier of the user
+     * @param consumerId The unique identifier of the user
      * @return A List of Reservation objects for the specified user
      */
-    List<ReservationJpaEntity> findByUser_Id(Long userId);
+    List<ReservationJpaEntity> findByConsumerId(Long consumerId);
 
     /**
      * Finds all reservations generated from a specific payment.
@@ -36,7 +36,7 @@ public interface ReservationJpaRepository extends JpaRepository<ReservationJpaEn
      * @param paymentId The unique identifier of the payment
      * @return A List of Reservation objects generated from the specified payment
      */
-    List<ReservationJpaEntity> findByPayment_Id(Long paymentId);
+    List<ReservationJpaEntity> findByPaymentId(Long paymentId);
 
     /**
      * Finds a reservation by its unique redemption code.
@@ -68,13 +68,13 @@ public interface ReservationJpaRepository extends JpaRepository<ReservationJpaEn
      * This query finds reservations where the expiration date is null (no expiration)
      * or the expiration date is in the future.
      *
-     * @param userId The unique identifier of the user
+     * @param consumerId The unique identifier of the user
      * @param currentTime The current timestamp for comparison
      * @return A List of valid Reservation objects for the specified user
      */
-    @Query("SELECT c FROM ReservationJpaEntity c WHERE c.user.id = :userId AND " +
+    @Query("SELECT c FROM ReservationJpaEntity c WHERE c.consumerId = :consumerId AND " +
            "(c.expiresAt IS NULL OR c.expiresAt > :currentTime)")
-    List<ReservationJpaEntity> findValidReservationsByUserId(@Param("userId") Long userId,
+    List<ReservationJpaEntity> findValidReservationsByConsumerId(@Param("consumerId") Long consumerId,
                                          @Param("currentTime") String currentTime);
 
     /**
@@ -107,10 +107,10 @@ public interface ReservationJpaRepository extends JpaRepository<ReservationJpaEn
     /**
      * Counts reservations for a specific user.
      *
-     * @param userId The unique identifier of the user
+     * @param consumerId The unique identifier of the user
      * @return The count of reservations for the specified user
      */
-    long countByUser_Id(Long userId);
+    long countByConsumerId(Long consumerId);
 
     /**
      * Finds reservations expiring within a specific timeframe.

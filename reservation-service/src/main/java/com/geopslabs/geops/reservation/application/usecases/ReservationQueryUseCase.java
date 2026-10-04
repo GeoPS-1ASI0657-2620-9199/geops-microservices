@@ -86,11 +86,11 @@ public interface ReservationQueryUseCase {
      * This method finds only valid reservations for a user,
      * useful for displaying redeemable reservations in user interfaces.
      *
-     * @param userId The unique identifier of the user
+     * @param consumerId The unique identifier of the user
      * @return A List of valid Reservation objects for the specified user
-     * @throws IllegalArgumentException if userId is null or empty
+     * @throws IllegalArgumentException if consumerId is null or empty
      */
-    List<Reservation> getValidReservationsByUserId(Long userId);
+    List<Reservation> getValidReservationsByConsumerId(Long consumerId);
 
     /**
      * Retrieves expired reservations for cleanup or analysis purposes.

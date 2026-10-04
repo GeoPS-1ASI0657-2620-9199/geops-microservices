@@ -8,14 +8,13 @@ final class ReservationPersistenceMapper {
     }
 
     static Reservation toDomain(ReservationJpaEntity entity) {
-        return new Reservation(entity.getId(), entity.getUser(), entity.getPayment(), entity.getPaymentCode(),
-                entity.getProductType(), entity.getOfferId(), entity.getCode(), entity.getExpiresAt(),
-                entity.getCreatedAt(), entity.getUpdatedAt());
+        return new Reservation(entity.getId(), entity.getConsumerId(), entity.getPaymentId(), entity.getPaymentCode(),
+                entity.getProductType(), entity.getOfferId(), entity.getCode(), entity.getExpiresAt());
     }
 
     static ReservationJpaEntity toEntity(Reservation reservation, ReservationJpaEntity entity) {
-        entity.setUser(reservation.getUser());
-        entity.setPayment(reservation.getPayment());
+        entity.setConsumerId(reservation.getConsumerId());
+        entity.setPaymentId(reservation.getPaymentId());
         entity.setPaymentCode(reservation.getPaymentCode());
         entity.setProductType(reservation.getProductType());
         entity.setOfferId(reservation.getOfferId());

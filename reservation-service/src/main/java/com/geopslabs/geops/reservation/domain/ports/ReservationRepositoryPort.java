@@ -14,7 +14,7 @@ public interface ReservationRepositoryPort {
 
     List<Reservation> findAll();
 
-    List<Reservation> findByUserId(Long userId);
+    List<Reservation> findByConsumerId(Long consumerId);
 
     List<Reservation> findByPaymentId(Long paymentId);
 
@@ -24,11 +24,11 @@ public interface ReservationRepositoryPort {
 
     List<Reservation> findByProductType(String productType);
 
-    List<Reservation> findValidReservationsByUserId(Long userId, String currentTime);
+    List<Reservation> findValidReservationsByConsumerId(Long consumerId, String currentTime);
 
     List<Reservation> findExpiredReservations(String currentTime);
 
-    long countByUserId(Long userId);
+    long countByConsumerId(Long consumerId);
 
     boolean existsByCode(String code);
 
