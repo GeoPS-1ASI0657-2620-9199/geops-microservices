@@ -1,35 +1,47 @@
 package com.geopslabs.geops.reservation.domain.models;
 
-import com.geopslabs.geops.reservation.domain.models.commands.CreateReservationCommand;
-
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 
 public class Reservation {
-    private Long id;
-    private Long consumerId;
-    private Long offerId;
-    private String code;
-    private LocalDateTime expiresAt;
+    private final Long id;
+    private final ReservationCode code;
+    private final Long consumerId;
+    private final Long offerId;
+    private final Long businessId;
+    private final String offerTitle;
+    private final LocalDateTime reservedAt;
+    private final LocalDateTime expiresAt;
+    private final LocalDateTime redeemedAt;
+    private final ReservationStatus status;
 
-    public Reservation(CreateReservationCommand command) {
-        this.consumerId = command.consumerId();
-        this.offerId = command.offerId();
-        this.code = command.code();
-        this.expiresAt = toUtc(command.expiresAt());
-    }
-
-    public Reservation(Long id, Long consumerId, Long offerId, String code, LocalDateTime expiresAt) {
+    @SuppressWarnings("java:S107")
+    public Reservation(Long id, ReservationCode code, Long consumerId, Long offerId, Long businessId,
+                       String offerTitle, LocalDateTime reservedAt, LocalDateTime expiresAt,
+                       LocalDateTime redeemedAt, ReservationStatus status) {
         this.id = id;
+        this.code = code;
         this.consumerId = consumerId;
         this.offerId = offerId;
-        this.code = code;
+        this.businessId = businessId;
+        this.offerTitle = offerTitle;
+        this.reservedAt = reservedAt;
         this.expiresAt = expiresAt;
+        this.redeemedAt = redeemedAt;
+        this.status = status;
+    }
+
+    public static Reservation create(OfferSnapshot offer, Long consumerId, ReservationCode code,
+                                     LocalDateTime reservedAt, LocalDateTime expiresAt) {
+        return new Reservation(null, code, consumerId, offer.offerId(), offer.businessId(), offer.title(),
+                reservedAt, expiresAt, null, ReservationStatus.ACTIVE);
     }
 
     public Long getId() {
         return id;
+    }
+
+    public ReservationCode getCode() {
+        return code;
     }
 
     public Long getConsumerId() {
@@ -40,15 +52,27 @@ public class Reservation {
         return offerId;
     }
 
-    public String getCode() {
-        return code;
+    public Long getBusinessId() {
+        return businessId;
+    }
+
+    public String getOfferTitle() {
+        return offerTitle;
+    }
+
+    public LocalDateTime getReservedAt() {
+        return reservedAt;
     }
 
     public LocalDateTime getExpiresAt() {
         return expiresAt;
     }
 
-    private static LocalDateTime toUtc(String instant) {
-        return instant == null ? null : LocalDateTime.ofInstant(Instant.parse(instant), ZoneOffset.UTC);
+    public LocalDateTime getRedeemedAt() {
+        return redeemedAt;
+    }
+
+    public ReservationStatus getStatus() {
+        return status;
     }
 }

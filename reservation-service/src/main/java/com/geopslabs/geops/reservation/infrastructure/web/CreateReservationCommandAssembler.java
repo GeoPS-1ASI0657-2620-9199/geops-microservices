@@ -2,14 +2,12 @@ package com.geopslabs.geops.reservation.infrastructure.web;
 
 import com.geopslabs.geops.reservation.domain.models.commands.CreateReservationCommand;
 
-public class CreateReservationCommandAssembler {
+public final class CreateReservationCommandAssembler {
 
-    public static CreateReservationCommand toCommandFromResource(CreateReservationRequest resource) {
-        return new CreateReservationCommand(
-            resource.consumerId(),
-            resource.offerId(),
-            resource.code(),
-            resource.expiresAt()
-        );
+    private CreateReservationCommandAssembler() {
+    }
+
+    public static CreateReservationCommand toCommand(AuthenticatedUser user, CreateReservationRequest request) {
+        return new CreateReservationCommand(user.consumerId(), request.offerId());
     }
 }

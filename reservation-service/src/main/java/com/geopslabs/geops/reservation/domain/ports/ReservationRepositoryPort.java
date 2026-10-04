@@ -19,6 +19,7 @@ public interface ReservationRepositoryPort {
 
     List<Reservation> findValidReservationsByConsumerId(Long consumerId, LocalDateTime currentTime);
 
-    boolean existsByCode(String code);
+    Optional<Reservation> findActiveByConsumerAndOffer(Long consumerId, Long offerId);
 
+    boolean existsByCode(String code);
 }

@@ -1,7 +1,11 @@
 package com.geopslabs.geops.reservation.infrastructure.persistence;
 
 import com.geopslabs.geops.reservation.domain.models.Reservation;
+import com.geopslabs.geops.reservation.domain.models.ReservationStatus;
+import com.geopslabs.geops.reservation.domain.models.exceptions.ActiveReservationAlreadyExistsException;
 import com.geopslabs.geops.reservation.domain.ports.ReservationRepositoryPort;
+import org.springframework.core.NestedExceptionUtils;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -11,6 +15,8 @@ import java.util.Optional;
 
 @Component
 public class ReservationJpaAdapter implements ReservationRepositoryPort {
+    static final String ACTIVE_RESERVATION_INDEX = "ux_reservations_consumer_offer_active";
+
     private final ReservationJpaRepository repository;
 
     public ReservationJpaAdapter(ReservationJpaRepository repository) {
@@ -19,9 +25,12 @@ public class ReservationJpaAdapter implements ReservationRepositoryPort {
 
     @Override
     public Reservation save(Reservation reservation) {
-        var entity = reservation.getId() == null ? new ReservationJpaEntity()
-                : repository.findById(reservation.getId()).orElseGet(ReservationJpaEntity::new);
-        return ReservationPersistenceMapper.toDomain(repository.save(ReservationPersistenceMapper.toEntity(reservation, entity)));
+        try {
+            var saved = repository.saveAndFlush(ReservationPersistenceMapper.toEntity(reservation));
+            return ReservationPersistenceMapper.toDomain(saved);
+        } catch (DataIntegrityViolationException exception) {
+            throw translate(exception, reservation);
+        }
     }
 
     @Override
@@ -50,8 +59,22 @@ public class ReservationJpaAdapter implements ReservationRepositoryPort {
     }
 
     @Override
+    public Optional<Reservation> findActiveByConsumerAndOffer(Long consumerId, Long offerId) {
+        return repository.findByConsumerIdAndOfferIdAndStatus(consumerId, offerId, ReservationStatus.ACTIVE)
+                .map(ReservationPersistenceMapper::toDomain);
+    }
+
+    @Override
     public boolean existsByCode(String code) {
         return repository.existsByCode(code);
+    }
+
+    private static RuntimeException translate(DataIntegrityViolationException exception, Reservation reservation) {
+        var cause = NestedExceptionUtils.getMostSpecificCause(exception).getMessage();
+        if (cause != null && cause.contains(ACTIVE_RESERVATION_INDEX)) {
+            return new ActiveReservationAlreadyExistsException(reservation.getConsumerId(), reservation.getOfferId());
+        }
+        return exception;
     }
 
     private static List<Reservation> toDomain(List<ReservationJpaEntity> entities) {
