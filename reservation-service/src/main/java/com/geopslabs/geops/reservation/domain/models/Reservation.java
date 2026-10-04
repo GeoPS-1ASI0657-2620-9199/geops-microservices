@@ -1,13 +1,13 @@
 package com.geopslabs.geops.reservation.domain.models;
 
-import com.geopslabs.geops.reservation.domain.models.commands.CreateCouponCommand;
-import com.geopslabs.geops.reservation.domain.models.commands.UpdateCouponCommand;
+import com.geopslabs.geops.reservation.domain.models.commands.CreateReservationCommand;
+import com.geopslabs.geops.reservation.domain.models.commands.UpdateReservationCommand;
 import com.geopslabs.geops.backend.identity.domain.model.aggregates.User;
 import com.geopslabs.geops.backend.payments.domain.model.aggregates.Payment;
 
 import java.util.Date;
 
-public class Coupon {
+public class Reservation {
     private Long id;
     private User user;
     private Payment payment;
@@ -19,7 +19,7 @@ public class Coupon {
     private Date createdAt;
     private Date updatedAt;
 
-    public Coupon(CreateCouponCommand command, User user, Payment payment) {
+    public Reservation(CreateReservationCommand command, User user, Payment payment) {
         this.user = user;
         this.payment = payment;
         this.paymentCode = command.paymentCode();
@@ -29,7 +29,7 @@ public class Coupon {
         this.expiresAt = command.expiresAt();
     }
 
-    public Coupon(Long id, User user, Payment payment, String paymentCode, String productType, Long offerId,
+    public Reservation(Long id, User user, Payment payment, String paymentCode, String productType, Long offerId,
                   String code, String expiresAt, Date createdAt, Date updatedAt) {
         this.id = id;
         this.user = user;
@@ -91,7 +91,7 @@ public class Coupon {
         return this.payment != null ? this.payment.getId() : null;
     }
 
-    public void updateCoupon(UpdateCouponCommand command) {
+    public void updateReservation(UpdateReservationCommand command) {
         if (command.productType() != null) {
             this.productType = command.productType();
         }

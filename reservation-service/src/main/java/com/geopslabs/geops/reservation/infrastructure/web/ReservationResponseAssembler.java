@@ -1,57 +1,57 @@
 package com.geopslabs.geops.reservation.infrastructure.web;
 
-import com.geopslabs.geops.reservation.domain.models.Coupon;
+import com.geopslabs.geops.reservation.domain.models.Reservation;
 import com.geopslabs.geops.backend.offers.domain.model.aggregates.Offer;
 import com.geopslabs.geops.backend.offers.interfaces.rest.transform.OfferResourceFromEntityAssembler;
 import com.geopslabs.geops.backend.offers.interfaces.rest.resources.OfferResource;
 
 /**
- * CouponResourceFromEntityAssembler
+ * ReservationResponseAssembler
  *
- * Assembler class responsible for converting Coupon entity objects
- * to CouponResource objects. This transformation follows the DDD pattern
+ * Assembler class responsible for converting Reservation entity objects
+ * to ReservationResponse objects. This transformation follows the DDD pattern
  * of converting domain layer entities to interface layer Resources for API responses.
  *
- * @summary Converts Coupon entity to CouponResource
+ * @summary Converts Reservation entity to ReservationResponse
  * @since 1.0
  * @author GeOps Labs
  */
-public class CouponResourceFromEntityAssembler {
+public class ReservationResponseAssembler {
 
     /**
-     * Converts a Coupon entity to a CouponResource without embedded offer data.
+     * Converts a Reservation entity to a ReservationResponse without embedded offer data.
      *
      * This method transforms the domain entity representation into
      * a REST API resource that can be returned in HTTP responses.
-     * It extracts all relevant coupon information for client consumption.
+     * It extracts all relevant reservation information for client consumption.
      *
-     * @param entity The Coupon entity from the domain layer
-     * @return A CouponResource ready for REST API response
+     * @param entity The Reservation entity from the domain layer
+     * @return A ReservationResponse ready for REST API response
      */
-    public static CouponResource toResourceFromEntity(Coupon entity) {
+    public static ReservationResponse toResourceFromEntity(Reservation entity) {
         return toResourceFromEntityWithOffer(entity, null);
     }
 
     /**
-     * Converts a Coupon entity to a CouponResource and embeds Offer data when provided.
+     * Converts a Reservation entity to a ReservationResponse and embeds Offer data when provided.
      *
      * This method transforms the domain entity representation into
      * a REST API resource that can be returned in HTTP responses.
-     * It extracts all relevant coupon information for client consumption,
+     * It extracts all relevant reservation information for client consumption,
      * and if an Offer is provided, it embeds the corresponding offer data
-     * into the CouponResource.
+     * into the ReservationResponse.
      *
-     * @param entity The Coupon entity from the domain layer
+     * @param entity The Reservation entity from the domain layer
      * @param offer  Optional Offer aggregate to embed inside the resource (may be null)
-     * @return A CouponResource ready for REST API response with optional offer
+     * @return A ReservationResponse ready for REST API response with optional offer
      */
-    public static CouponResource toResourceFromEntityWithOffer(Coupon entity, Offer offer) {
+    public static ReservationResponse toResourceFromEntityWithOffer(Reservation entity, Offer offer) {
         OfferResource offerResource = null;
         if (offer != null) {
             offerResource = OfferResourceFromEntityAssembler.toResourceFromEntity(offer);
         }
 
-        return new CouponResource(
+        return new ReservationResponse(
             entity.getId(),
             entity.getUserId(),
             entity.getPaymentId(),

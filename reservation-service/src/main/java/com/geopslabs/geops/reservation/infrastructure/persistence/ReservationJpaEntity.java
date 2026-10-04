@@ -14,7 +14,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name = "coupons", indexes = {
+@Table(name = "reservations", indexes = {
     @Index(name = "idx_user_id", columnList = "user_id"),
     @Index(name = "idx_payment_id", columnList = "payment_id"),
     @Index(name = "idx_code", columnList = "code"),
@@ -22,7 +22,7 @@ import lombok.Setter;
 })
 @Getter
 @Setter
-public class CouponJpaEntity extends AuditableAbstractAggregateRoot<CouponJpaEntity> {
+public class ReservationJpaEntity extends AuditableAbstractAggregateRoot<ReservationJpaEntity> {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

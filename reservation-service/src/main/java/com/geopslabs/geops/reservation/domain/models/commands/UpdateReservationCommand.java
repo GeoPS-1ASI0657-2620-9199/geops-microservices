@@ -1,24 +1,24 @@
 package com.geopslabs.geops.reservation.domain.models.commands;
 
 /**
- * UpdateCouponCommand
+ * UpdateReservationCommand
  *
- * Command record for updating an existing coupon.
- * This command allows partial updates of coupon data, including product type,
- * offer reference, coupon code, and expiration date.
+ * Command record for updating an existing reservation.
+ * This command allows partial updates of reservation data, including product type,
+ * offer reference, reservation code, and expiration date.
  *
- * @summary Command to update an existing coupon
- * @param couponId The unique identifier of the coupon to update
+ * @summary Command to update an existing reservation
+ * @param reservationId The unique identifier of the reservation to update
  * @param productType Updated product type (optional)
  * @param offerId Updated reference to the offer id (optional)
- * @param code Updated coupon code to redeem (optional)
+ * @param code Updated reservation code to redeem (optional)
  * @param expiresAt Updated expiration date (optional)
  *
  * @since 1.0
  * @author GeOps Labs
  */
-public record UpdateCouponCommand(
-    Long couponId,
+public record UpdateReservationCommand(
+    Long reservationId,
     String productType,
     Long offerId,
     String code,
@@ -29,9 +29,9 @@ public record UpdateCouponCommand(
      *
      * @throws IllegalArgumentException if validation fails
      */
-    public UpdateCouponCommand {
-        if (couponId == null || couponId <= 0) {
-            throw new IllegalArgumentException("couponId cannot be null or negative");
+    public UpdateReservationCommand {
+        if (reservationId == null || reservationId <= 0) {
+            throw new IllegalArgumentException("reservationId cannot be null or negative");
         }
 
         // Validate optional fields if provided

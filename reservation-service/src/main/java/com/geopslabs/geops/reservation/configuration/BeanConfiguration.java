@@ -2,11 +2,11 @@ package com.geopslabs.geops.reservation.configuration;
 
 import com.geopslabs.geops.backend.identity.infrastructure.persistence.jpa.UserRepository;
 import com.geopslabs.geops.backend.payments.infrastructure.persistence.jpa.PaymentRepository;
-import com.geopslabs.geops.reservation.application.services.CouponCommandService;
-import com.geopslabs.geops.reservation.application.services.CouponQueryService;
-import com.geopslabs.geops.reservation.application.usecases.CouponCommandUseCase;
-import com.geopslabs.geops.reservation.application.usecases.CouponQueryUseCase;
-import com.geopslabs.geops.reservation.domain.ports.CouponRepositoryPort;
+import com.geopslabs.geops.reservation.application.services.ReservationCommandService;
+import com.geopslabs.geops.reservation.application.services.ReservationQueryService;
+import com.geopslabs.geops.reservation.application.usecases.ReservationCommandUseCase;
+import com.geopslabs.geops.reservation.application.usecases.ReservationQueryUseCase;
+import com.geopslabs.geops.reservation.domain.ports.ReservationRepositoryPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -14,14 +14,14 @@ import org.springframework.context.annotation.Configuration;
 public class BeanConfiguration {
 
     @Bean
-    public CouponCommandUseCase couponCommandUseCase(CouponRepositoryPort couponRepository,
+    public ReservationCommandUseCase reservationCommandUseCase(ReservationRepositoryPort reservationRepository,
                                                      UserRepository userRepository,
                                                      PaymentRepository paymentRepository) {
-        return new CouponCommandService(couponRepository, userRepository, paymentRepository);
+        return new ReservationCommandService(reservationRepository, userRepository, paymentRepository);
     }
 
     @Bean
-    public CouponQueryUseCase couponQueryUseCase(CouponRepositoryPort couponRepository) {
-        return new CouponQueryService(couponRepository);
+    public ReservationQueryUseCase reservationQueryUseCase(ReservationRepositoryPort reservationRepository) {
+        return new ReservationQueryService(reservationRepository);
     }
 }

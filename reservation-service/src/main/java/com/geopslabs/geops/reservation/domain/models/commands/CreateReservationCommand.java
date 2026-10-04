@@ -1,26 +1,25 @@
-package com.geopslabs.geops.reservation.infrastructure.web;
+package com.geopslabs.geops.reservation.domain.models.commands;
 
 /**
- * CreateCouponResource
+ * CreateReservationCommand
  *
- * Resource Resource for creating coupons via REST API.
- * This resource represents the request payload for coupon creation,
- * containing all necessary information for setting up a new coupon.
- * Based on the frontend Coupon entity structure.
+ * Command record that encapsulates all the necessary data to create a new reservation.
+ * This command validates input data and ensures that required fields are properly provided
+ * for reservation creation, supporting reservation generation from payments and offer redemption.
  *
- * @summary Request resource for creating coupons
- * @param userId The unique identifier of the user who owns the coupon
- * @param paymentId The payment identifier that generated this coupon
+ * @summary Command to create a new reservation
+ * @param userId The unique identifier of the user who owns the reservation
+ * @param paymentId The payment identifier that generated this reservation
  * @param paymentCode The payment code generated at payment time
  * @param productType The product type copied from payment (optional)
  * @param offerId The reference to the offer id (optional)
- * @param code The coupon code to redeem
- * @param expiresAt The expiration date of the coupon (optional)
+ * @param code The reservation code to redeem
+ * @param expiresAt The expiration date of the reservation (optional)
  *
  * @since 1.0
  * @author GeOps Labs
  */
-public record CreateCouponResource(
+public record CreateReservationCommand(
     Long userId,
     Long paymentId,
     String paymentCode,
@@ -30,11 +29,11 @@ public record CreateCouponResource(
     String expiresAt
 ) {
     /**
-     * Compact constructor that validates the resource parameters
+     * Compact constructor that validates the command parameters
      *
      * @throws IllegalArgumentException if validation fails
      */
-    public CreateCouponResource {
+    public CreateReservationCommand {
         if (userId == null) {
             throw new IllegalArgumentException("userId cannot be null or empty");
         }
@@ -51,6 +50,7 @@ public record CreateCouponResource(
             throw new IllegalArgumentException("code cannot be null or empty");
         }
 
+        // Validate offer ID if provided
         if (offerId != null && offerId <= 0) {
             throw new IllegalArgumentException("offerId must be positive if provided");
         }

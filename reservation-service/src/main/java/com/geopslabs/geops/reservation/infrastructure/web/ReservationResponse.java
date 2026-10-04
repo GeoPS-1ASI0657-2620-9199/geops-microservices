@@ -3,30 +3,30 @@ package com.geopslabs.geops.reservation.infrastructure.web;
 import com.geopslabs.geops.backend.offers.interfaces.rest.resources.OfferResource;
 
 /**
- * CouponResource
+ * ReservationResponse
  *
- * Resource Resource for coupon responses via REST API.
- * This resource represents the response payload containing coupon information
- * when retrieving coupon data from the system.
- * Based on the frontend Coupon entity structure.
+ * Resource Resource for reservation responses via REST API.
+ * This resource represents the response payload containing reservation information
+ * when retrieving reservation data from the system.
+ * Based on the frontend Reservation entity structure.
  *
- * @summary Response resource for coupon data
- * @param id The unique identifier of the coupon
- * @param userId The unique identifier of the user who owns the coupon
- * @param paymentId The payment identifier that generated this coupon
+ * @summary Response resource for reservation data
+ * @param id The unique identifier of the reservation
+ * @param userId The unique identifier of the user who owns the reservation
+ * @param paymentId The payment identifier that generated this reservation
  * @param paymentCode The payment code generated at payment time
  * @param productType The product type copied from payment (optional)
  * @param offerId The reference to the offer id (optional)
  * @param offer The optional embedded offer data (when requested)
- * @param code The coupon code to redeem
- * @param expiresAt The expiration date of the coupon (optional)
- * @param createdAt Timestamp when the coupon was created
- * @param updatedAt Timestamp when the coupon was last updated
+ * @param code The reservation code to redeem
+ * @param expiresAt The expiration date of the reservation (optional)
+ * @param createdAt Timestamp when the reservation was created
+ * @param updatedAt Timestamp when the reservation was last updated
  *
  * @since 1.0
  * @author GeOps Labs
  */
-public record CouponResource(
+public record ReservationResponse(
     Long id,
     Long userId,
     Long paymentId,
