@@ -5,10 +5,10 @@ import com.geopslabs.geops.reservation.domain.models.OfferSnapshot;
 import com.geopslabs.geops.reservation.domain.models.ReservationStatus;
 import com.geopslabs.geops.reservation.infrastructure.persistence.ReservationJpaRepository;
 import io.cucumber.java.Before;
-import io.cucumber.java.es.Cuando;
-import io.cucumber.java.es.Dado;
-import io.cucumber.java.es.Entonces;
-import io.cucumber.java.es.Y;
+import io.cucumber.java.en.And;
+import io.cucumber.java.en.Given;
+import io.cucumber.java.en.Then;
+import io.cucumber.java.en.When;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -52,22 +52,22 @@ public class ReservationSteps {
         catalog.reset();
     }
 
-    @Dado("que Catalog tiene la oferta {long} del comercio {long} titulada {string} vigente hasta el {string}")
+    @Given("Catalog has offer {long} from business {long} titled {string} valid until {string}")
     public void catalogHasOffer(Long offerId, Long businessId, String title, String validTo) {
         catalog.publish(new OfferSnapshot(offerId, businessId, title, LocalDate.parse(validTo)));
     }
 
-    @Dado("que Catalog marca la oferta {long} como no disponible")
+    @Given("Catalog marks offer {long} as unavailable")
     public void catalogMarksOfferUnavailable(Long offerId) {
         catalog.markUnavailable(offerId);
     }
 
-    @Dado("que Catalog no responde")
+    @Given("Catalog does not respond")
     public void catalogIsDown() {
         catalog.goDown();
     }
 
-    @Dado("que el consumidor {long} ya reservó la oferta {long}")
+    @Given("consumer {long} already reserved offer {long}")
     public void consumerAlreadyReserved(Long consumerId, Long offerId) throws JsonProcessingException {
         var result = reserve(TestIdentity.consumerToken(consumerId), offerId);
         assertThat(result.status()).as(result.body()).isEqualTo(HTTP_CREATED);
@@ -75,7 +75,7 @@ public class ReservationSteps {
         state.rememberReservation(body.path("reservationId").asLong(), body.path("code").asText());
     }
 
-    @Dado("que esa reserva ya fue canjeada")
+    @Given("that reservation was already redeemed")
     public void thatReservationWasRedeemed() {
         var entity = reservations.findById(state.reservationId()).orElseThrow();
         entity.setStatus(ReservationStatus.REDEEMED);
@@ -83,22 +83,22 @@ public class ReservationSteps {
         reservations.save(entity);
     }
 
-    @Cuando("el consumidor {long} reserva la oferta {long}")
+    @When("consumer {long} reserves offer {long}")
     public void consumerReserves(Long consumerId, Long offerId) {
         reserve(TestIdentity.consumerToken(consumerId), offerId);
     }
 
-    @Cuando("el consumidor {long} envía una reserva sin offerId")
+    @When("consumer {long} sends a reservation without offerId")
     public void consumerReservesWithoutOffer(Long consumerId) {
         http.post(RESERVATIONS, TestIdentity.consumerToken(consumerId), EMPTY_BODY);
     }
 
-    @Cuando("se reserva la oferta {long} {}")
+    @When("offer {long} is reserved {}")
     public void reserveWithToken(Long offerId, String tokenKind) {
         reserve(tokenOfKind(tokenKind), offerId);
     }
 
-    @Cuando("el consumidor {long} envía {int} reservas simultáneas de la oferta {long}")
+    @When("consumer {long} sends {int} simultaneous reservations for offer {long}")
     public void consumerReservesConcurrently(Long consumerId, int requests, Long offerId)
             throws InterruptedException, ExecutionException {
         var request = http.postLater(RESERVATIONS, TestIdentity.consumerToken(consumerId),
@@ -123,25 +123,25 @@ public class ReservationSteps {
         }
     }
 
-    @Entonces("la respuesta solo trae los campos reservationId, code y expiresAt")
+    @Then("the response only has the fields reservationId, code and expiresAt")
     public void responseHasOnlyCreationFields() throws JsonProcessingException {
         var fields = new HashSet<String>();
         http.json(http.last()).fieldNames().forEachRemaining(fields::add);
         assertThat(fields).containsExactlyInAnyOrder("reservationId", "code", "expiresAt");
     }
 
-    @Y("el campo {string} tiene {int} caracteres")
+    @And("the field {string} has {int} characters")
     public void fieldHasLength(String field, int length) throws JsonProcessingException {
         assertThat(http.json(http.last()).path(field).asText()).hasSize(length);
     }
 
-    @Y("la cabecera Location apunta a la reserva creada")
+    @And("the Location header points to the created reservation")
     public void locationPointsToReservation() throws JsonProcessingException {
         var id = http.json(http.last()).path("reservationId").asLong();
         assertThat(http.last().location()).endsWith(RESERVATIONS + "/" + id);
     }
 
-    @Y("la reserva guardada está en {word} con el título {string} y el comercio {long}")
+    @And("the stored reservation is {word} with the title {string} and business {long}")
     public void storedReservationHas(String status, String title, Long businessId) throws JsonProcessingException {
         var id = http.json(http.last()).path("reservationId").asLong();
         var entity = reservations.findById(id).orElseThrow();
@@ -150,21 +150,21 @@ public class ReservationSteps {
         assertThat(entity.getBusinessId()).isEqualTo(businessId);
     }
 
-    @Y("la respuesta es la misma reserva de antes")
+    @And("the response is the same reservation as before")
     public void responseIsTheSameReservation() throws JsonProcessingException {
         var body = http.json(http.last());
         assertThat(body.path("reservationId").asLong()).isEqualTo(state.reservationId());
         assertThat(body.path("code").asText()).isEqualTo(state.reservationCode());
     }
 
-    @Y("la respuesta es una reserva nueva")
+    @And("the response is a new reservation")
     public void responseIsANewReservation() throws JsonProcessingException {
         var body = http.json(http.last());
         assertThat(body.path("reservationId").asLong()).isNotEqualTo(state.reservationId());
         assertThat(body.path("code").asText()).isNotEqualTo(state.reservationCode());
     }
 
-    @Entonces("una respuesta tiene código 201 y las demás 200 con la misma reserva")
+    @Then("one response has status 201 and the others 200 with the same reservation")
     public void oneCreatedOthersReturnedSame() throws JsonProcessingException {
         var results = state.concurrentResults();
         var created = results.stream().filter(result -> result.status() == HTTP_CREATED).count();
@@ -178,7 +178,7 @@ public class ReservationSteps {
         assertThat(ids).hasSize(SINGLE_RESERVATION);
     }
 
-    @Y("el consumidor {long} tiene {int} reserva(s) en {word} de la oferta {long}")
+    @And("consumer {long} has {int} {word} reservation(s) for offer {long}")
     public void consumerHasReservations(Long consumerId, int expected, String status, Long offerId) {
         var count = reservations.findAll().stream()
                 .filter(entity -> entity.getConsumerId().equals(consumerId))
@@ -188,7 +188,7 @@ public class ReservationSteps {
         assertThat(count).isEqualTo(expected);
     }
 
-    @Y("no se guardó ninguna reserva")
+    @And("no reservation was stored")
     public void noReservationStored() {
         assertThat(reservations.count()).isZero();
     }
@@ -199,12 +199,12 @@ public class ReservationSteps {
 
     private static String tokenOfKind(String tokenKind) {
         return switch (tokenKind) {
-            case "sin token" -> null;
-            case "con token de dueño de negocio" -> TestIdentity.businessOwnerToken(BUSINESS_OWNER_USER_ID, BUSINESS_ID);
-            case "con token sin rol" -> TestIdentity.tokenWithoutRoles(CONSUMER_ID);
-            case "con token de otro emisor" -> TestIdentity.tokenFromAnotherIssuer(CONSUMER_ID);
-            case "con token para otra audiencia" -> TestIdentity.tokenForAnotherAudience(CONSUMER_ID);
-            case "con token firmado con otra clave" -> TestIdentity.tokenSignedWithAnotherKey(CONSUMER_ID);
+            case "without a token" -> null;
+            case "with a business owner token" -> TestIdentity.businessOwnerToken(BUSINESS_OWNER_USER_ID, BUSINESS_ID);
+            case "with a token without roles" -> TestIdentity.tokenWithoutRoles(CONSUMER_ID);
+            case "with a token from another issuer" -> TestIdentity.tokenFromAnotherIssuer(CONSUMER_ID);
+            case "with a token for another audience" -> TestIdentity.tokenForAnotherAudience(CONSUMER_ID);
+            case "with a token signed with another key" -> TestIdentity.tokenSignedWithAnotherKey(CONSUMER_ID);
             default -> throw new IllegalArgumentException(tokenKind);
         };
     }

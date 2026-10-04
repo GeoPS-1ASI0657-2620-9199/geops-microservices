@@ -1,9 +1,9 @@
 package com.geopslabs.geops.reservation.acceptance;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import io.cucumber.java.es.Cuando;
-import io.cucumber.java.es.Entonces;
-import io.cucumber.java.es.Y;
+import io.cucumber.java.en.And;
+import io.cucumber.java.en.Then;
+import io.cucumber.java.en.When;
 
 import java.util.ArrayList;
 
@@ -24,33 +24,33 @@ public class QuerySteps {
         this.state = state;
     }
 
-    @Cuando("el consumidor {long} consulta esa reserva")
+    @When("consumer {long} views that reservation")
     public void consumerReadsThatReservation(Long consumerId) {
         http.get(RESERVATION_BY_ID.formatted(state.reservationId()), TestIdentity.consumerToken(consumerId));
     }
 
-    @Cuando("el consumidor {long} consulta una reserva que no existe")
+    @When("consumer {long} views a reservation that does not exist")
     public void consumerReadsUnknownReservation(Long consumerId) {
         http.get(RESERVATION_BY_ID.formatted(UNKNOWN_RESERVATION_ID), TestIdentity.consumerToken(consumerId));
     }
 
-    @Cuando("el comercio {long} consulta el código de esa reserva")
+    @When("business {long} looks up the code of that reservation")
     public void businessReadsThatCode(Long businessId) {
         http.get(RESERVATION_BY_CODE.formatted(state.reservationCode()),
                 TestIdentity.businessOwnerToken(BUSINESS_OWNER_USER_ID, businessId));
     }
 
-    @Cuando("el consumidor {long} consulta el código de esa reserva")
+    @When("consumer {long} looks up the code of that reservation")
     public void consumerReadsThatCode(Long consumerId) {
         http.get(RESERVATION_BY_CODE.formatted(state.reservationCode()), TestIdentity.consumerToken(consumerId));
     }
 
-    @Cuando("el consumidor {long} lista sus reservas en {word}")
+    @When("consumer {long} lists their reservations with status {word}")
     public void consumerListsReservations(Long consumerId, String status) {
         http.get(RESERVATIONS_WITH_STATUS.formatted(status), TestIdentity.consumerToken(consumerId));
     }
 
-    @Entonces("la respuesta muestra la oferta {long} titulada {string} en {word}")
+    @Then("the response shows offer {long} titled {string} with status {word}")
     public void responseShowsOffer(Long offerId, String title, String status) throws JsonProcessingException {
         var body = http.json(http.last());
         assertThat(body.path("reservationId").asLong()).isEqualTo(state.reservationId());
@@ -59,7 +59,7 @@ public class QuerySteps {
         assertThat(body.path("status").asText()).isEqualTo(status);
     }
 
-    @Y("la lista tiene solo reservas en {word} de la oferta {long}")
+    @And("the list only has {word} reservations for offer {long}")
     public void listHasOnlyOffers(String status, Long offerId) throws JsonProcessingException {
         var offers = new ArrayList<Long>();
         for (var item : http.json(http.last())) {

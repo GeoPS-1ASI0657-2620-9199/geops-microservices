@@ -68,8 +68,8 @@ PostgreSQL en Testcontainers, con un Catalog simulado y tokens firmados con una 
 
 | Historia | Archivo | Escenarios |
 |---|---|---|
-| US40 Reservar una oferta sin pagar | `US40-reservar-una-oferta-sin-pagar.feature` | 15 |
-| Consultas de reservas | `consultar-reserva.feature` | 8 |
+| US40 Reservar una oferta sin pagar | `US40-reserve-offer-without-payment.feature` | 15 |
+| Consultas de reservas | `query-reservations.feature` | 8 |
 
 ## Ejecución local
 
