@@ -9,7 +9,7 @@ gateway y los demás servicios lo validan.
 | Operación | Acceso | Descripción |
 |---|---|---|
 | `POST /api/v1/auth/register` | Público | Registra un consumidor o un dueño de negocio con su perfil. Responde `201` con la cuenta creada, sin token |
-| `POST /api/v1/auth/login` | Público | Comprueba las credenciales y emite el token. La respuesta lleva `role` y, según el rol, `consumerId` o `businessId` |
+| `POST /api/v1/auth/login` | Público | Comprueba las credenciales y emite el token. La respuesta lleva `role` y, según el rol, `consumerId` o `businessId` con `businessName` |
 | `GET /.well-known/jwks.json` | Público | Publica las claves públicas que validan el token |
 
 Los errores responden `{"code": "...", "message": "..."}`. Los ejemplos de cada código están en

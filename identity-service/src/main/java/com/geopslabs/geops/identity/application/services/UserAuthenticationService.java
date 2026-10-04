@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 @Transactional(noRollbackFor = InvalidCredentialsException.class)
@@ -52,10 +53,12 @@ public class UserAuthenticationService implements LogInUseCase {
         user.resetFailedLogins();
         userRepository.save(user);
         var consumerId = consumerIdOf(user);
-        var businessId = businessIdOf(user);
+        var businessProfile = businessProfileOf(user);
+        var businessId = businessProfile.map(BusinessProfile::getId).orElse(null);
+        var businessName = businessProfile.map(BusinessProfile::getBusinessName).orElse(null);
         LOGGER.info("user.logged-in userId={} role={} businessId={}", user.getId(), user.getRole(), businessId);
         return new LogInResult(tokenIssuer.issue(user, businessId), user.getId(), user.getRole(), consumerId,
-                businessId);
+                businessId, businessName);
     }
 
     private InvalidCredentialsException rejectUnknownEmail(String password) {
@@ -81,13 +84,12 @@ public class UserAuthenticationService implements LogInUseCase {
         }
     }
 
-    private Long businessIdOf(User user) {
+    private Optional<BusinessProfile> businessProfileOf(User user) {
         if (!user.getRole().requiresBusinessProfile()) {
-            return null;
+            return Optional.empty();
         }
-        return businessProfileRepository.findByUserId(user.getId())
-                .map(BusinessProfile::getId)
-                .orElseThrow(() -> missingBusinessProfile(user));
+        return Optional.of(businessProfileRepository.findByUserId(user.getId())
+                .orElseThrow(() -> missingBusinessProfile(user)));
     }
 
     private static IllegalStateException missingBusinessProfile(User user) {

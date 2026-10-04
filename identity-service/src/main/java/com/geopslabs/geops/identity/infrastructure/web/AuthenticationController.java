@@ -121,7 +121,8 @@ public class AuthenticationController {
                             @ExampleObject(name = "businessToken", value = """
                                     {"accessToken": "eyJraWQiOiJpZGVudGl0eS0yMDI2LTEwIiwidHlwIjoiSldUIiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiI0MiIsImlzcyI6Imdlb3BzLWlkZW50aXR5IiwiYXVkIjoiZ2VvcHMtYXBpIiwicm9sZXMiOlsiUk9MRV9CVVNJTkVTU19PV05FUiJdLCJidXNpbmVzc0lkIjo3LCJpYXQiOjE3OTEwNTA0MDAsImV4cCI6MTc5MTA1NDAwMH0.c2lnbmF0dXJh",
                                      "tokenType": "Bearer", "expiresIn": 3600, "userId": 42,
-                                     "role": "BUSINESS_OWNER", "businessId": 7}""")})),
+                                     "role": "BUSINESS_OWNER", "businessId": 7,
+                                     "businessName": "Pollería El Buen Sabor"}""")})),
             @ApiResponse(responseCode = "400", description = "Missing or malformed email or password",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
                             examples = @ExampleObject(name = "invalidRequest", value = """

@@ -4,5 +4,5 @@ import com.geopslabs.geops.identity.domain.models.IssuedToken;
 import com.geopslabs.geops.identity.domain.models.Role;
 
 public record LogInResult(IssuedToken token, Long userId, Role role, Long consumerId,
-                          Long businessId) {
+                          Long businessId, String businessName) {
 }

@@ -100,6 +100,7 @@ class UserAuthenticationServiceTest {
         assertThat(result.token().value()).isEqualTo(TOKEN);
         assertThat(result.role()).isEqualTo(Role.BUSINESS_OWNER);
         assertThat(result.businessId()).isEqualTo(BUSINESS_ID);
+        assertThat(result.businessName()).isEqualTo(businessProfile().getBusinessName());
         assertThat(result.consumerId()).isNull();
     }
 
