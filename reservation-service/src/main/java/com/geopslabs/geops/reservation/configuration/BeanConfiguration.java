@@ -3,7 +3,6 @@ package com.geopslabs.geops.reservation.configuration;
 import com.geopslabs.geops.reservation.application.services.ReservationCommandService;
 import com.geopslabs.geops.reservation.application.services.ReservationQueryService;
 import com.geopslabs.geops.reservation.application.usecases.CreateReservationUseCase;
-import com.geopslabs.geops.reservation.application.usecases.ReservationQueryUseCase;
 import com.geopslabs.geops.reservation.domain.ports.OfferCatalogPort;
 import com.geopslabs.geops.reservation.domain.ports.ReservationRepositoryPort;
 import org.springframework.context.annotation.Bean;
@@ -34,7 +33,7 @@ public class BeanConfiguration {
     }
 
     @Bean
-    public ReservationQueryUseCase reservationQueryUseCase(ReservationRepositoryPort reservationRepository) {
+    public ReservationQueryService reservationQueryService(ReservationRepositoryPort reservationRepository) {
         return new ReservationQueryService(reservationRepository);
     }
 }

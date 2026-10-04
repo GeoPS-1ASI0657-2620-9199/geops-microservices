@@ -1,8 +1,8 @@
 package com.geopslabs.geops.reservation.domain.ports;
 
 import com.geopslabs.geops.reservation.domain.models.Reservation;
+import com.geopslabs.geops.reservation.domain.models.ReservationStatus;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,11 +13,7 @@ public interface ReservationRepositoryPort {
 
     Optional<Reservation> findByCode(String code);
 
-    List<Reservation> findAll();
-
-    List<Reservation> findByConsumerId(Long consumerId);
-
-    List<Reservation> findValidReservationsByConsumerId(Long consumerId, LocalDateTime currentTime);
+    List<Reservation> findByConsumerId(Long consumerId, ReservationStatus status);
 
     Optional<Reservation> findActiveByConsumerAndOffer(Long consumerId, Long offerId);
 

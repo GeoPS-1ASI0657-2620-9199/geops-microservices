@@ -20,6 +20,7 @@ public class SecurityConfiguration {
     private static final String NO_PREFIX = "";
     private static final String RESERVATIONS = "/api/v1/reservations";
     private static final String RESERVATION_BY_CODE = "/api/v1/reservations/code/**";
+    private static final String RESERVATION_BY_ID = "/api/v1/reservations/*";
     private static final String ANY_RESERVATION_PATH = "/api/v1/reservations/**";
     private static final String[] PUBLIC_PATHS = {
             "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/health", "/actuator/health/**", "/error"
@@ -49,6 +50,7 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST, RESERVATIONS).hasAuthority(ROLE_CONSUMER)
                 .requestMatchers(HttpMethod.GET, RESERVATIONS).hasAuthority(ROLE_CONSUMER)
                 .requestMatchers(HttpMethod.GET, RESERVATION_BY_CODE).hasAuthority(ROLE_BUSINESS_OWNER)
+                .requestMatchers(HttpMethod.GET, RESERVATION_BY_ID).hasAuthority(ROLE_CONSUMER)
                 .requestMatchers(ANY_RESERVATION_PATH).authenticated()
                 .anyRequest().denyAll();
     }

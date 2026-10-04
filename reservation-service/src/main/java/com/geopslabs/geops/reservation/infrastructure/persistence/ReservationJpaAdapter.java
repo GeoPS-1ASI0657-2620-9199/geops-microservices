@@ -8,8 +8,6 @@ import org.springframework.core.NestedExceptionUtils;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,18 +42,11 @@ public class ReservationJpaAdapter implements ReservationRepositoryPort {
     }
 
     @Override
-    public List<Reservation> findAll() {
-        return toDomain(repository.findAll());
-    }
-
-    @Override
-    public List<Reservation> findByConsumerId(Long consumerId) {
-        return toDomain(repository.findByConsumerId(consumerId));
-    }
-
-    @Override
-    public List<Reservation> findValidReservationsByConsumerId(Long consumerId, LocalDateTime currentTime) {
-        return toDomain(repository.findValidReservationsByConsumerId(consumerId, currentTime.toInstant(ZoneOffset.UTC)));
+    public List<Reservation> findByConsumerId(Long consumerId, ReservationStatus status) {
+        var entities = status == null
+                ? repository.findByConsumerIdOrderByReservedAtDesc(consumerId)
+                : repository.findByConsumerIdAndStatusOrderByReservedAtDesc(consumerId, status);
+        return entities.stream().map(ReservationPersistenceMapper::toDomain).toList();
     }
 
     @Override
@@ -75,9 +66,5 @@ public class ReservationJpaAdapter implements ReservationRepositoryPort {
             return new ActiveReservationAlreadyExistsException(reservation.getConsumerId(), reservation.getOfferId());
         }
         return exception;
-    }
-
-    private static List<Reservation> toDomain(List<ReservationJpaEntity> entities) {
-        return entities.stream().map(ReservationPersistenceMapper::toDomain).toList();
     }
 }

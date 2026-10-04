@@ -1,11 +1,15 @@
 package com.geopslabs.geops.reservation.infrastructure.web;
 
 import com.geopslabs.geops.reservation.application.usecases.CreateReservationUseCase;
-import com.geopslabs.geops.reservation.application.usecases.ReservationQueryUseCase;
+import com.geopslabs.geops.reservation.application.usecases.GetReservationByCodeUseCase;
+import com.geopslabs.geops.reservation.application.usecases.GetReservationByIdUseCase;
+import com.geopslabs.geops.reservation.application.usecases.ListConsumerReservationsUseCase;
+import com.geopslabs.geops.reservation.domain.models.ReservationStatus;
 import com.geopslabs.geops.reservation.domain.models.queries.GetReservationByCodeQuery;
 import com.geopslabs.geops.reservation.domain.models.queries.GetReservationByIdQuery;
 import com.geopslabs.geops.reservation.domain.models.queries.GetReservationsByConsumerIdQuery;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -34,13 +38,28 @@ public class ReservationsController {
     static final String RESERVATIONS_PATH = "/api/v1/reservations";
     private static final String PATH_SEPARATOR = "/";
 
+    private static final String RESERVATION_EXAMPLE = """
+            {"reservationId": 15, "code": "K7P3XM9Q", "consumerId": 2001, "offerId": 1052, "businessId": 301,
+             "offerTitle": "Menú ejecutivo a mitad de precio", "status": "ACTIVE",
+             "reservedAt": "2026-10-08T13:05:00Z", "expiresAt": "2026-10-15T04:59:59Z", "redeemedAt": null}""";
+    private static final String UNAUTHORIZED_EXAMPLE = """
+            {"code": "UNAUTHORIZED", "message": "A valid token is required"}""";
+    private static final String FORBIDDEN_EXAMPLE = """
+            {"code": "FORBIDDEN", "message": "Your account is not allowed to perform this operation"}""";
+
     private final CreateReservationUseCase createReservation;
-    private final ReservationQueryUseCase reservationQueryService;
+    private final GetReservationByIdUseCase getReservationById;
+    private final GetReservationByCodeUseCase getReservationByCode;
+    private final ListConsumerReservationsUseCase listConsumerReservations;
 
     public ReservationsController(CreateReservationUseCase createReservation,
-                                  ReservationQueryUseCase reservationQueryService) {
+                                  GetReservationByIdUseCase getReservationById,
+                                  GetReservationByCodeUseCase getReservationByCode,
+                                  ListConsumerReservationsUseCase listConsumerReservations) {
         this.createReservation = createReservation;
-        this.reservationQueryService = reservationQueryService;
+        this.getReservationById = getReservationById;
+        this.getReservationByCode = getReservationByCode;
+        this.listConsumerReservations = listConsumerReservations;
     }
 
     @Operation(summary = "Create a reservation for a valid offer, paid later at the business",
@@ -58,11 +77,9 @@ public class ReservationsController {
             content = @Content(examples = @ExampleObject(value = """
                     {"code": "VALIDATION_ERROR", "message": "offerId must not be null"}""")))
     @ApiResponse(responseCode = "401", description = "Missing or invalid token",
-            content = @Content(examples = @ExampleObject(value = """
-                    {"code": "UNAUTHORIZED", "message": "A valid token is required"}""")))
+            content = @Content(examples = @ExampleObject(value = UNAUTHORIZED_EXAMPLE)))
     @ApiResponse(responseCode = "403", description = "Token without ROLE_CONSUMER",
-            content = @Content(examples = @ExampleObject(value = """
-                    {"code": "FORBIDDEN", "message": "Your account is not allowed to perform this operation"}""")))
+            content = @Content(examples = @ExampleObject(value = FORBIDDEN_EXAMPLE)))
     @ApiResponse(responseCode = "404", description = "Offer does not exist",
             content = @Content(examples = @ExampleObject(value = """
                     {"code": "OFFER_NOT_FOUND", "message": "Offer 9999 was not found"}""")))
@@ -85,40 +102,63 @@ public class ReservationsController {
         return ResponseEntity.created(location).body(body);
     }
 
-    @Operation(summary = "Get a reservation by id")
+    @Operation(summary = "Get one reservation of the consumer in the token")
+    @ApiResponse(responseCode = "200", description = "Reservation found",
+            content = @Content(examples = @ExampleObject(value = RESERVATION_EXAMPLE)))
+    @ApiResponse(responseCode = "400", description = "The id is not a number",
+            content = @Content(examples = @ExampleObject(value = """
+                    {"code": "VALIDATION_ERROR", "message": "id has an invalid value"}""")))
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token",
+            content = @Content(examples = @ExampleObject(value = UNAUTHORIZED_EXAMPLE)))
+    @ApiResponse(responseCode = "403", description = "Token without ROLE_CONSUMER or reservation of another consumer",
+            content = @Content(examples = @ExampleObject(value = """
+                    {"code": "FORBIDDEN", "message": "Reservation 15 belongs to another account"}""")))
+    @ApiResponse(responseCode = "404", description = "Reservation does not exist",
+            content = @Content(examples = @ExampleObject(value = """
+                    {"code": "RESERVATION_NOT_FOUND", "message": "Reservation 9999 was not found"}""")))
     @GetMapping("/{id}")
-    public ReservationResponse getById(@PathVariable Long id) {
-        var reservation = reservationQueryService.handle(new GetReservationByIdQuery(id));
+    public ReservationResponse getReservation(@AuthenticationPrincipal Jwt jwt,
+            @Parameter(description = "Reservation id", example = "15") @PathVariable Long id) {
+        var consumerId = AuthenticatedUser.from(jwt).consumerId();
+        var reservation = getReservationById.getById(new GetReservationByIdQuery(id, consumerId));
         return ReservationResponseAssembler.toResponse(reservation);
     }
 
-    @Operation(summary = "List reservations, optionally of one consumer")
-    @GetMapping
-    public List<ReservationResponse> getAll(@RequestParam(required = false) Long consumerId) {
-        var reservations = consumerId == null
-                ? reservationQueryService.getAllReservations()
-                : reservationQueryService.handle(new GetReservationsByConsumerIdQuery(consumerId));
-        return reservations.stream().map(ReservationResponseAssembler::toResponse).toList();
-    }
-
-    @Operation(summary = "List the reservations of a consumer")
-    @GetMapping("/user/{consumerId}")
-    public List<ReservationResponse> getByConsumer(@PathVariable Long consumerId) {
-        var reservations = reservationQueryService.handle(new GetReservationsByConsumerIdQuery(consumerId));
-        return reservations.stream().map(ReservationResponseAssembler::toResponse).toList();
-    }
-
-    @Operation(summary = "Get a reservation by its code")
+    @Operation(summary = "Get the reservation that matches a code, for the business that owns the offer")
+    @ApiResponse(responseCode = "200", description = "Reservation found",
+            content = @Content(examples = @ExampleObject(value = RESERVATION_EXAMPLE)))
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token",
+            content = @Content(examples = @ExampleObject(value = UNAUTHORIZED_EXAMPLE)))
+    @ApiResponse(responseCode = "403", description = "Token without ROLE_BUSINESS_OWNER or code of another business",
+            content = @Content(examples = @ExampleObject(value = """
+                    {"code": "FORBIDDEN", "message": "Reservation 15 belongs to another account"}""")))
+    @ApiResponse(responseCode = "404", description = "No reservation has this code",
+            content = @Content(examples = @ExampleObject(value = """
+                    {"code": "RESERVATION_NOT_FOUND", "message": "Reservation with code ZZZZ2222 was not found"}""")))
     @GetMapping("/code/{code}")
-    public ReservationResponse getByCode(@PathVariable String code) {
-        var reservation = reservationQueryService.handle(new GetReservationByCodeQuery(code));
+    public ReservationResponse getReservationByCode(@AuthenticationPrincipal Jwt jwt,
+            @Parameter(description = "Reservation code", example = "K7P3XM9Q") @PathVariable String code) {
+        var businessId = AuthenticatedUser.from(jwt).requireBusinessId();
+        var reservation = getReservationByCode.getByCode(new GetReservationByCodeQuery(code, businessId));
         return ReservationResponseAssembler.toResponse(reservation);
     }
 
-    @Operation(summary = "List the reservations of a consumer that have not expired")
-    @GetMapping("/user/{consumerId}/valid")
-    public List<ReservationResponse> getValidByConsumer(@PathVariable Long consumerId) {
-        var reservations = reservationQueryService.getValidReservationsByConsumerId(consumerId);
+    @Operation(summary = "List the reservations of the consumer in the token, newest first")
+    @ApiResponse(responseCode = "200", description = "Reservations of the consumer",
+            content = @Content(examples = @ExampleObject(value = "[" + RESERVATION_EXAMPLE + "]")))
+    @ApiResponse(responseCode = "400", description = "Unknown status",
+            content = @Content(examples = @ExampleObject(value = """
+                    {"code": "VALIDATION_ERROR", "message": "status has an invalid value"}""")))
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token",
+            content = @Content(examples = @ExampleObject(value = UNAUTHORIZED_EXAMPLE)))
+    @ApiResponse(responseCode = "403", description = "Token without ROLE_CONSUMER",
+            content = @Content(examples = @ExampleObject(value = FORBIDDEN_EXAMPLE)))
+    @GetMapping
+    public List<ReservationResponse> listReservations(@AuthenticationPrincipal Jwt jwt,
+            @Parameter(description = "Only reservations in this status", example = "ACTIVE")
+            @RequestParam(required = false) ReservationStatus status) {
+        var consumerId = AuthenticatedUser.from(jwt).consumerId();
+        var reservations = listConsumerReservations.list(new GetReservationsByConsumerIdQuery(consumerId, status));
         return reservations.stream().map(ReservationResponseAssembler::toResponse).toList();
     }
 }

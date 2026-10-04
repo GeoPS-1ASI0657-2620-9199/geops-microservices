@@ -36,6 +36,14 @@ public class Reservation {
                 reservedAt, expiresAt, null, ReservationStatus.ACTIVE);
     }
 
+    public boolean isOwnedByConsumer(Long candidateConsumerId) {
+        return consumerId.equals(candidateConsumerId);
+    }
+
+    public boolean isOfBusiness(Long candidateBusinessId) {
+        return businessId.equals(candidateBusinessId);
+    }
+
     public Long getId() {
         return id;
     }
