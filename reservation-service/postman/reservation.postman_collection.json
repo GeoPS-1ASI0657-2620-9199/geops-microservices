@@ -274,8 +274,8 @@
                   "pm.test(\"status is 400\", function () {",
                   "    pm.response.to.have.status(400);",
                   "});",
-                  "pm.test(\"error code is VALIDATION_ERROR\", function () {",
-                  "    pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\");",
+                  "pm.test(\"error code is INVALID_REQUEST\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_REQUEST\");",
                   "});"
                 ]
               }
@@ -610,8 +610,8 @@
                   "pm.test(\"status is 400\", function () {",
                   "    pm.response.to.have.status(400);",
                   "});",
-                  "pm.test(\"error code is VALIDATION_ERROR\", function () {",
-                  "    pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\");",
+                  "pm.test(\"error code is INVALID_REQUEST\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_REQUEST\");",
                   "});"
                 ]
               }

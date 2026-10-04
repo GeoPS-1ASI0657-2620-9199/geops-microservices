@@ -22,7 +22,7 @@ Los errores responden `{"code": "...", "message": "..."}`. Los ejemplos de cada 
 
 | Código | HTTP | Cuándo |
 |---|---|---|
-| `VALIDATION_ERROR` | 400 | Falta `offerId`, el id no es un número o el estado no existe |
+| `INVALID_REQUEST` | 400 | Falta `offerId`, el id no es un número o el estado no existe |
 | `UNAUTHORIZED` | 401 | Sin token, o token vencido, de otro emisor, para otra audiencia o con otra firma |
 | `FORBIDDEN` | 403 | El token no tiene el rol, o la reserva es de otro consumidor o de otro comercio |
 | `OFFER_NOT_FOUND`, `RESERVATION_NOT_FOUND` | 404 | La oferta o la reserva no existen |

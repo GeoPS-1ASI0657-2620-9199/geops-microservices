@@ -49,4 +49,4 @@ Feature: Query reservations
   Scenario: The requested status does not exist
     When consumer 2001 lists their reservations with status VIGENTE
     Then the response has status 400
-    And the field "code" is "VALIDATION_ERROR"
+    And the field "code" is "INVALID_REQUEST"

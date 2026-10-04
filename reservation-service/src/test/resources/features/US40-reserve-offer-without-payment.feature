@@ -63,7 +63,7 @@ Feature: Reserve an offer on the platform without paying
   Scenario: The request does not specify the offer
     When consumer 2001 sends a reservation without offerId
     Then the response has status 400
-    And the field "code" is "VALIDATION_ERROR"
+    And the field "code" is "INVALID_REQUEST"
 
   Scenario Outline: Only a consumer with a valid Identity token can reserve
     When offer 1052 is reserved <token>

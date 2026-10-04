@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-    private static final String VALIDATION_ERROR = "VALIDATION_ERROR";
+    private static final String INVALID_REQUEST = "INVALID_REQUEST";
     private static final String INVALID_FIELD_MESSAGE = "%s %s";
     private static final String INVALID_PARAMETER_MESSAGE = "%s has an invalid value";
     private static final String MISSING_PARAMETER_MESSAGE = "%s is required";
@@ -64,28 +64,28 @@ public class GlobalExceptionHandler {
         var fields = exception.getBindingResult().getFieldErrors().stream()
                 .map(FieldError::getField)
                 .collect(Collectors.joining(MESSAGE_SEPARATOR));
-        LOGGER.info("request.rejected code={} fields={}", VALIDATION_ERROR, fields);
-        return respond(HttpStatus.BAD_REQUEST, VALIDATION_ERROR, message);
+        LOGGER.info("request.rejected code={} fields={}", INVALID_REQUEST, fields);
+        return respond(HttpStatus.BAD_REQUEST, INVALID_REQUEST, message);
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException exception) {
-        LOGGER.info("request.rejected code={} parameter={}", VALIDATION_ERROR, exception.getName());
-        return respond(HttpStatus.BAD_REQUEST, VALIDATION_ERROR,
+        LOGGER.info("request.rejected code={} parameter={}", INVALID_REQUEST, exception.getName());
+        return respond(HttpStatus.BAD_REQUEST, INVALID_REQUEST,
                 INVALID_PARAMETER_MESSAGE.formatted(exception.getName()));
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ErrorResponse> handleMissingParameter(MissingServletRequestParameterException exception) {
-        LOGGER.info("request.rejected code={} parameter={}", VALIDATION_ERROR, exception.getParameterName());
-        return respond(HttpStatus.BAD_REQUEST, VALIDATION_ERROR,
+        LOGGER.info("request.rejected code={} parameter={}", INVALID_REQUEST, exception.getParameterName());
+        return respond(HttpStatus.BAD_REQUEST, INVALID_REQUEST,
                 MISSING_PARAMETER_MESSAGE.formatted(exception.getParameterName()));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleUnreadableBody(HttpMessageNotReadableException exception) {
-        LOGGER.info("request.rejected code={} reason=unreadable-body", VALIDATION_ERROR);
-        return respond(HttpStatus.BAD_REQUEST, VALIDATION_ERROR, UNREADABLE_BODY_MESSAGE);
+        LOGGER.info("request.rejected code={} reason=unreadable-body", INVALID_REQUEST);
+        return respond(HttpStatus.BAD_REQUEST, INVALID_REQUEST, UNREADABLE_BODY_MESSAGE);
     }
 
     @ExceptionHandler(ServletException.class)

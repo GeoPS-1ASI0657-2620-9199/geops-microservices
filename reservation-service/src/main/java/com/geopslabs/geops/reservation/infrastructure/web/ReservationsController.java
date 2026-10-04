@@ -75,7 +75,7 @@ public class ReservationsController {
                     {"reservationId": 15, "code": "K7P3XM9Q", "expiresAt": "2026-10-15T04:59:59Z"}""")))
     @ApiResponse(responseCode = "400", description = "Missing offerId",
             content = @Content(examples = @ExampleObject(value = """
-                    {"code": "VALIDATION_ERROR", "message": "offerId must not be null"}""")))
+                    {"code": "INVALID_REQUEST", "message": "offerId must not be null"}""")))
     @ApiResponse(responseCode = "401", description = "Missing or invalid token",
             content = @Content(examples = @ExampleObject(value = UNAUTHORIZED_EXAMPLE)))
     @ApiResponse(responseCode = "403", description = "Token without ROLE_CONSUMER",
@@ -107,7 +107,7 @@ public class ReservationsController {
             content = @Content(examples = @ExampleObject(value = RESERVATION_EXAMPLE)))
     @ApiResponse(responseCode = "400", description = "The id is not a number",
             content = @Content(examples = @ExampleObject(value = """
-                    {"code": "VALIDATION_ERROR", "message": "id has an invalid value"}""")))
+                    {"code": "INVALID_REQUEST", "message": "id has an invalid value"}""")))
     @ApiResponse(responseCode = "401", description = "Missing or invalid token",
             content = @Content(examples = @ExampleObject(value = UNAUTHORIZED_EXAMPLE)))
     @ApiResponse(responseCode = "403", description = "Token without ROLE_CONSUMER or reservation of another consumer",
@@ -148,7 +148,7 @@ public class ReservationsController {
             content = @Content(examples = @ExampleObject(value = "[" + RESERVATION_EXAMPLE + "]")))
     @ApiResponse(responseCode = "400", description = "Unknown status",
             content = @Content(examples = @ExampleObject(value = """
-                    {"code": "VALIDATION_ERROR", "message": "status has an invalid value"}""")))
+                    {"code": "INVALID_REQUEST", "message": "status has an invalid value"}""")))
     @ApiResponse(responseCode = "401", description = "Missing or invalid token",
             content = @Content(examples = @ExampleObject(value = UNAUTHORIZED_EXAMPLE)))
     @ApiResponse(responseCode = "403", description = "Token without ROLE_CONSUMER",
