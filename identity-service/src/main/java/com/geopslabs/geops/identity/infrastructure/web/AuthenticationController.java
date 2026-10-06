@@ -1,12 +1,7 @@
 package com.geopslabs.geops.identity.infrastructure.web;
 
-import com.geopslabs.geops.identity.application.usecases.GetUserByEmailQuery;
+import com.geopslabs.geops.identity.application.usecases.LogInUseCase;
 import com.geopslabs.geops.identity.application.usecases.RegisterUserUseCase;
-import com.geopslabs.geops.identity.application.usecases.UserQueryUseCase;
-import com.geopslabs.geops.identity.domain.ports.PasswordHasherPort;
-import com.geopslabs.geops.identity.domain.ports.TokenIssuerPort;
-import com.geopslabs.geops.identity.infrastructure.web.resources.AuthenticationResource;
-import com.geopslabs.geops.identity.infrastructure.web.resources.SignInResource;
 import com.geopslabs.geops.identity.shared.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -28,22 +23,15 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 @Tag(name = "Authentication", description = "User registration and login")
 @RestController
-@RequestMapping(produces = APPLICATION_JSON_VALUE)
+@RequestMapping(value = "/api/v1/auth", produces = APPLICATION_JSON_VALUE)
 @CrossOrigin(origins = "*")
 public class AuthenticationController {
     private final RegisterUserUseCase registerUserUseCase;
-    private final UserQueryUseCase userQueryService;
-    private final PasswordHasherPort hashingService;
-    private final TokenIssuerPort tokenService;
+    private final LogInUseCase logInUseCase;
 
-    public AuthenticationController(RegisterUserUseCase registerUserUseCase,
-                                    UserQueryUseCase userQueryService,
-                                    PasswordHasherPort hashingService,
-                                    TokenIssuerPort tokenService) {
+    public AuthenticationController(RegisterUserUseCase registerUserUseCase, LogInUseCase logInUseCase) {
         this.registerUserUseCase = registerUserUseCase;
-        this.userQueryService = userQueryService;
-        this.hashingService = hashingService;
-        this.tokenService = tokenService;
+        this.logInUseCase = logInUseCase;
     }
 
     @Operation(summary = "Register a consumer or a business owner with its profile",
@@ -78,52 +66,38 @@ public class AuthenticationController {
                                     {"code": "PHONE_ALREADY_REGISTERED",
                                      "message": "Ese teléfono ya tiene una cuenta. Inicia sesión o usa otro teléfono."}""")}))
     })
-    @PostMapping(value = "/api/v1/auth/register", consumes = APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/register", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<RegisteredUserResponse> register(@Valid @RequestBody RegisterUserRequest request) {
         var registered = registerUserUseCase.register(request.toCommand());
         return ResponseEntity.status(HttpStatus.CREATED).body(RegisteredUserResponse.from(registered));
     }
 
-    @Operation(summary = "Authenticate a user", description = "Validates user credentials and returns user information")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "User authenticated successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid input data"),
-        @ApiResponse(responseCode = "401", description = "Invalid credentials")
+    @Operation(summary = "Check credentials and issue an RS256 token",
+            description = "Any failure answers the same 401 so the response never says which data was wrong.")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @Content(
+            mediaType = APPLICATION_JSON_VALUE,
+            schema = @Schema(implementation = LogInRequest.class),
+            examples = @ExampleObject(name = "consumer", value = """
+                    {"email": "lucia.fernandez@ejemplo.pe", "password": "Ofertas#2026"}""")))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Valid credentials; signed token issued",
+                    content = @Content(schema = @Schema(implementation = TokenResponse.class),
+                            examples = @ExampleObject(name = "consumerToken", value = """
+                                    {"accessToken": "eyJraWQiOiJpZGVudGl0eS0yMDI2LTEwIiwidHlwIjoiSldUIiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiI0MSIsInJvbGUiOiJDT05TVU1FUiIsImNvbnN1bWVySWQiOjQxfQ.c2lnbmF0dXJh",
+                                     "tokenType": "Bearer", "expiresIn": 3600, "userId": 41,
+                                     "role": "CONSUMER", "consumerId": 41}"""))),
+            @ApiResponse(responseCode = "400", description = "Missing or malformed email or password",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(name = "invalidRequest", value = """
+                                    {"code": "INVALID_REQUEST", "message": "Revisa estos datos: email."}"""))),
+            @ApiResponse(responseCode = "401", description = "Unknown email, wrong password or locked account",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(name = "invalidCredentials", value = """
+                                    {"code": "INVALID_CREDENTIALS",
+                                     "message": "No se pudo iniciar sesión con esos datos."}""")))
     })
-    @PostMapping("/api/v1/authentication/sign-in")
-    public ResponseEntity<AuthenticationResource> signIn(@RequestBody SignInResource resource) {
-        if (resource.email() == null || resource.email().isBlank()) {
-            return ResponseEntity.badRequest().build();
-        }
-        if (resource.password() == null || resource.password().isBlank()) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        var query = new GetUserByEmailQuery(resource.email());
-        var userOptional = userQueryService.handle(query);
-
-        if (userOptional.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        var user = userOptional.get();
-
-        if (!hashingService.matches(resource.password(), user.getPasswordHash())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        var token = tokenService.generateToken(user.getEmail());
-
-        var authResource = new AuthenticationResource(
-            user.getId(),
-            user.getFullName(),
-            user.getEmail(),
-            user.getPhone(),
-            user.getRole().name(),
-            token,
-            "User authenticated successfully"
-        );
-
-        return ResponseEntity.ok(authResource);
+    @PostMapping(value = "/login", consumes = APPLICATION_JSON_VALUE)
+    public TokenResponse logIn(@Valid @RequestBody LogInRequest request) {
+        return TokenResponse.from(logInUseCase.logIn(request.toCommand()));
     }
 }
