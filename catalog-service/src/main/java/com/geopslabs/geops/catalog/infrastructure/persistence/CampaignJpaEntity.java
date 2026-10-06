@@ -1,9 +1,11 @@
 package com.geopslabs.geops.catalog.infrastructure.persistence;
 
 import com.geopslabs.geops.catalog.domain.models.ECampaignStatus;
-import com.geopslabs.geops.catalog.shared.AuditableAbstractAggregateRoot;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
@@ -16,7 +18,11 @@ import java.time.LocalDate;
 @Table(name = "campaign")
 @Getter
 @Setter
-public class CampaignJpaEntity extends AuditableAbstractAggregateRoot<CampaignJpaEntity> {
+public class CampaignJpaEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(name = "business_id", nullable = false)
     private Long businessId;
@@ -40,12 +46,4 @@ public class CampaignJpaEntity extends AuditableAbstractAggregateRoot<CampaignJp
     @Column(name = "estimated_budget", nullable = false)
     private float estimatedBudget;
 
-    @Column(name = "total_impressions", nullable = false)
-    private Long totalImpressions;
-
-    @Column(name = "total_clicks", nullable = false)
-    private Long totalClicks;
-
-    @Column(name = "CTR", nullable = false)
-    private float ctr;
 }

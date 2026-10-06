@@ -43,8 +43,7 @@ public class CampaignCommandService implements CampaignCommandUseCase {
             var foundCampaign = campaignRepository.findById(command.id());
             if(foundCampaign.isEmpty()) throw new NoSuchElementException("Campaign not found with id: " + command.id());
                 foundCampaign.get().edit(command.name(), command.description(), command.startDate(), command.endDate(),
-                    ECampaignStatus.valueOf(command.status()), command.estimatedBudget(), command.totalImpressions(),
-                    command.totalClicks(), command.ctr());
+                    ECampaignStatus.valueOf(command.status()), command.estimatedBudget());
             var editedCampaign = campaignRepository.save(foundCampaign.get());
             return Optional.of(editedCampaign);
         }
@@ -69,6 +68,5 @@ public class CampaignCommandService implements CampaignCommandUseCase {
             return false;
         }
     }
-
 
 }

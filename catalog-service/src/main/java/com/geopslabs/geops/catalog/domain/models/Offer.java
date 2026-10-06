@@ -5,7 +5,6 @@ import com.geopslabs.geops.catalog.domain.models.commands.UpdateOfferCommand;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Date;
 
 public class Offer {
     private Long id;
@@ -13,45 +12,33 @@ public class Offer {
     private String title;
     private Long businessId;
     private BigDecimal price;
-    private String codePrefix;
     private LocalDate validTo;
-    private Integer rating;
     private String location;
     private String category;
     private String imageUrl;
-    private Date createdAt;
-    private Date updatedAt;
-
     public Offer(Campaign campaign, CreateOfferCommand command) {
         this.campaign = campaign;
         this.title = command.title();
         this.businessId = command.businessId();
         this.price = command.price();
-        this.codePrefix = command.codePrefix();
         this.validTo = command.validTo();
-        this.rating = command.rating();
         this.location = command.location();
         this.category = command.category();
         this.imageUrl = command.imageUrl();
     }
 
     @SuppressWarnings("java:S107")
-    public Offer(Long id, Campaign campaign, String title, Long businessId, BigDecimal price, String codePrefix,
-                 LocalDate validTo, Integer rating, String location, String category, String imageUrl,
-                 Date createdAt, Date updatedAt) {
+    public Offer(Long id, Campaign campaign, String title, Long businessId, BigDecimal price,
+                 LocalDate validTo, String location, String category, String imageUrl) {
         this.id = id;
         this.campaign = campaign;
         this.title = title;
         this.businessId = businessId;
         this.price = price;
-        this.codePrefix = codePrefix;
         this.validTo = validTo;
-        this.rating = rating;
         this.location = location;
         this.category = category;
         this.imageUrl = imageUrl;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
     }
 
     public void updateOffer(UpdateOfferCommand command) {
@@ -64,14 +51,8 @@ public class Offer {
         if (command.price() != null) {
             this.price = command.price();
         }
-        if (command.codePrefix() != null) {
-            this.codePrefix = command.codePrefix();
-        }
         if (command.validTo() != null) {
             this.validTo = command.validTo();
-        }
-        if (command.rating() != null) {
-            this.rating = command.rating();
         }
         if (command.location() != null) {
             this.location = command.location();
@@ -108,16 +89,8 @@ public class Offer {
         return price;
     }
 
-    public String getCodePrefix() {
-        return codePrefix;
-    }
-
     public LocalDate getValidTo() {
         return validTo;
-    }
-
-    public Integer getRating() {
-        return rating;
     }
 
     public String getLocation() {
@@ -130,13 +103,5 @@ public class Offer {
 
     public String getImageUrl() {
         return imageUrl;
-    }
-
-    public Date getCreatedAt() {
-        return createdAt;
-    }
-
-    public Date getUpdatedAt() {
-        return updatedAt;
     }
 }

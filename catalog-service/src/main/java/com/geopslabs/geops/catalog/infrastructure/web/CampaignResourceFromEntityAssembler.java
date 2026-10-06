@@ -7,8 +7,6 @@ public class CampaignResourceFromEntityAssembler {
     public static CampaignResource toResourceFromEntity(Campaign entity)
     {
         return new CampaignResource(entity.getId(), entity.getBusinessId(), entity.getName(), entity.getDescription(),entity.getStartDate(),
-                entity.getEndDate(), entity.getStatus().toString(), entity.getEstimatedBudget(),
-                entity.getTotalImpressions(),entity.getTotalClicks(),entity.getCTR(),entity.getCreatedAt(),
-                entity.getUpdatedAt());
+                entity.getEndDate(), entity.getStatus().toString(), entity.getEstimatedBudget());
     }
 }

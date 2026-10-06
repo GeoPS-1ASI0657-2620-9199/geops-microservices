@@ -4,16 +4,6 @@ import com.geopslabs.geops.catalog.domain.models.Campaign;
 
 import java.time.LocalDate;
 
-/**
- * Command to create a campaign
- * @param businessId The user id
- * @param name The campaign name
- * @param description The campaign description
- * @param startDate The start date of the campaign
- * @param endDate The end date of the campaign
- * @param estimatedBudget The estimated budget for the campaign
- * @see Campaign
- */
 public record CreateCampaignCommand(Long businessId, String name, String description, LocalDate startDate, LocalDate endDate, Float estimatedBudget) {
     public CreateCampaignCommand {
         if(businessId == null || businessId < 0)

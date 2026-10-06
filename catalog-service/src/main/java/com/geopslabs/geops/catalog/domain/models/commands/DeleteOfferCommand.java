@@ -1,12 +1,5 @@
 package com.geopslabs.geops.catalog.domain.models.commands;
 
-/**
- * Deletes an offer from the database using its id
- * @param id The offer unique identification
- *
- * @since 1.0
- * @author GeOps Labs
- */
 public record DeleteOfferCommand(Long id) {
     public DeleteOfferCommand {
         if(id == null || id < 1)

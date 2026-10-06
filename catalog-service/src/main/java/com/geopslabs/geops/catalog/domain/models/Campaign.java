@@ -3,7 +3,6 @@ package com.geopslabs.geops.catalog.domain.models;
 import com.geopslabs.geops.catalog.domain.models.commands.CreateCampaignCommand;
 
 import java.time.LocalDate;
-import java.util.Date;
 
 public class Campaign {
     private Long id;
@@ -14,11 +13,6 @@ public class Campaign {
     private LocalDate endDate;
     private ECampaignStatus status;
     private float estimatedBudget;
-    private Long totalImpressions;
-    private Long totalClicks;
-    private float CTR;
-    private Date createdAt;
-    private Date updatedAt;
 
     public Campaign(CreateCampaignCommand command) {
         this.businessId = command.businessId();
@@ -28,15 +22,11 @@ public class Campaign {
         this.endDate = command.endDate();
         this.status = ECampaignStatus.ACTIVE;
         this.estimatedBudget = command.estimatedBudget() != null ? command.estimatedBudget() : 0;
-        this.totalImpressions = 0L;
-        this.totalClicks = 0L;
-        this.CTR = 0;
     }
 
     @SuppressWarnings("java:S107")
     public Campaign(Long id, Long businessId, String name, String description, LocalDate startDate, LocalDate endDate,
-                    ECampaignStatus status, float estimatedBudget, Long totalImpressions, Long totalClicks,
-                    float ctr, Date createdAt, Date updatedAt) {
+                    ECampaignStatus status, float estimatedBudget) {
         this.id = id;
         this.businessId = businessId;
         this.name = name;
@@ -45,15 +35,10 @@ public class Campaign {
         this.endDate = endDate;
         this.status = status;
         this.estimatedBudget = estimatedBudget;
-        this.totalImpressions = totalImpressions;
-        this.totalClicks = totalClicks;
-        this.CTR = ctr;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
     }
 
     public void edit(String name, String description, LocalDate startDate, LocalDate endDate, ECampaignStatus status,
-                     Float estimatedBudget, Long totalImpressions, Long totalClicks, Float ctr) {
+                     Float estimatedBudget) {
         this.name = name;
         this.description = description;
         this.startDate = startDate;
@@ -61,15 +46,6 @@ public class Campaign {
         this.status = status;
         if (estimatedBudget != null) {
             this.estimatedBudget = estimatedBudget;
-        }
-        if (totalImpressions != null) {
-            this.totalImpressions = Math.max(0L, totalImpressions);
-        }
-        if (totalClicks != null) {
-            this.totalClicks = Math.max(0L, totalClicks);
-        }
-        if (ctr != null) {
-            this.CTR = Math.max(0, ctr);
         }
     }
 
@@ -103,25 +79,5 @@ public class Campaign {
 
     public float getEstimatedBudget() {
         return estimatedBudget;
-    }
-
-    public Long getTotalImpressions() {
-        return totalImpressions;
-    }
-
-    public Long getTotalClicks() {
-        return totalClicks;
-    }
-
-    public float getCTR() {
-        return CTR;
-    }
-
-    public Date getCreatedAt() {
-        return createdAt;
-    }
-
-    public Date getUpdatedAt() {
-        return updatedAt;
     }
 }

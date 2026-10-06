@@ -9,9 +9,8 @@ final class OfferPersistenceMapper {
 
     static Offer toDomain(OfferJpaEntity entity) {
         return new Offer(entity.getId(), CampaignPersistenceMapper.toDomain(entity.getCampaign()), entity.getTitle(),
-                entity.getBusinessId(), entity.getPrice(), entity.getCodePrefix(), entity.getValidTo(),
-                entity.getRating(), entity.getLocation(), entity.getCategory(), entity.getImageUrl(),
-                entity.getCreatedAt(), entity.getUpdatedAt());
+                entity.getBusinessId(), entity.getPrice(), entity.getValidTo(),
+                entity.getLocation(), entity.getCategory(), entity.getImageUrl());
     }
 
     static OfferJpaEntity toEntity(Offer offer) {
@@ -21,9 +20,7 @@ final class OfferPersistenceMapper {
         entity.setTitle(offer.getTitle());
         entity.setBusinessId(offer.getBusinessId());
         entity.setPrice(offer.getPrice());
-        entity.setCodePrefix(offer.getCodePrefix());
         entity.setValidTo(offer.getValidTo());
-        entity.setRating(offer.getRating());
         entity.setLocation(offer.getLocation());
         entity.setCategory(offer.getCategory());
         entity.setImageUrl(offer.getImageUrl());

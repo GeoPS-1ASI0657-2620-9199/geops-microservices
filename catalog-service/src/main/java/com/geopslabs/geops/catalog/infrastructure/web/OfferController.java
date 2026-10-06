@@ -26,15 +26,6 @@ import java.util.List;
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
-/**
- * OfferController
- * REST controller that exposes offer endpoints for the GeOps platform
- * This controller handles HTTP requests for offer CRUD operations
- *
- * @summary REST controller for offer operations
- * @since 1.0
- * @author GeOps Labs
- */
 @Tag(name = "Offers", description = "Offer operations and management")
 @RestController
 @RequestMapping(value = "/api/v1/offers", produces = APPLICATION_JSON_VALUE)
@@ -43,24 +34,12 @@ public class OfferController {
     private final OfferCommandUseCase offerCommandService;
     private final OfferQueryUseCase offerQueryService;
 
-    /**
-     * Constructor for dependency injection
-     *
-     * @param offerCommandService Service for handling offer commands
-     * @param offerQueryService Service for handling offer queries
-     */
     public OfferController(OfferCommandUseCase offerCommandService,
                           OfferQueryUseCase offerQueryService) {
         this.offerCommandService = offerCommandService;
         this.offerQueryService = offerQueryService;
     }
 
-    /**
-     * Creates a new offer
-     *
-     * @param resource The offer creation request data
-     * @return ResponseEntity containing the created offer or error status
-     */
     @Operation(summary = "Create new offer")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Offer created successfully"),
@@ -80,12 +59,6 @@ public class OfferController {
         return new ResponseEntity<>(offerResource, CREATED);
     }
 
-    /**
-     * Retrieves an offer by its unique identifier
-     *
-     * @param id The unique identifier of the offer
-     * @return ResponseEntity containing the offer data or not found status
-     */
     @Operation(summary = "Get offer by ID")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Offer found"),
@@ -106,15 +79,6 @@ public class OfferController {
         return ResponseEntity.ok(offerResource);
     }
 
-    /**
-     * Retrieves all offers or offers by a list of IDs
-     * This endpoint supports two modes:
-     * 1. GET /offers - retrieves all offers
-     * 2. GET /offers?id=1&id=2&id=3 - retrieves offers by specified IDs
-     *
-     * @param id Optional list of offer IDs to filter by
-     * @return ResponseEntity containing the list of offers
-     */
     @Operation(summary = "Get all offers or offers by IDs")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Offers retrieved successfully")
@@ -126,14 +90,12 @@ public class OfferController {
         List<OfferResource> offerResources;
 
         if (id != null && !id.isEmpty()) {
-            // GET /offers?id=1&id=2&id=3
             var query = new GetOffersByIdsQuery(id);
             var offers = offerQueryService.handle(query);
             offerResources = offers.stream()
                     .map(OfferResourceFromEntityAssembler::toResourceFromEntity)
                     .toList();
         } else {
-            // GET /offers
             var query = new GetAllOffersQuery();
             var offers = offerQueryService.handle(query);
             offerResources = offers.stream()
@@ -144,13 +106,6 @@ public class OfferController {
         return ResponseEntity.ok(offerResources);
     }
 
-    /**
-     * Updates an existing offer
-     *
-     * @param id The unique identifier of the offer to update
-     * @param resource The offer update request data
-     * @return ResponseEntity containing the updated offer or error status
-     */
     @Operation(summary = "Update offer")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Offer updated successfully"),
@@ -162,7 +117,6 @@ public class OfferController {
             @Parameter(description = "Offer unique identifier") @PathVariable Long id,
             @RequestBody UpdateOfferResource resource) {
 
-        // First check if offer exists
         var existingOfferQuery = new GetOfferByIdQuery(id);
         var existingOffer = offerQueryService.handle(existingOfferQuery);
 
@@ -170,7 +124,6 @@ public class OfferController {
             return ResponseEntity.notFound().build();
         }
 
-        // Create update command and handle it
         var updateCommand = UpdateOfferCommandFromResourceAssembler.toCommandFromResource(id, resource);
         var offer = offerCommandService.handle(updateCommand);
 
@@ -182,12 +135,6 @@ public class OfferController {
         return ResponseEntity.ok(offerResource);
     }
 
-    /**
-     * Deletes an offer by ID
-     *
-     * @param id The unique identifier of the offer to delete
-     * @return ResponseEntity with no content or error status
-     */
     @Operation(summary = "Delete offer")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "204", description = "Offer deleted successfully"),
@@ -207,11 +154,6 @@ public class OfferController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Gets all offers from a campaign.
-     * @param id The campaign id.
-     * @return A list of {@link OfferResource} that has a campaign in common.
-     */
     @Operation(summary = "Get all offers from a campaign", description = "Get all offers by using a campaign unique identifier")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Offers retrieved successfully"),

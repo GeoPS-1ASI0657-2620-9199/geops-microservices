@@ -8,9 +8,6 @@ import com.geopslabs.geops.catalog.domain.models.queries.GetCampaignByIdQuery;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Campaign Query service interface to use all the queries
- */
 public interface CampaignQueryUseCase {
 
     Optional<Campaign> handle(GetCampaignByIdQuery query);
