@@ -129,6 +129,12 @@ services:
       <<: *service-env
       SERVER_PORT: 8084
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/engagement_db
+      IDENTITY_JWKS_URI: http://identity-service:8081/.well-known/jwks.json
+      SPRING_PROFILES_ACTIVE: demo
+    depends_on:
+      <<: *service-deps
+      identity-service:
+        condition: service_healthy
     healthcheck:
       <<: *health
       test: ["CMD", "curl", "-fs", "http://localhost:8084/actuator/health"]
