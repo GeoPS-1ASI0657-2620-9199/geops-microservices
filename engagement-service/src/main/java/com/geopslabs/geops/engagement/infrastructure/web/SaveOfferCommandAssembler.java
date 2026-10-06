@@ -7,7 +7,7 @@ public final class SaveOfferCommandAssembler {
     private SaveOfferCommandAssembler() {
     }
 
-    public static SaveOfferCommand toCommandFromResource(SaveOfferRequest request) {
-        return new SaveOfferCommand(request.consumerId(), request.offerId());
+    public static SaveOfferCommand toCommand(AuthenticatedUser user, SaveOfferRequest request) {
+        return new SaveOfferCommand(user.consumerId(), request.offerId());
     }
 }

@@ -8,6 +8,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,10 +33,11 @@ public class ReviewController {
         this.reviewQueryService = reviewQueryService;
     }
 
-    @Operation(summary = "Publish a review of a business")
+    @Operation(summary = "Publish a review of a business as the consumer of the token")
     @PostMapping
-    public ResponseEntity<ReviewResource> create(@RequestBody CreateReviewResource resource) {
-        var command = CreateReviewCommandFromResourceAssembler.toCommandFromResource(resource);
+    public ResponseEntity<ReviewResource> create(@AuthenticationPrincipal Jwt jwt,
+                                                 @RequestBody CreateReviewResource resource) {
+        var command = CreateReviewCommandFromResourceAssembler.toCommand(AuthenticatedUser.from(jwt), resource);
         var review = reviewCommandService.handle(command);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ReviewResourceFromEntityAssembler.toResourceFromEntity(review));
