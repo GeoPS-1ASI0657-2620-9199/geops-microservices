@@ -22,6 +22,10 @@ public class ConsumerProfile {
         this.id = id;
     }
 
+    public static ConsumerProfile createFor(Long userId) {
+        return new ConsumerProfile(userId, false, DEFAULT_SEARCH_RADIUS_MINUTES, null);
+    }
+
     public Long getId() {
         return id;
     }

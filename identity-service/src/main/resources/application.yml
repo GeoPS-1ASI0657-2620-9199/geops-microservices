@@ -17,11 +17,13 @@ spring:
   flyway:
     enabled: true
 
-authorization:
-  jwt:
-    secret: ${JWT_HMAC_SECRET}
-    expiration:
-      days: 7
+geops:
+  security:
+    jwt:
+      private-key-path: ${JWT_PRIVATE_KEY_PATH}
+      public-key-path: ${JWT_PUBLIC_KEY_PATH}
+      issuer: geops-identity
+      audience: geops-api
 
 management:
   endpoints:

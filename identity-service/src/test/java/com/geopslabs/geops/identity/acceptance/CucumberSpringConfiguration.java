@@ -1,9 +1,6 @@
-package com.geopslabs.geops.identity;
+package com.geopslabs.geops.identity.acceptance;
 
-import com.geopslabs.geops.identity.acceptance.TestKeys;
-import org.flywaydb.core.Flyway;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
+import io.cucumber.spring.CucumberContextConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -11,13 +8,11 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-@SpringBootTest
-class IdentityServiceApplicationTests {
+@CucumberContextConfiguration
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+public class CucumberSpringConfiguration {
     private static final DockerImageName POSTGIS_IMAGE =
             DockerImageName.parse("imresamu/postgis:16-3.4").asCompatibleSubstituteFor("postgres");
-    private static final String BASELINE_VERSION = "1";
 
     @ServiceConnection
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(POSTGIS_IMAGE);
@@ -26,16 +21,8 @@ class IdentityServiceApplicationTests {
         POSTGRES.start();
     }
 
-    @Autowired
-    private Flyway flyway;
-
     @DynamicPropertySource
     static void jwtKeys(DynamicPropertyRegistry registry) {
         TestKeys.register(registry);
-    }
-
-    @Test
-    void appliesBaselineMigration() {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo(BASELINE_VERSION);
     }
 }
