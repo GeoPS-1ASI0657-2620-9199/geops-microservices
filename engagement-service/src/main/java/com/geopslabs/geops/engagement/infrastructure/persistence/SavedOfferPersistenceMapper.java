@@ -7,7 +7,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 
 final class SavedOfferPersistenceMapper {
-
     private SavedOfferPersistenceMapper() {
     }
 

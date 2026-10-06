@@ -15,7 +15,6 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class BeanConfiguration {
-
     @Bean
     public SavedOfferCommandUseCase savedOfferCommandUseCase(SavedOfferRepositoryPort savedOfferRepository) {
         return new SavedOfferCommandService(savedOfferRepository);

@@ -13,18 +13,18 @@ final class ReviewPersistenceMapper {
 
     static Review toDomain(ReviewJpaEntity entity) {
         return new Review(entity.getId(), entity.getReservationId(), entity.getConsumerId(), entity.getBusinessId(),
-                entity.getUserName(), entity.getRating(), entity.getText(), entity.getLikes(),
-                toUtc(entity.getCreatedAt()));
+                entity.getRating(), entity.getText(), entity.getVerifiedRedemption(), toUtc(entity.getCreatedAt()));
     }
 
-    static ReviewJpaEntity toEntity(Review review, ReviewJpaEntity entity) {
+    static ReviewJpaEntity toEntity(Review review) {
+        var entity = new ReviewJpaEntity();
+        entity.setId(review.getId());
         entity.setReservationId(review.getReservationId());
         entity.setConsumerId(review.getConsumerId());
         entity.setBusinessId(review.getBusinessId());
-        entity.setUserName(review.getUserName());
         entity.setRating(review.getRating());
         entity.setText(review.getText());
-        entity.setLikes(review.getLikes());
+        entity.setVerifiedRedemption(review.getVerifiedRedemption());
         entity.setCreatedAt(toInstant(review.getCreatedAt()));
         return entity;
     }

@@ -23,42 +23,19 @@ import java.util.List;
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
-/**
- * SavedOffersController
- *
- * REST controller for managing saved offer offers for users
- * This controller provides endpoints to create, retrieve, and delete saved offers
- *
- * @summary REST controller for saved offer management
- * @since 1.0
- * @author GeOps Labs
- */
 @Tag(name = "Saved offers", description = "Offers the consumer saved to find them again")
 @RestController
 @RequestMapping(value = "/api/v1/saved-offers", produces = APPLICATION_JSON_VALUE)
 public class SavedOffersController {
-
     private final SavedOfferCommandUseCase savedOfferCommandService;
     private final SavedOfferQueryUseCase savedOfferQueryService;
 
-    /**
-     * Constructor for dependency injection
-     *
-     * @param savedOfferCommandService Service for handling saved offer commands
-     * @param savedOfferQueryService Service for handling saved offer queries
-     */
     public SavedOffersController(SavedOfferCommandUseCase savedOfferCommandService,
                              SavedOfferQueryUseCase savedOfferQueryService) {
         this.savedOfferCommandService = savedOfferCommandService;
         this.savedOfferQueryService = savedOfferQueryService;
     }
 
-    /**
-     * Creates a new saved offer
-     *
-     * @param resource The saved offer creation request data
-     * @return ResponseEntity containing the created saved offer or error status
-     */
     @Operation(summary = "Create new savedOffer")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "SavedOffer created successfully"),
@@ -78,13 +55,6 @@ public class SavedOffersController {
         return new ResponseEntity<>(savedOfferResource, CREATED);
     }
 
-    /**
-     * Retrieves saved offers by consumerId or checks if a specific saved offer exists
-     *
-     * @param consumerId The ID of the user whose saved offers are to be retrieved (required)
-     * @param offerId The ID of the offer to check if saved offer (optional)
-     * @return ResponseEntity containing the list of saved offers or specific saved offer, or error status
-     */
     @Operation(summary = "Get savedOffers by consumerId or check if savedOffer exists")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "SavedOffers retrieved successfully"),
@@ -96,10 +66,7 @@ public class SavedOffersController {
             @RequestParam(required = true) Long consumerId,
             @Parameter(description = "Offer ID (optional - for checking if saved)")
             @RequestParam(required = false) Long offerId) {
-
         if (offerId != null) {
-            // GET /saved offers?consumerId=1&offerId=7
-            // Check if specific saved offer exists (for heart button)
             var query = new GetSavedOfferByConsumerIdAndOfferIdQuery(consumerId, offerId);
             var savedOffer = savedOfferQueryService.handle(query);
 
@@ -108,12 +75,9 @@ public class SavedOffersController {
                     .toResourceFromEntity(savedOffer.get());
                 return ResponseEntity.ok(savedOfferResource);
             } else {
-                // Return 200 with empty body to indicate "not saved"
                 return ResponseEntity.ok().build();
             }
         } else {
-            // GET /saved offers?consumerId=1
-            // Get all saved offers for user
             var query = new GetSavedOffersByConsumerQuery(consumerId);
             var savedOffers = savedOfferQueryService.handle(query);
             var savedOfferResources = savedOffers.stream()
@@ -123,12 +87,6 @@ public class SavedOffersController {
         }
     }
 
-    /**
-     * Deletes a saved offer by ID
-     *
-     * @param id The unique identifier of the saved offer to delete
-     * @return ResponseEntity with no content or error status
-     */
     @Operation(summary = "Delete savedOffer by ID")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "204", description = "SavedOffer deleted successfully"),
@@ -138,7 +96,6 @@ public class SavedOffersController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(
             @Parameter(description = "SavedOffer unique identifier") @PathVariable Long id) {
-
         boolean deleted = savedOfferCommandService.handleDelete(id);
 
         if (!deleted) {
@@ -148,13 +105,6 @@ public class SavedOffersController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Deletes a saved offer by consumerId and offerId
-     * This endpoint is useful for the frontend when un-hearting an offer
-     *
-     * @param resource The delete saved offer resource containing consumerId and offerId
-     * @return ResponseEntity with no content or error status
-     */
     @Operation(summary = "Delete savedOffer by consumerId and offerId")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "204", description = "SavedOffer deleted successfully"),

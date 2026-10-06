@@ -17,7 +17,6 @@ import java.time.Instant;
 @Getter
 @Setter
 public class SavedOfferJpaEntity {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
