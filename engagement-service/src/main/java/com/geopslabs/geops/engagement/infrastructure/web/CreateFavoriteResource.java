@@ -1,0 +1,31 @@
+package com.geopslabs.geops.engagement.infrastructure.web;
+
+/**
+ * CreateFavoriteResource
+ *
+ * Resource representing the data required to create a new favorite offer for a user
+ *
+ * @summary Resource for creating a favorite offer
+ * @since 1.0
+ * @author GeOps Labs
+ */
+public record CreateFavoriteResource(
+    Long userId,
+    Long offerId
+) {
+    /**
+     * Compact constructor that validates the resource parameters
+     *
+     * @throws IllegalArgumentException if validation fails
+     */
+    public CreateFavoriteResource {
+        if (userId == null) {
+            throw new IllegalArgumentException("userId cannot be null");
+        }
+
+        if (offerId == null) {
+            throw new IllegalArgumentException("offerId cannot be null");
+        }
+    }
+}
+
