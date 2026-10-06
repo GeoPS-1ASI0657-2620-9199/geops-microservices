@@ -7,7 +7,7 @@ Feature: Versioned schema migrations
     Given an empty database with PostGIS
     When the migrations run in order
     Then every pending migration is applied successfully
-    And the resulting schema is the one the running service validated
+    And every table and column the service maps exists in the resulting schema
 
   Scenario: Running the migrations again changes nothing
     Given an empty database with PostGIS

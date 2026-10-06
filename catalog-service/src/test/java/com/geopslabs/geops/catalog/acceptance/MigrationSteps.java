@@ -7,16 +7,23 @@ import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.output.MigrateResult;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.persister.entity.AbstractEntityPersister;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
+import jakarta.persistence.EntityManagerFactory;
+
 import javax.sql.DataSource;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -46,18 +53,23 @@ public class MigrationSteps {
             WHERE connamespace = 'public'::regnamespace
               AND conrelid::regclass::text NOT IN ('flyway_schema_history', 'spatial_ref_sys')
             ORDER BY 1""";
+    private static final String TABLE_COLUMNS = """
+            SELECT table_name || '.' || column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public'""";
+    private static final String COLUMN_SEPARATOR = ".";
     private static final int NO_MIGRATIONS = 0;
     private static final int SHORT_NAME_LENGTH = 8;
 
-    private final DataSource serviceDataSource;
+    private final EntityManagerFactory entityManagerFactory;
     private final Environment environment;
     private String databaseName;
     private DataSource migrationDataSource;
     private MigrateResult lastResult;
     private List<String> schemaBeforeRerun;
 
-    public MigrationSteps(DataSource serviceDataSource, Environment environment) {
-        this.serviceDataSource = serviceDataSource;
+    public MigrationSteps(EntityManagerFactory entityManagerFactory, Environment environment) {
+        this.entityManagerFactory = entityManagerFactory;
         this.environment = environment;
     }
 
@@ -98,10 +110,12 @@ public class MigrationSteps {
         assertThat(lastResult.migrationsExecuted).isEqualTo(migrationFiles().size());
     }
 
-    @And("the resulting schema is the one the running service validated")
-    public void theSchemaIsTheOneTheServiceValidated() {
-        var migratedSchema = schemaOf(migrationDataSource);
-        assertThat(migratedSchema).isNotEmpty().isEqualTo(schemaOf(serviceDataSource));
+    @And("every table and column the service maps exists in the resulting schema")
+    public void everyMappedColumnExists() {
+        var mapped = mappedColumns();
+        var migrated = new JdbcTemplate(migrationDataSource).queryForList(TABLE_COLUMNS, String.class);
+        assertThat(mapped).isNotEmpty();
+        assertThat(migrated).containsAll(mapped);
     }
 
     @Then("no migration is applied")
@@ -130,6 +144,23 @@ public class MigrationSteps {
                 .dataSource(migrationDataSource)
                 .locations(MIGRATIONS_LOCATION)
                 .load();
+    }
+
+    private List<String> mappedColumns() {
+        var columns = new ArrayList<String>();
+        entityManagerFactory.unwrap(SessionFactoryImplementor.class).getMappingMetamodel()
+                .forEachEntityDescriptor(descriptor -> columns.addAll(columnsOf((AbstractEntityPersister) descriptor)));
+        return columns;
+    }
+
+    private static List<String> columnsOf(AbstractEntityPersister persister) {
+        var table = persister.getTableName();
+        var propertyColumns = IntStream.range(0, persister.getPropertySpan())
+                .mapToObj(persister::getPropertyColumnNames)
+                .flatMap(Arrays::stream);
+        return Stream.concat(Arrays.stream(persister.getIdentifierColumnNames()), propertyColumns)
+                .map(column -> table + COLUMN_SEPARATOR + column)
+                .toList();
     }
 
     private static List<String> schemaOf(DataSource dataSource) {
