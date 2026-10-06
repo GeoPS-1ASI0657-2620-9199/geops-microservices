@@ -6,5 +6,5 @@ import java.util.List;
 
 public interface ReviewJpaRepository extends JpaRepository<ReviewJpaEntity, Long> {
 
-    List<ReviewJpaEntity> findByBusinessIdOrderByCreatedAtDesc(Long businessId);
+    List<ReviewJpaEntity> findByBusinessIdOrderByCreatedAtDescIdDesc(Long businessId);
 }

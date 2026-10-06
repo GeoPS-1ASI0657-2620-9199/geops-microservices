@@ -5,8 +5,6 @@ import com.geopslabs.geops.engagement.domain.models.queries.GetReviewsByBusiness
 
 import java.util.List;
 
-public interface ReviewQueryUseCase {
-
-    List<Review> handle(GetReviewsByBusinessQuery query);
+public interface ListBusinessReviewsUseCase {
+    List<Review> list(GetReviewsByBusinessQuery query);
 }
-

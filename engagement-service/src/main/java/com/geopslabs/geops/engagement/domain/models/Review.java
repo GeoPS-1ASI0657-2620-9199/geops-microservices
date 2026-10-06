@@ -1,46 +1,37 @@
 package com.geopslabs.geops.engagement.domain.models;
 
-import com.geopslabs.geops.engagement.domain.models.commands.CreateReviewCommand;
-
 import java.time.LocalDateTime;
 
 public class Review {
-    private Long id;
-    private Long reservationId;
-    private Long consumerId;
-    private Long businessId;
-    private Integer rating;
-    private String text;
-    private Boolean verifiedRedemption;
-    private LocalDateTime createdAt;
+    private final Long id;
+    private final Long consumerId;
+    private final Long businessId;
+    private final Long reservationId;
+    private final Rating rating;
+    private final String text;
+    private final Boolean verifiedRedemption;
+    private final LocalDateTime createdAt;
 
-    public Review(CreateReviewCommand command) {
-        this.reservationId = command.reservationId();
-        this.consumerId = command.consumerId();
-        this.businessId = command.businessId();
-        this.rating = command.rating();
-        this.text = command.text();
-        this.verifiedRedemption = Boolean.FALSE;
-    }
-
-    public Review(Long id, Long reservationId, Long consumerId, Long businessId, Integer rating, String text,
+    @SuppressWarnings("java:S107")
+    public Review(Long id, Long consumerId, Long businessId, Long reservationId, Rating rating, String text,
                   Boolean verifiedRedemption, LocalDateTime createdAt) {
         this.id = id;
-        this.reservationId = reservationId;
         this.consumerId = consumerId;
         this.businessId = businessId;
+        this.reservationId = reservationId;
         this.rating = rating;
         this.text = text;
         this.verifiedRedemption = verifiedRedemption;
         this.createdAt = createdAt;
     }
 
-    public Long getId() {
-        return id;
+    public static Review of(RedeemedReservation redemption, Rating rating, String text, LocalDateTime createdAt) {
+        return new Review(null, redemption.consumerId(), redemption.businessId(), redemption.reservationId(), rating,
+                text, Boolean.TRUE, createdAt);
     }
 
-    public Long getReservationId() {
-        return reservationId;
+    public Long getId() {
+        return id;
     }
 
     public Long getConsumerId() {
@@ -51,7 +42,11 @@ public class Review {
         return businessId;
     }
 
-    public Integer getRating() {
+    public Long getReservationId() {
+        return reservationId;
+    }
+
+    public Rating getRating() {
         return rating;
     }
 

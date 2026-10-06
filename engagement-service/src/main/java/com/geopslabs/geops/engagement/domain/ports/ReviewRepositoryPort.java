@@ -7,5 +7,5 @@ import java.util.List;
 public interface ReviewRepositoryPort {
     Review save(Review review);
 
-    List<Review> findByBusinessIdOrderByCreatedAtDesc(Long businessId);
+    List<Review> findByBusinessId(Long businessId);
 }
