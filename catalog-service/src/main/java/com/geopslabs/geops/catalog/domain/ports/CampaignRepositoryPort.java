@@ -10,9 +10,5 @@ public interface CampaignRepositoryPort {
 
     Optional<Campaign> findById(Long id);
 
-    List<Campaign> findAll();
-
     List<Campaign> findByBusinessId(Long businessId);
-
-    void deleteById(Long id);
 }

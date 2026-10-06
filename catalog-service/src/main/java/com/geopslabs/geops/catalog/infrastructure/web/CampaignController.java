@@ -1,129 +1,51 @@
 package com.geopslabs.geops.catalog.infrastructure.web;
 
-import com.geopslabs.geops.catalog.domain.models.commands.DeleteCampaignCommand;
-import com.geopslabs.geops.catalog.domain.models.queries.GetAllCampaignsByBusinessIdQuery;
-import com.geopslabs.geops.catalog.domain.models.queries.GetAllCampaignsQuery;
+import com.geopslabs.geops.catalog.application.usecases.GetCampaignByIdUseCase;
+import com.geopslabs.geops.catalog.application.usecases.ListBusinessCampaignsUseCase;
 import com.geopslabs.geops.catalog.domain.models.queries.GetCampaignByIdQuery;
-import com.geopslabs.geops.catalog.application.usecases.CampaignCommandUseCase;
-import com.geopslabs.geops.catalog.application.usecases.CampaignQueryUseCase;
-import com.geopslabs.geops.catalog.infrastructure.web.CampaignResource;
-import com.geopslabs.geops.catalog.infrastructure.web.CreateCampaignResource;
-import com.geopslabs.geops.catalog.infrastructure.web.UpdateCampaignResource;
-import com.geopslabs.geops.catalog.infrastructure.web.CampaignResourceFromEntityAssembler;
-import com.geopslabs.geops.catalog.infrastructure.web.CreateCampaignCommandFromResourceAssembler;
-import com.geopslabs.geops.catalog.infrastructure.web.UpdateCampaignCommandFromResourceAssembler;
+import com.geopslabs.geops.catalog.domain.models.queries.GetCampaignsByBusinessIdQuery;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
-@Tag(name = "Campaigns", description = "Campaign operations and management")
+@Tag(name = "Campaigns", description = "Advertising campaigns of the businesses")
 @RestController
 @RequestMapping(value = "/api/v1/campaigns", produces = APPLICATION_JSON_VALUE)
 public class CampaignController {
-    private final CampaignCommandUseCase campaignCommandService;
-    private final CampaignQueryUseCase campaignQueryService;
+    private final GetCampaignByIdUseCase getCampaignById;
+    private final ListBusinessCampaignsUseCase listBusinessCampaigns;
 
-    public CampaignController(CampaignCommandUseCase campaignCommandService, CampaignQueryUseCase campaignQueryService) {
-        this.campaignCommandService = campaignCommandService;
-        this.campaignQueryService = campaignQueryService;
+    public CampaignController(GetCampaignByIdUseCase getCampaignById,
+                              ListBusinessCampaignsUseCase listBusinessCampaigns) {
+        this.getCampaignById = getCampaignById;
+        this.listBusinessCampaigns = listBusinessCampaigns;
     }
 
-    @PostMapping()
-    @Operation(summary = "Creates a new campaign", description = "Creates a Campaign with the given information")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Campaign created successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid input")
-    })
-    public ResponseEntity<CampaignResource> create(@RequestBody CreateCampaignResource resource) {
-        var command = CreateCampaignCommandFromResourceAssembler.toCommandFromResource(resource);
-        var createdCampaign = campaignCommandService.handle(command);
-        if(createdCampaign.isEmpty()) return ResponseEntity.badRequest().build();
-        var campaignResource = CampaignResourceFromEntityAssembler.toResourceFromEntity(createdCampaign.get());
-        return new ResponseEntity<>(campaignResource,CREATED);
-    }
-
-    @GetMapping
-    @Operation(summary = "Gets all the registered campaigns", description = "Gets all the campaigns in the database")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Campaigns retrieved successfully")
-    })
-    public ResponseEntity<List<CampaignResource>> getAll() {
-        var campaigns = campaignQueryService.handle(new GetAllCampaignsQuery());
-        var campaignResources = campaigns.stream()
-                .map(CampaignResourceFromEntityAssembler::toResourceFromEntity)
-                .toList();
-        return ResponseEntity.ok(campaignResources);
-    }
-
+    @Operation(summary = "Gets a campaign by its id")
+    @ApiResponse(responseCode = "200", description = "Campaign found")
+    @ApiResponse(responseCode = "404", description = "Campaign not found")
     @GetMapping("/{id}")
-    @Operation(summary = "Gets a Campaign by its id", description = "Gets a campaign by giving its unique identifier")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Campaign found"),
-            @ApiResponse(responseCode = "404", description = "Campaign not found"),
-            @ApiResponse(responseCode = "400", description = "Invalid campaign ID")
-    })
-    public ResponseEntity<CampaignResource> getById(
-            @Parameter(description = "Review unique identifier") @PathVariable Long id) {
-        var campaign = campaignQueryService.handle(new GetCampaignByIdQuery(id));
-        if (campaign.isEmpty()) return ResponseEntity.notFound().build();
-        var campaignResource = CampaignResourceFromEntityAssembler.toResourceFromEntity(campaign.get());
-        return ResponseEntity.ok(campaignResource);
+    public CampaignResource getById(@Parameter(description = "Campaign unique identifier") @PathVariable Long id) {
+        return CampaignResourceFromEntityAssembler.toResourceFromEntity(
+                getCampaignById.getById(new GetCampaignByIdQuery(id)));
     }
 
+    @Operation(summary = "Gets all the campaigns of a business")
+    @ApiResponse(responseCode = "200", description = "Campaigns of the business")
     @GetMapping("/business/{businessId}/campaigns")
-    @Operation(summary = "Gets all the campaigns registered with the user",
-            description = "Gets all campaigns from the user by giving the user unique identifier")
-    public ResponseEntity<List<CampaignResource>> getCampaignsByBusinessId(
-            @Parameter(description = "Business unique identifier") @PathVariable Long businessId)
-    {
-        var campaigns = campaignQueryService.handle(new GetAllCampaignsByBusinessIdQuery(businessId));
-        var campaignResources = campaigns.stream()
+    public List<CampaignResource> getCampaignsByBusinessId(
+            @Parameter(description = "Business unique identifier") @PathVariable Long businessId) {
+        return listBusinessCampaigns.list(new GetCampaignsByBusinessIdQuery(businessId)).stream()
                 .map(CampaignResourceFromEntityAssembler::toResourceFromEntity)
                 .toList();
-        return ResponseEntity.ok(campaignResources);
-    }
-
-    @PatchMapping("/{id}")
-    @Operation(summary = "Updates a campaign",description = "Updates a campaign with its id and some given information")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Campaign successfully updated"),
-            @ApiResponse(responseCode = "400", description = "Invalid input data or validation error"),
-            @ApiResponse(responseCode = "404", description = "Campaign not found"),
-    })
-    public ResponseEntity<CampaignResource> update(@Parameter(description = "Review unique identifier")
-                                                   @PathVariable Long id,
-                                                   @RequestBody UpdateCampaignResource resource) {
-        var existingCampaign = campaignQueryService.handle(new GetCampaignByIdQuery(id));
-        if(existingCampaign.isEmpty()) return ResponseEntity.notFound().build();
-
-        var updateCampaignCommand = UpdateCampaignCommandFromResourceAssembler.
-                toCommandFromResource(id, resource);
-        var updatedCampaign = campaignCommandService.handle(updateCampaignCommand);
-        if(updatedCampaign.isEmpty()) return ResponseEntity.badRequest().build();
-
-        var campaignResource = CampaignResourceFromEntityAssembler.toResourceFromEntity(updatedCampaign.get());
-        return ResponseEntity.ok(campaignResource);
-    }
-
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Delete campaign by id", description = "Delete a campaign by its unique identifier")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Campaign deleted successfully"),
-            @ApiResponse(responseCode = "404", description = "Campaign not found")
-    })
-    public ResponseEntity<Void> deleteById(@Parameter(description = "Campaign ID") @PathVariable Long id) {
-        var command = new DeleteCampaignCommand(id);
-        boolean deleted = campaignCommandService.handle(command);
-        if(!deleted) return ResponseEntity.notFound().build();
-        return ResponseEntity.noContent().build();
     }
 }

@@ -10,13 +10,5 @@ public interface OfferRepositoryPort {
 
     Optional<Offer> findById(Long id);
 
-    List<Offer> findAll();
-
-    List<Offer> findByIdIn(List<Long> ids);
-
     List<Offer> findByCampaignId(Long campaignId);
-
-    boolean existsById(Long id);
-
-    void deleteById(Long id);
 }

@@ -1,45 +1,43 @@
 package com.geopslabs.geops.catalog.application.services;
 
+import com.geopslabs.geops.catalog.application.usecases.GetCampaignByIdUseCase;
+import com.geopslabs.geops.catalog.application.usecases.ListBusinessCampaignsUseCase;
+import com.geopslabs.geops.catalog.application.usecases.ListCampaignOffersUseCase;
 import com.geopslabs.geops.catalog.domain.models.Campaign;
-import com.geopslabs.geops.catalog.domain.models.queries.GetAllCampaignsByBusinessIdQuery;
-import com.geopslabs.geops.catalog.domain.models.queries.GetAllCampaignsQuery;
+import com.geopslabs.geops.catalog.domain.models.Offer;
+import com.geopslabs.geops.catalog.domain.models.exceptions.CampaignNotFoundException;
 import com.geopslabs.geops.catalog.domain.models.queries.GetCampaignByIdQuery;
-import com.geopslabs.geops.catalog.application.usecases.CampaignQueryUseCase;
+import com.geopslabs.geops.catalog.domain.models.queries.GetCampaignsByBusinessIdQuery;
+import com.geopslabs.geops.catalog.domain.models.queries.GetOffersByCampaignIdQuery;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
-import org.springframework.transaction.annotation.Transactional;
+import com.geopslabs.geops.catalog.domain.ports.OfferRepositoryPort;
 
 import java.util.List;
-import java.util.Optional;
 
-@Transactional
-public class CampaignQueryService implements CampaignQueryUseCase {
-
+public class CampaignQueryService
+        implements GetCampaignByIdUseCase, ListBusinessCampaignsUseCase, ListCampaignOffersUseCase {
     private final CampaignRepositoryPort campaignRepository;
+    private final OfferRepositoryPort offerRepository;
 
-    public CampaignQueryService(CampaignRepositoryPort campaignRepository) {
+    public CampaignQueryService(CampaignRepositoryPort campaignRepository, OfferRepositoryPort offerRepository) {
         this.campaignRepository = campaignRepository;
+        this.offerRepository = offerRepository;
     }
 
     @Override
-    public Optional<Campaign> handle(GetCampaignByIdQuery query) {
-        try{
-            var campaign = campaignRepository.findById(query.id());
-            if(campaign.isEmpty())
-                throw new IllegalArgumentException("Campaign with id " + query.id() + " not found");
-            return campaign;
-        }
-        catch (Exception e){
-            System.out.println("Error creating a campaign: " + e.getMessage());
-            e.printStackTrace();
-            return Optional.empty();
-        }
+    public Campaign getById(GetCampaignByIdQuery query) {
+        return campaignRepository.findById(query.campaignId())
+                .orElseThrow(() -> new CampaignNotFoundException(query.campaignId()));
     }
 
     @Override
-    public List<Campaign> handle(GetAllCampaignsQuery query) {return campaignRepository.findAll();}
-
-    @Override
-    public List<Campaign> handle(GetAllCampaignsByBusinessIdQuery query) {
+    public List<Campaign> list(GetCampaignsByBusinessIdQuery query) {
         return campaignRepository.findByBusinessId(query.businessId());
+    }
+
+    @Override
+    public List<Offer> list(GetOffersByCampaignIdQuery query) {
+        var campaign = getById(new GetCampaignByIdQuery(query.campaignId()));
+        return offerRepository.findByCampaignId(campaign.getId());
     }
 }

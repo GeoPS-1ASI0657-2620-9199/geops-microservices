@@ -17,26 +17,18 @@ public class CampaignJpaAdapter implements CampaignRepositoryPort {
 
     @Override
     public Campaign save(Campaign campaign) {
-        return CampaignPersistenceMapper.toDomain(repository.save(CampaignPersistenceMapper.toEntity(campaign)));
+        return CampaignPersistenceMapper.toDomain(repository.saveAndFlush(CampaignPersistenceMapper.toEntity(campaign)));
     }
 
     @Override
     public Optional<Campaign> findById(Long id) {
-        return repository.findCampaignById(id).map(CampaignPersistenceMapper::toDomain);
-    }
-
-    @Override
-    public List<Campaign> findAll() {
-        return repository.findAll().stream().map(CampaignPersistenceMapper::toDomain).toList();
+        return repository.findById(id).map(CampaignPersistenceMapper::toDomain);
     }
 
     @Override
     public List<Campaign> findByBusinessId(Long businessId) {
-        return repository.findAllByBusinessId(businessId).stream().map(CampaignPersistenceMapper::toDomain).toList();
-    }
-
-    @Override
-    public void deleteById(Long id) {
-        repository.deleteCampaignById(id);
+        return repository.findByBusinessIdOrderByIdAsc(businessId).stream()
+                .map(CampaignPersistenceMapper::toDomain)
+                .toList();
     }
 }

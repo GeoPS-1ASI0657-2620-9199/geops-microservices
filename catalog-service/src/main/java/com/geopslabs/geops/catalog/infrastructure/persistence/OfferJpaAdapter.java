@@ -17,7 +17,7 @@ public class OfferJpaAdapter implements OfferRepositoryPort {
 
     @Override
     public Offer save(Offer offer) {
-        return OfferPersistenceMapper.toDomain(repository.save(OfferPersistenceMapper.toEntity(offer)));
+        return OfferPersistenceMapper.toDomain(repository.saveAndFlush(OfferPersistenceMapper.toEntity(offer)));
     }
 
     @Override
@@ -26,27 +26,9 @@ public class OfferJpaAdapter implements OfferRepositoryPort {
     }
 
     @Override
-    public List<Offer> findAll() {
-        return repository.findAll().stream().map(OfferPersistenceMapper::toDomain).toList();
-    }
-
-    @Override
-    public List<Offer> findByIdIn(List<Long> ids) {
-        return repository.findByIdIn(ids).stream().map(OfferPersistenceMapper::toDomain).toList();
-    }
-
-    @Override
     public List<Offer> findByCampaignId(Long campaignId) {
-        return repository.findByCampaign_Id(campaignId).stream().map(OfferPersistenceMapper::toDomain).toList();
-    }
-
-    @Override
-    public boolean existsById(Long id) {
-        return repository.existsById(id);
-    }
-
-    @Override
-    public void deleteById(Long id) {
-        repository.deleteById(id);
+        return repository.findByCampaign_IdOrderByIdAsc(campaignId).stream()
+                .map(OfferPersistenceMapper::toDomain)
+                .toList();
     }
 }
