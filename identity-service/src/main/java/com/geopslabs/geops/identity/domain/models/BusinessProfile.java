@@ -5,34 +5,55 @@ public class BusinessProfile {
     private Long userId;
     private String businessName;
     private String businessType;
-    private String ruc;
+    private Ruc ruc;
     private String address;
-    private Double latitude;
-    private Double longitude;
+    private GeoPoint location;
     private String openingHours;
     private AccountStatus accountStatus;
     private VerificationStatus verificationStatus;
 
-    public BusinessProfile(Long userId, String businessName, String businessType, String ruc, String address,
+    public BusinessProfile(String businessName, String businessType, Ruc ruc, String address, GeoPoint location,
                            String openingHours) {
-        this.userId = userId;
         this.businessName = businessName;
         this.businessType = businessType;
         this.ruc = ruc;
         this.address = address;
+        this.location = location;
         this.openingHours = openingHours;
         this.accountStatus = AccountStatus.ACTIVE;
         this.verificationStatus = VerificationStatus.UNVERIFIED;
     }
 
-    public BusinessProfile(Long id, BusinessProfile data, Double latitude, Double longitude,
-                           AccountStatus accountStatus, VerificationStatus verificationStatus) {
-        this(data.userId, data.businessName, data.businessType, data.ruc, data.address, data.openingHours);
+    public BusinessProfile(Long id, Long userId, BusinessProfile data, AccountStatus accountStatus,
+                           VerificationStatus verificationStatus) {
+        this(data.businessName, data.businessType, data.ruc, data.address, data.location, data.openingHours);
         this.id = id;
-        this.latitude = latitude;
-        this.longitude = longitude;
+        this.userId = userId;
         this.accountStatus = accountStatus;
         this.verificationStatus = verificationStatus;
+    }
+
+    public static BusinessProfile register(String businessName, String businessType, Ruc ruc, String address,
+                                           GeoPoint location, String openingHours) {
+        ensureRucIsWellFormed(ruc);
+        ensureAddressIsPresent(address);
+        return new BusinessProfile(businessName, businessType, ruc, address.strip(), location, openingHours);
+    }
+
+    public BusinessProfile ownedBy(Long ownerId) {
+        return new BusinessProfile(id, ownerId, this, accountStatus, verificationStatus);
+    }
+
+    private static void ensureRucIsWellFormed(Ruc ruc) {
+        if (!ruc.isWellFormed()) {
+            throw new InvalidRucException();
+        }
+    }
+
+    private static void ensureAddressIsPresent(String address) {
+        if (address == null || address.isBlank()) {
+            throw InvalidLocationException.missingAddress();
+        }
     }
 
     public Long getId() {
@@ -51,7 +72,7 @@ public class BusinessProfile {
         return businessType;
     }
 
-    public String getRuc() {
+    public Ruc getRuc() {
         return ruc;
     }
 
@@ -59,12 +80,8 @@ public class BusinessProfile {
         return address;
     }
 
-    public Double getLatitude() {
-        return latitude;
-    }
-
-    public Double getLongitude() {
-        return longitude;
+    public GeoPoint getLocation() {
+        return location;
     }
 
     public String getOpeningHours() {

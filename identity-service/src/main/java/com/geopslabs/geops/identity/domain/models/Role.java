@@ -6,6 +6,10 @@ public enum Role {
     ADMIN;
 
     public boolean isSelfRegistrable() {
-        return this == CONSUMER;
+        return this != ADMIN;
+    }
+
+    public boolean requiresBusinessProfile() {
+        return this == BUSINESS_OWNER;
     }
 }

@@ -6,6 +6,7 @@ import com.geopslabs.geops.identity.application.services.UserAuthenticationServi
 import com.geopslabs.geops.identity.application.usecases.GetPublicKeysUseCase;
 import com.geopslabs.geops.identity.application.usecases.LogInUseCase;
 import com.geopslabs.geops.identity.application.usecases.RegisterUserUseCase;
+import com.geopslabs.geops.identity.domain.ports.BusinessProfileRepositoryPort;
 import com.geopslabs.geops.identity.domain.ports.ConsumerProfileRepositoryPort;
 import com.geopslabs.geops.identity.domain.ports.PasswordHasherPort;
 import com.geopslabs.geops.identity.domain.ports.TokenIssuerPort;
@@ -28,8 +29,10 @@ public class BeanConfiguration {
     @Bean
     public RegisterUserUseCase registerUserUseCase(UserRepositoryPort userRepository,
                                                    ConsumerProfileRepositoryPort consumerProfileRepository,
+                                                   BusinessProfileRepositoryPort businessProfileRepository,
                                                    PasswordHasherPort passwordHasher) {
-        return new UserCommandService(userRepository, consumerProfileRepository, passwordHasher);
+        return new UserCommandService(userRepository, consumerProfileRepository, businessProfileRepository,
+                passwordHasher);
     }
 
     @Bean

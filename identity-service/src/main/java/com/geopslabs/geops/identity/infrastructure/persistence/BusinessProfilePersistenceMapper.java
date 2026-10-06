@@ -1,6 +1,8 @@
 package com.geopslabs.geops.identity.infrastructure.persistence;
 
 import com.geopslabs.geops.identity.domain.models.BusinessProfile;
+import com.geopslabs.geops.identity.domain.models.GeoPoint;
+import com.geopslabs.geops.identity.domain.models.Ruc;
 
 import java.math.BigDecimal;
 
@@ -9,10 +11,10 @@ public final class BusinessProfilePersistenceMapper {
     }
 
     public static BusinessProfile toDomain(BusinessProfileJpaEntity entity) {
-        var data = new BusinessProfile(entity.getUserId(), entity.getBusinessName(), entity.getBusinessType(),
-                entity.getRuc(), entity.getAddress(), entity.getOpeningHours());
-        return new BusinessProfile(entity.getId(), data, toDouble(entity.getLatitude()),
-                toDouble(entity.getLongitude()), entity.getAccountStatus(), entity.getVerificationStatus());
+        var data = new BusinessProfile(entity.getBusinessName(), entity.getBusinessType(), new Ruc(entity.getRuc()),
+                entity.getAddress(), locationOf(entity), entity.getOpeningHours());
+        return new BusinessProfile(entity.getId(), entity.getUserId(), data, entity.getAccountStatus(),
+                entity.getVerificationStatus());
     }
 
     public static BusinessProfileJpaEntity toEntity(BusinessProfile profile) {
@@ -21,21 +23,27 @@ public final class BusinessProfilePersistenceMapper {
         entity.setUserId(profile.getUserId());
         entity.setBusinessName(profile.getBusinessName());
         entity.setBusinessType(profile.getBusinessType());
-        entity.setRuc(profile.getRuc());
+        entity.setRuc(profile.getRuc().number());
         entity.setAddress(profile.getAddress());
-        entity.setLatitude(toBigDecimal(profile.getLatitude()));
-        entity.setLongitude(toBigDecimal(profile.getLongitude()));
         entity.setOpeningHours(profile.getOpeningHours());
         entity.setAccountStatus(profile.getAccountStatus());
         entity.setVerificationStatus(profile.getVerificationStatus());
+        setLocation(entity, profile.getLocation());
         return entity;
     }
 
-    private static Double toDouble(BigDecimal value) {
-        return value != null ? value.doubleValue() : null;
+    private static GeoPoint locationOf(BusinessProfileJpaEntity entity) {
+        if (entity.getLatitude() == null || entity.getLongitude() == null) {
+            return null;
+        }
+        return new GeoPoint(entity.getLatitude().doubleValue(), entity.getLongitude().doubleValue());
     }
 
-    private static BigDecimal toBigDecimal(Double value) {
-        return value != null ? BigDecimal.valueOf(value) : null;
+    private static void setLocation(BusinessProfileJpaEntity entity, GeoPoint location) {
+        if (location == null) {
+            return;
+        }
+        entity.setLatitude(BigDecimal.valueOf(location.latitude()));
+        entity.setLongitude(BigDecimal.valueOf(location.longitude()));
     }
 }

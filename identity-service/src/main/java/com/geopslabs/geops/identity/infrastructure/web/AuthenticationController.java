@@ -35,36 +35,66 @@ public class AuthenticationController {
     }
 
     @Operation(summary = "Register a consumer or a business owner with its profile",
-            description = "Creates the account and its consumer profile. It does not log the user in.")
+            description = "Creates the account with its consumer profile, or with its business profile when the "
+                    + "role is BUSINESS_OWNER. It does not log the user in.")
     @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @Content(
             mediaType = APPLICATION_JSON_VALUE,
             schema = @Schema(implementation = RegisterUserRequest.class),
-            examples = @ExampleObject(name = "consumer", value = """
-                    {"role": "CONSUMER", "fullName": "Lucía Fernández Ríos",
-                     "email": "lucia.fernandez@ejemplo.pe", "phone": "987123456",
-                     "password": "Ofertas#2026"}""")))
+            examples = {
+                    @ExampleObject(name = "consumer", value = """
+                            {"role": "CONSUMER", "fullName": "Lucía Fernández Ríos",
+                             "email": "lucia.fernandez@ejemplo.pe", "phone": "987123456",
+                             "password": "Ofertas#2026"}"""),
+                    @ExampleObject(name = "businessOwner", value = """
+                            {"role": "BUSINESS_OWNER", "fullName": "Rosa Quispe Mamani",
+                             "email": "rosa.quispe@ejemplo.pe", "phone": "987654321",
+                             "password": "Bodega#2026",
+                             "businessProfile": {"businessName": "Bodega Doña Rosa", "businessType": "Bodega",
+                              "ruc": "10456789019", "address": "Jr. Huánuco 1250, La Victoria",
+                              "latitude": -12.0681, "longitude": -77.0350,
+                              "openingHours": "Lun-Sáb 07:00-22:00"}}""")}))
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Account and consumer profile created",
-                    content = @Content(schema = @Schema(implementation = RegisteredUserResponse.class),
-                            examples = @ExampleObject(name = "consumerCreated", value = """
+            @ApiResponse(responseCode = "201", description = "Account and its consumer or business profile created",
+                    content = @Content(schema = @Schema(implementation = RegisteredUserResponse.class), examples = {
+                            @ExampleObject(name = "consumerCreated", value = """
                                     {"userId": 41, "fullName": "Lucía Fernández Ríos",
                                      "email": "lucia.fernandez@ejemplo.pe", "role": "CONSUMER",
-                                     "consumerProfileId": 15}"""))),
-            @ApiResponse(responseCode = "400", description = "Invalid data or role not allowed",
+                                     "consumerProfileId": 15}"""),
+                            @ExampleObject(name = "businessCreated", value = """
+                                    {"userId": 42, "fullName": "Rosa Quispe Mamani",
+                                     "email": "rosa.quispe@ejemplo.pe", "role": "BUSINESS_OWNER",
+                                     "businessProfileId": 7, "accountStatus": "ACTIVE",
+                                     "verificationStatus": "UNVERIFIED"}""")})),
+            @ApiResponse(responseCode = "400", description = "Invalid data, invalid location, invalid RUC or role "
+                    + "not allowed",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class), examples = {
                             @ExampleObject(name = "invalidRequest", value = """
                                     {"code": "INVALID_REQUEST", "message": "Revisa estos datos: password, phone."}"""),
+                            @ExampleObject(name = "invalidLocation", value = """
+                                    {"code": "INVALID_LOCATION",
+                                     "message": "La latitud debe estar entre -90 y 90. Corrige la ubicación del local."}"""),
+                            @ExampleObject(name = "invalidRuc", value = """
+                                    {"code": "INVALID_RUC", "message": "El RUC debe tener 11 dígitos."}"""),
+                            @ExampleObject(name = "businessProfileRequired", value = """
+                                    {"code": "BUSINESS_PROFILE_REQUIRED",
+                                     "message": "Completa los datos del negocio para crear la cuenta."}"""),
+                            @ExampleObject(name = "businessProfileNotAllowed", value = """
+                                    {"code": "BUSINESS_PROFILE_NOT_ALLOWED",
+                                     "message": "Los datos del negocio solo van en una cuenta de negocio."}"""),
                             @ExampleObject(name = "roleNotAllowed", value = """
                                     {"code": "ROLE_NOT_ALLOWED",
                                      "message": "Ese tipo de cuenta no se puede crear desde el registro."}""")})),
-            @ApiResponse(responseCode = "409", description = "Email or phone already registered",
+            @ApiResponse(responseCode = "409", description = "Email, phone or RUC already registered",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class), examples = {
                             @ExampleObject(name = "emailAlreadyRegistered", value = """
                                     {"code": "EMAIL_ALREADY_REGISTERED",
                                      "message": "Ese correo ya tiene una cuenta. Inicia sesión o usa otro correo."}"""),
                             @ExampleObject(name = "phoneAlreadyRegistered", value = """
                                     {"code": "PHONE_ALREADY_REGISTERED",
-                                     "message": "Ese teléfono ya tiene una cuenta. Inicia sesión o usa otro teléfono."}""")}))
+                                     "message": "Ese teléfono ya tiene una cuenta. Inicia sesión o usa otro teléfono."}"""),
+                            @ExampleObject(name = "rucAlreadyRegistered", value = """
+                                    {"code": "RUC_ALREADY_REGISTERED",
+                                     "message": "Ese RUC ya tiene un negocio registrado."}""")}))
     })
     @PostMapping(value = "/register", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<RegisteredUserResponse> register(@Valid @RequestBody RegisterUserRequest request) {
