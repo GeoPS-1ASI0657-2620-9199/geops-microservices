@@ -8,7 +8,13 @@ import java.util.Comparator;
 import java.util.List;
 
 public class ProximitySearchService {
-    private static final Comparator<RankedOffer> BY_DISTANCE = Comparator.comparingDouble(RankedOffer::distanceMeters);
+    public static final int DISTANCE_BAND_METERS = 100;
+
+    private static final Comparator<RankedOffer> RANKING = Comparator
+            .comparingInt((RankedOffer ranked) -> (int) (ranked.distanceMeters() / DISTANCE_BAND_METERS))
+            .thenComparing(ranked -> ranked.offer().hasOpenReports())
+            .thenComparing(ranked -> !ranked.offer().verifiedSeal())
+            .thenComparingDouble(RankedOffer::distanceMeters);
 
     private final OfferRepositoryPort offers;
     private final Clock clock;
@@ -24,7 +30,7 @@ public class ProximitySearchService {
                 .filter(candidate -> category == null || category.equals(candidate.category()))
                 .map(candidate -> RankedOffer.of(candidate, origin.distanceTo(candidate.location())))
                 .filter(ranked -> ranked.distanceMeters() <= radiusMeters)
-                .sorted(BY_DISTANCE)
+                .sorted(RANKING)
                 .toList();
     }
 }

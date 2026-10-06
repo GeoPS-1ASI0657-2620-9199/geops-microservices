@@ -65,6 +65,28 @@ class ProximitySearchServiceTest {
         assertThat(result).extracting(ranked -> ranked.offer().offerId()).containsExactly(1L);
     }
 
+    @Test
+    void putsMerchantsWithoutOpenReportsFirstInsideTheSameBand() {
+        when(offers.findPublishedWithin(any(), anyInt(), any())).thenReturn(List.of(
+                candidate(210L, 210, true, 2),
+                candidate(260L, 260, false, 0),
+                candidate(150L, 150, false, 3)));
+
+        var result = service.search(ORIGIN, 800, null);
+
+        assertThat(result).extracting(ranked -> ranked.offer().offerId()).containsExactly(150L, 260L, 210L);
+    }
+
+    @Test
+    void putsVerifiedMerchantsNextInsideTheSameBand() {
+        when(offers.findPublishedWithin(any(), anyInt(), any()))
+                .thenReturn(List.of(candidate(1L, 220, false, 0), candidate(2L, 280, true, 0)));
+
+        var result = service.search(ORIGIN, 800, null);
+
+        assertThat(result).extracting(ranked -> ranked.offer().offerId()).containsExactly(2L, 1L);
+    }
+
     private static NearbyOfferCandidate candidate(Long id, double metersNorth, boolean verified, int openReports) {
         var location = new GeoPoint(ORIGIN.latitude() + metersNorth / METERS_PER_DEGREE, ORIGIN.longitude());
         return new NearbyOfferCandidate(id, "Oferta " + id, new BigDecimal("15.00"), LocalDate.of(2026, 10, 15),
