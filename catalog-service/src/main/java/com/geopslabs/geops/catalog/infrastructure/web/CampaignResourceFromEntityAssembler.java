@@ -8,7 +8,9 @@ public final class CampaignResourceFromEntityAssembler {
     }
 
     public static CampaignResource toResourceFromEntity(Campaign entity) {
+        var zone = entity.getZone();
         return new CampaignResource(entity.getId(), entity.getBusinessId(), entity.getName(), entity.getDescription(),
-                entity.getStartDate(), entity.getEndDate(), entity.getStatus().name(), entity.getEstimatedBudget());
+                entity.getPeriod().start(), entity.getPeriod().end(), zone.type().name(), zone.radiusMeters(),
+                zone.district(), entity.getStatus().name(), entity.getEstimatedBudget().amount());
     }
 }

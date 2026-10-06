@@ -6,5 +6,5 @@ import java.util.List;
 
 public interface OfferJpaRepository extends JpaRepository<OfferJpaEntity, Long> {
 
-    List<OfferJpaEntity> findByCampaign_IdOrderByIdAsc(Long campaignId);
+    List<OfferJpaEntity> findByCampaignIdOrderByIdAsc(Long campaignId);
 }

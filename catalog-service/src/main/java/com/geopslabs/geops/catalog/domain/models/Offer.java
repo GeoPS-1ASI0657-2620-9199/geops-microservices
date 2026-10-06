@@ -1,50 +1,64 @@
 package com.geopslabs.geops.catalog.domain.models;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public class Offer {
     private final Long id;
-    private final Campaign campaign;
-    private final String title;
+    private final Long campaignId;
     private final Long businessId;
-    private final BigDecimal price;
+    private final String title;
+    private final String conditions;
+    private final Money price;
     private final LocalDate validTo;
-    private final String location;
     private final String category;
+    private final GeocodingStatus geocodingStatus;
+    private final String address;
     private final String imageUrl;
+    private final OfferSource source;
+    private final String sourceName;
+    private final OfferStatus status;
 
     @SuppressWarnings("java:S107")
-    public Offer(Long id, Campaign campaign, String title, Long businessId, BigDecimal price,
-                 LocalDate validTo, String location, String category, String imageUrl) {
+    public Offer(Long id, Long campaignId, Long businessId, String title, String conditions, Money price,
+                 LocalDate validTo, String category, GeocodingStatus geocodingStatus, String address,
+                 String imageUrl, OfferSource source, String sourceName, OfferStatus status) {
         this.id = id;
-        this.campaign = campaign;
-        this.title = title;
+        this.campaignId = campaignId;
         this.businessId = businessId;
+        this.title = title;
+        this.conditions = conditions;
         this.price = price;
         this.validTo = validTo;
-        this.location = location;
         this.category = category;
+        this.geocodingStatus = geocodingStatus;
+        this.address = address;
         this.imageUrl = imageUrl;
+        this.source = source;
+        this.sourceName = sourceName;
+        this.status = status;
     }
 
     public Long getId() {
         return id;
     }
 
-    public Campaign getCampaign() {
-        return campaign;
-    }
-
-    public String getTitle() {
-        return title;
+    public Long getCampaignId() {
+        return campaignId;
     }
 
     public Long getBusinessId() {
         return businessId;
     }
 
-    public BigDecimal getPrice() {
+    public String getTitle() {
+        return title;
+    }
+
+    public String getConditions() {
+        return conditions;
+    }
+
+    public Money getPrice() {
         return price;
     }
 
@@ -52,15 +66,31 @@ public class Offer {
         return validTo;
     }
 
-    public String getLocation() {
-        return location;
-    }
-
     public String getCategory() {
         return category;
     }
 
+    public GeocodingStatus getGeocodingStatus() {
+        return geocodingStatus;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
     public String getImageUrl() {
         return imageUrl;
+    }
+
+    public OfferSource getSource() {
+        return source;
+    }
+
+    public String getSourceName() {
+        return sourceName;
+    }
+
+    public OfferStatus getStatus() {
+        return status;
     }
 }

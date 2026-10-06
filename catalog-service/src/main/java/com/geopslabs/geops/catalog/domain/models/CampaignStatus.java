@@ -1,7 +1,7 @@
 package com.geopslabs.geops.catalog.domain.models;
 
-public enum ECampaignStatus {
+public enum CampaignStatus {
     ACTIVE,
     PAUSED,
-    FINALIZED
+    FINISHED
 }

@@ -4,14 +4,17 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record OfferResource(
-    Long id,
-    Long campaignId,
-    String title,
-    Long businessId,
-    BigDecimal price,
-    LocalDate validTo,
-    String location,
-    String category,
-    String imageUrl
-) {
+        Long id,
+        Long campaignId,
+        Long businessId,
+        String title,
+        String conditions,
+        BigDecimal price,
+        LocalDate validTo,
+        String category,
+        String address,
+        String imageUrl,
+        String source,
+        String sourceName,
+        String status) {
 }

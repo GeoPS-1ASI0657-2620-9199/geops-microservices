@@ -1,36 +1,34 @@
 package com.geopslabs.geops.catalog.domain.models;
 
-import java.time.LocalDate;
-
 public class Campaign {
     private final Long id;
     private final Long businessId;
     private final String name;
     private final String description;
-    private final LocalDate startDate;
-    private final LocalDate endDate;
-    private final ECampaignStatus status;
-    private final float estimatedBudget;
+    private final DateRange period;
+    private final CampaignZone zone;
+    private final CampaignStatus status;
+    private final Money estimatedBudget;
 
     @SuppressWarnings("java:S107")
-    public Campaign(Long id, Long businessId, String name, String description, LocalDate startDate, LocalDate endDate,
-                    ECampaignStatus status, float estimatedBudget) {
+    public Campaign(Long id, Long businessId, String name, String description, DateRange period, CampaignZone zone,
+                    CampaignStatus status, Money estimatedBudget) {
         this.id = id;
         this.businessId = businessId;
         this.name = name;
         this.description = description;
-        this.startDate = startDate;
-        this.endDate = endDate;
+        this.period = period;
+        this.zone = zone;
         this.status = status;
         this.estimatedBudget = estimatedBudget;
     }
 
-    public Long getBusinessId() {
-        return businessId;
-    }
-
     public Long getId() {
         return id;
+    }
+
+    public Long getBusinessId() {
+        return businessId;
     }
 
     public String getName() {
@@ -41,19 +39,19 @@ public class Campaign {
         return description;
     }
 
-    public LocalDate getStartDate() {
-        return startDate;
+    public DateRange getPeriod() {
+        return period;
     }
 
-    public LocalDate getEndDate() {
-        return endDate;
+    public CampaignZone getZone() {
+        return zone;
     }
 
-    public ECampaignStatus getStatus() {
+    public CampaignStatus getStatus() {
         return status;
     }
 
-    public float getEstimatedBudget() {
+    public Money getEstimatedBudget() {
         return estimatedBudget;
     }
 }

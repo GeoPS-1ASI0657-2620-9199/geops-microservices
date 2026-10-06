@@ -27,7 +27,7 @@ public class OfferJpaAdapter implements OfferRepositoryPort {
 
     @Override
     public List<Offer> findByCampaignId(Long campaignId) {
-        return repository.findByCampaign_IdOrderByIdAsc(campaignId).stream()
+        return repository.findByCampaignIdOrderByIdAsc(campaignId).stream()
                 .map(OfferPersistenceMapper::toDomain)
                 .toList();
     }
