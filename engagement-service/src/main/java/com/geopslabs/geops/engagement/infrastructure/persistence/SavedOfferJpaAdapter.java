@@ -17,40 +17,20 @@ public class SavedOfferJpaAdapter implements SavedOfferRepositoryPort {
 
     @Override
     public SavedOffer save(SavedOffer savedOffer) {
-        var entity = savedOffer.getId() == null ? new SavedOfferJpaEntity()
-                : repository.findById(savedOffer.getId()).orElseGet(SavedOfferJpaEntity::new);
-        return SavedOfferPersistenceMapper.toDomain(
-                repository.save(SavedOfferPersistenceMapper.toEntity(savedOffer, entity)));
-    }
-
-    @Override
-    public Optional<SavedOffer> findById(Long id) {
-        return repository.findById(id).map(SavedOfferPersistenceMapper::toDomain);
+        var entity = SavedOfferPersistenceMapper.toEntity(savedOffer, new SavedOfferJpaEntity());
+        return SavedOfferPersistenceMapper.toDomain(repository.saveAndFlush(entity));
     }
 
     @Override
     public List<SavedOffer> findByConsumerId(Long consumerId) {
-        return repository.findByConsumerId(consumerId).stream().map(SavedOfferPersistenceMapper::toDomain).toList();
+        return repository.findByConsumerIdOrderBySavedAtDesc(consumerId).stream()
+                .map(SavedOfferPersistenceMapper::toDomain)
+                .toList();
     }
 
     @Override
     public Optional<SavedOffer> findByConsumerIdAndOfferId(Long consumerId, Long offerId) {
         return repository.findByConsumerIdAndOfferId(consumerId, offerId).map(SavedOfferPersistenceMapper::toDomain);
-    }
-
-    @Override
-    public boolean existsById(Long id) {
-        return repository.existsById(id);
-    }
-
-    @Override
-    public boolean existsByConsumerIdAndOfferId(Long consumerId, Long offerId) {
-        return repository.existsByConsumerIdAndOfferId(consumerId, offerId);
-    }
-
-    @Override
-    public void deleteById(Long id) {
-        repository.deleteById(id);
     }
 
     @Override
