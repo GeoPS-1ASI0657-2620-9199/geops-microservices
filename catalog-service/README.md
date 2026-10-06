@@ -59,3 +59,12 @@ se publica: se toma el JWKS del gateway con
 La colección `postman/catalog.postman_collection.json` tiene un caso correcto y uno de error por
 endpoint; las dos peticiones de login de Identity llenan `token` y `businessToken`, y
 «List my campaigns» llena `campaignId`.
+
+Hasta que llegue la creación de campañas (US05) no hay endpoint que cree datos. Para correr la
+colección con la base vacía se carga `postman/seed-catalog.sql`, que deja dos comercios con una
+campaña cada uno y una oferta. El comercio `1` es el primero que se registra en Identity, así que
+su dueño ve la campaña «Almuerzos de octubre».
+
+| Git Bash | PowerShell |
+|---|---|
+| `docker compose -f ../platform/docker-compose.yml exec -T postgres psql -U postgres -d catalog_db < postman/seed-catalog.sql` | `Get-Content postman\seed-catalog.sql \| docker compose -f ..\platform\docker-compose.yml exec -T postgres psql -U postgres -d catalog_db` |
