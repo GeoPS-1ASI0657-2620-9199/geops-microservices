@@ -6,8 +6,8 @@ import com.geopslabs.geops.engagement.application.services.SavedOfferCommandServ
 import com.geopslabs.geops.engagement.application.services.SavedOfferQueryService;
 import com.geopslabs.geops.engagement.application.usecases.ReviewCommandUseCase;
 import com.geopslabs.geops.engagement.application.usecases.ReviewQueryUseCase;
-import com.geopslabs.geops.engagement.application.usecases.SavedOfferCommandUseCase;
-import com.geopslabs.geops.engagement.application.usecases.SavedOfferQueryUseCase;
+import com.geopslabs.geops.engagement.domain.ports.BusinessSnapshotRepositoryPort;
+import com.geopslabs.geops.engagement.domain.ports.OfferSnapshotRepositoryPort;
 import com.geopslabs.geops.engagement.domain.ports.ReviewRepositoryPort;
 import com.geopslabs.geops.engagement.domain.ports.SavedOfferRepositoryPort;
 import org.springframework.context.annotation.Bean;
@@ -24,13 +24,21 @@ public class BeanConfiguration {
     }
 
     @Bean
-    public SavedOfferCommandUseCase savedOfferCommandUseCase(SavedOfferRepositoryPort savedOfferRepository) {
-        return new SavedOfferCommandService(savedOfferRepository);
+    public SavedOfferCommandService savedOfferCommandService(SavedOfferRepositoryPort savedOfferRepository,
+                                                             OfferSnapshotRepositoryPort offerSnapshotRepository,
+                                                             BusinessSnapshotRepositoryPort businessSnapshotRepository,
+                                                             Clock clock) {
+        return new SavedOfferCommandService(savedOfferRepository, offerSnapshotRepository,
+                businessSnapshotRepository, clock);
     }
 
     @Bean
-    public SavedOfferQueryUseCase savedOfferQueryUseCase(SavedOfferRepositoryPort savedOfferRepository) {
-        return new SavedOfferQueryService(savedOfferRepository);
+    public SavedOfferQueryService savedOfferQueryService(SavedOfferRepositoryPort savedOfferRepository,
+                                                         OfferSnapshotRepositoryPort offerSnapshotRepository,
+                                                         BusinessSnapshotRepositoryPort businessSnapshotRepository,
+                                                         Clock clock) {
+        return new SavedOfferQueryService(savedOfferRepository, offerSnapshotRepository,
+                businessSnapshotRepository, clock);
     }
 
     @Bean

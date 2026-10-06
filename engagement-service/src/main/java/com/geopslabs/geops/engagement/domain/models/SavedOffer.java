@@ -1,25 +1,22 @@
 package com.geopslabs.geops.engagement.domain.models;
 
-import com.geopslabs.geops.engagement.domain.models.commands.SaveOfferCommand;
-
 import java.time.LocalDateTime;
 
 public class SavedOffer {
-    private Long id;
-    private Long consumerId;
-    private Long offerId;
-    private LocalDateTime savedAt;
-
-    public SavedOffer(SaveOfferCommand command) {
-        this.consumerId = command.consumerId();
-        this.offerId = command.offerId();
-    }
+    private final Long id;
+    private final Long consumerId;
+    private final Long offerId;
+    private final LocalDateTime savedAt;
 
     public SavedOffer(Long id, Long consumerId, Long offerId, LocalDateTime savedAt) {
         this.id = id;
         this.consumerId = consumerId;
         this.offerId = offerId;
         this.savedAt = savedAt;
+    }
+
+    public static SavedOffer create(Long consumerId, Long offerId, LocalDateTime savedAt) {
+        return new SavedOffer(null, consumerId, offerId, savedAt);
     }
 
     public Long getId() {
@@ -36,13 +33,5 @@ public class SavedOffer {
 
     public LocalDateTime getSavedAt() {
         return savedAt;
-    }
-
-    public boolean belongsToConsumer(Long candidateConsumerId) {
-        return consumerId.equals(candidateConsumerId);
-    }
-
-    public boolean isForOffer(Long candidateOfferId) {
-        return offerId.equals(candidateOfferId);
     }
 }
