@@ -9,6 +9,7 @@ las ofertas de cada una.
 
 | Operación | Acceso | Descripción |
 |---|---|---|
+| `GET /api/v1/offers/nearby` | Pública | Lista las ofertas vigentes a `radiusMinutes` (5 a 20) minutos a pie de `lat` y `lng`, con su distancia en metros y en minutos, ordenadas por tramos de 100 m y, dentro de cada tramo, primero los comercios sin reportes abiertos y luego los verificados. Paginada por `page` y `size` (hasta 20) |
 | `GET /api/v1/offers/{offerId}` | Pública | Devuelve la oferta con sus condiciones, precio, vigencia, dirección, fuente y estado |
 | `GET /api/v1/campaigns` | `ROLE_BUSINESS_OWNER` | Lista las campañas del comercio del token, de la más antigua a la más reciente |
 | `GET /api/v1/campaigns/{campaignId}` | `ROLE_BUSINESS_OWNER` dueño de la campaña | Devuelve la campaña con su periodo, zona, estado y presupuesto |
@@ -27,6 +28,10 @@ Los errores responden `{"code": "...", "message": "..."}`. Los ejemplos de cada 
 | `UNAUTHORIZED` | 401 | Sin token, o token vencido, de otro emisor, para otra audiencia o con otra firma |
 | `FORBIDDEN` | 403 | El token no tiene el rol, o la campaña es de otro comercio |
 | `OFFER_NOT_FOUND`, `CAMPAIGN_NOT_FOUND` | 404 | La oferta o la campaña no existen |
+| `RADIUS_OUT_OF_RANGE` | 400 | `nearby` con un radio fuera de 5 a 20 minutos |
+| `INVALID_COORDINATES` | 400 | `nearby` con una latitud fuera de -90 a 90 o una longitud fuera de -180 a 180 |
+| `MISSING_PARAMETER`, `INVALID_PARAMETER` | 400 | `nearby` sin `lat`, `lng` o `radiusMinutes`, o con un valor que no es número |
+| `INVALID_PAGE` | 400 | `nearby` con `page` negativo o `size` fuera de 1 a 20 |
 
 ## Base de datos
 
@@ -43,6 +48,9 @@ PostgreSQL con PostGIS en Testcontainers, con tokens firmados con una clave de p
 | Historia | Archivo | Escenarios |
 |---|---|---|
 | Consultas del catálogo (GEO-207) | `query-catalog.feature` | 11 |
+| US01 Modelar coordenadas e índice espacial (GEO-26) | `US01-model-offer-coordinates.feature` | 4 |
+| US02 Consultar ofertas por radio (GEO-28) | `US02-query-offers-by-radius.feature` | 7 |
+| US03 Buscar ofertas por ubicación (GEO-29) | `US03-search-offers-by-location.feature` | 4 |
 
 ## Ejecución local
 
@@ -62,7 +70,7 @@ endpoint; las dos peticiones de login de Identity llenan `token` y `businessToke
 
 Hasta que llegue la creación de campañas (US05) no hay endpoint que cree datos. Para correr la
 colección con la base vacía se carga `postman/seed-catalog.sql`, que deja dos comercios con una
-campaña cada uno y una oferta. El comercio `1` es el primero que se registra en Identity, así que
+campaña cada uno y una oferta, ubicada en La Victoria para que la carpeta `Nearby` la encuentre. El comercio `1` es el primero que se registra en Identity, así que
 su dueño ve la campaña «Almuerzos de octubre».
 
 | Git Bash | PowerShell |
