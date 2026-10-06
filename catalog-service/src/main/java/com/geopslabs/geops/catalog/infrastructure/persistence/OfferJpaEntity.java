@@ -25,6 +25,7 @@ public class OfferJpaEntity {
     private static final int TITLE_LENGTH = 255;
     private static final int CATEGORY_LENGTH = 100;
     private static final int STATUS_LENGTH = 20;
+    private static final int SOURCE_LENGTH = 20;
     private static final int ADDRESS_LENGTH = 255;
     private static final int IMAGE_URL_LENGTH = 500;
     private static final int SOURCE_NAME_LENGTH = 150;
@@ -68,7 +69,7 @@ public class OfferJpaEntity {
     private String imageUrl;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "source", nullable = false, length = STATUS_LENGTH)
+    @Column(name = "source", nullable = false, length = SOURCE_LENGTH)
     private OfferSource source;
 
     @Column(name = "source_name", length = SOURCE_NAME_LENGTH)
