@@ -76,6 +76,10 @@ public class ProximitySearchSteps {
     private static final String SOURCE_NAME = "Directorio público";
     private static final String CONTENT = "content";
     private static final String TITLE = "title";
+    private static final String METERS_NORTH = "meters north";
+    private static final String OPEN_REPORTS = "open reports";
+    private static final long FIRST_NEARBY_BUSINESS_ID = 100L;
+    private static final String NO_REPORTS = "0";
 
     private final OfferRepositoryPort offers;
     private final CampaignRepositoryPort campaigns;
@@ -232,6 +236,62 @@ public class ProximitySearchSteps {
         var sorted = responseMillis.stream().sorted().toList();
         var p95 = sorted.get((int) Math.ceil(PERCENTILE_95 * sorted.size()) - 1);
         assertThat(p95).as("p95 of %d requests", sorted.size()).isLessThan(millis);
+    }
+
+    @Given("these valid offers exist around the origin, each from its own business:")
+    public void theseValidOffersExist(DataTable table) {
+        var today = LocalDate.now(LIMA);
+        var period = new DateRange(today.minusDays(1), today.plusDays(DAYS_LEFT));
+        var businessId = FIRST_NEARBY_BUSINESS_ID;
+        for (Map<String, String> row : table.asMaps()) {
+            var openReports = Integer.parseInt(row.getOrDefault(OPEN_REPORTS, NO_REPORTS));
+            standings.save(new MerchantStanding(businessId, row.get(TITLE), false, openReports, FULL_COMPLIANCE, false,
+                    LocalDateTime.now()));
+            var campaignId = campaigns.save(new Campaign(null, businessId, row.get(TITLE), row.get(TITLE), period,
+                    new CampaignZone(ZoneType.RADIUS, CAMPAIGN_RADIUS_METERS, null), CampaignStatus.ACTIVE,
+                    Money.soles(PRICE))).getId();
+            offers.save(new Offer(null, campaignId, businessId, row.get(TITLE), CONDITIONS, Money.soles(PRICE),
+                    today.plusDays(DAYS_LEFT), CATEGORY, GeocodingStatus.GEOCODED, ADDRESS, null,
+                    OfferSource.AFFILIATED, null, OfferStatus.PUBLISHED, north(row.get(METERS_NORTH))));
+            businessId++;
+        }
+    }
+
+    @Given("the consumer denies the location permission and picks a district centered at the origin")
+    public void consumerPicksDistrict() {
+        assertThat(origin).isNotNull();
+    }
+
+    @When("I search nearby offers from the district center with radiusMinutes {int}")
+    public void searchFromDistrictCenter(int minutes) {
+        searchWithRadius(minutes);
+    }
+
+    @Given("there are no valid offers within {int} meters of the origin")
+    public void noValidOffersNearby(int meters) {
+        assertThat(offers.findPublishedWithin(origin, meters, LocalDate.now(LIMA))).isEmpty();
+    }
+
+    @Then("the offers come in this order:")
+    public void offersComeInOrder(DataTable expected) throws JsonProcessingException {
+        var actual = contentStream()
+                .map(node -> List.of(node.path(TITLE).asText(), node.path("distanceMeters").asText(),
+                        node.path("walkMinutes").asText()))
+                .toList();
+        var rows = expected.asMaps().stream()
+                .map(row -> List.of(row.get(TITLE), row.get("distanceMeters"), row.get("walkMinutes")))
+                .toList();
+        assertThat(actual).isEqualTo(rows);
+    }
+
+    @Then("the list is empty with totalElements {int}")
+    public void listIsEmpty(int total) throws JsonProcessingException {
+        assertThat(titles()).isEmpty();
+        assertThat(http.json(http.last()).path("totalElements").asInt()).isEqualTo(total);
+    }
+
+    private GeoPoint north(String meters) {
+        return new GeoPoint(origin.latitude() + Double.parseDouble(meters) / METERS_PER_DEGREE, origin.longitude());
     }
 
     private Long campaign(DateRange period, CampaignStatus status) {
