@@ -1,15 +1,15 @@
 package com.geopslabs.geops.engagement.infrastructure.web;
 
 /**
- * DeleteFavoriteResource
+ * SaveOfferRequest
  *
- * Resource representing the data required to delete a favorite by user and offer
+ * Resource representing the data required to create a new saved offer offer for a user
  *
- * @summary Resource for deleting a favorite by userId and offerId
+ * @summary Resource for creating a saved offer offer
  * @since 1.0
  * @author GeOps Labs
  */
-public record DeleteFavoriteResource(
+public record SaveOfferRequest(
     Long userId,
     Long offerId
 ) {
@@ -18,7 +18,7 @@ public record DeleteFavoriteResource(
      *
      * @throws IllegalArgumentException if validation fails
      */
-    public DeleteFavoriteResource {
+    public SaveOfferRequest {
         if (userId == null) {
             throw new IllegalArgumentException("userId cannot be null");
         }

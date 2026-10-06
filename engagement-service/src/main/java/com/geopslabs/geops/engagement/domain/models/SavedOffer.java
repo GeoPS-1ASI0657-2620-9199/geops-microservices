@@ -1,24 +1,24 @@
 package com.geopslabs.geops.engagement.domain.models;
 
-import com.geopslabs.geops.engagement.domain.models.commands.CreateFavoriteCommand;
+import com.geopslabs.geops.engagement.domain.models.commands.SaveOfferCommand;
 import com.geopslabs.geops.backend.identity.domain.model.aggregates.User;
 import com.geopslabs.geops.backend.offers.domain.model.aggregates.Offer;
 
 import java.util.Date;
 
-public class Favorite {
+public class SavedOffer {
     private Long id;
     private User user;
     private Offer offer;
     private Date createdAt;
     private Date updatedAt;
 
-    public Favorite(CreateFavoriteCommand command, User user, Offer offer) {
+    public SavedOffer(SaveOfferCommand command, User user, Offer offer) {
         this.user = user;
         this.offer = offer;
     }
 
-    public Favorite(Long id, User user, Offer offer, Date createdAt, Date updatedAt) {
+    public SavedOffer(Long id, User user, Offer offer, Date createdAt, Date updatedAt) {
         this.id = id;
         this.user = user;
         this.offer = offer;

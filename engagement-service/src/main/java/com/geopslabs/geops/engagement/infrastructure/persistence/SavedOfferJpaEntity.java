@@ -14,9 +14,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name = "favorites",
+@Table(name = "saved_offers",
     uniqueConstraints = @UniqueConstraint(
-        name = "uk_user_offer",
+        name = "uk_saved_offers_1",
         columnNames = {"user_id", "offer_id"}
     ),
     indexes = {
@@ -26,7 +26,7 @@ import lombok.Setter;
 )
 @Getter
 @Setter
-public class FavoriteJpaEntity extends AuditableAbstractAggregateRoot<FavoriteJpaEntity> {
+public class SavedOfferJpaEntity extends AuditableAbstractAggregateRoot<SavedOfferJpaEntity> {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

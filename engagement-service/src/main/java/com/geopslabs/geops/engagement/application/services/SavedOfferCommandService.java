@@ -1,10 +1,10 @@
 package com.geopslabs.geops.engagement.application.services;
 
-import com.geopslabs.geops.engagement.domain.models.Favorite;
-import com.geopslabs.geops.engagement.domain.models.commands.CreateFavoriteCommand;
-import com.geopslabs.geops.engagement.domain.models.commands.DeleteFavoriteCommand;
-import com.geopslabs.geops.engagement.application.usecases.FavoriteCommandUseCase;
-import com.geopslabs.geops.engagement.domain.ports.FavoriteRepositoryPort;
+import com.geopslabs.geops.engagement.domain.models.SavedOffer;
+import com.geopslabs.geops.engagement.domain.models.commands.SaveOfferCommand;
+import com.geopslabs.geops.engagement.domain.models.commands.RemoveSavedOfferCommand;
+import com.geopslabs.geops.engagement.application.usecases.SavedOfferCommandUseCase;
+import com.geopslabs.geops.engagement.domain.ports.SavedOfferRepositoryPort;
 import com.geopslabs.geops.backend.identity.infrastructure.persistence.jpa.UserRepository;
 import com.geopslabs.geops.backend.notifications.application.internal.outboundservices.NotificationFactoryService;
 import com.geopslabs.geops.backend.offers.infrastructure.persistence.jpa.OfferRepository;
@@ -13,20 +13,20 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 
 /**
- * FavoriteCommandService
+ * SavedOfferCommandService
  *
- * Implementation of the FavoriteCommandUseCase that handles all command operations
- * for favorites. This service implements the business logic for
- * creating and managing favorites following DDD principles
+ * Implementation of the SavedOfferCommandUseCase that handles all command operations
+ * for saved offers. This service implements the business logic for
+ * creating and managing saved offers following DDD principles
  *
  * @author GeOps Labs
- * @summary Implementation of favorite command service operations
+ * @summary Implementation of saved offer command service operations
  * @since 1.0
  */
 @Transactional
-public class FavoriteCommandService implements FavoriteCommandUseCase {
+public class SavedOfferCommandService implements SavedOfferCommandUseCase {
 
-    private final FavoriteRepositoryPort favoriteRepository;
+    private final SavedOfferRepositoryPort savedOfferRepository;
     private final UserRepository userRepository;
     private final OfferRepository offerRepository;
     private final NotificationFactoryService notificationFactory;
@@ -34,18 +34,18 @@ public class FavoriteCommandService implements FavoriteCommandUseCase {
     /**
      * Constructor for dependency injection
      *
-     * @param favoriteRepository The repository for favorite data access
+     * @param savedOfferRepository The repository for saved offer data access
      * @param userRepository The repository for user data access
      * @param offerRepository The repository for offer data access
      * @param notificationFactory Service to create notifications
      */
-    public FavoriteCommandService(
-        FavoriteRepositoryPort favoriteRepository,
+    public SavedOfferCommandService(
+        SavedOfferRepositoryPort savedOfferRepository,
         UserRepository userRepository,
         OfferRepository offerRepository,
         NotificationFactoryService notificationFactory
     ) {
-        this.favoriteRepository = favoriteRepository;
+        this.savedOfferRepository = savedOfferRepository;
         this.userRepository = userRepository;
         this.offerRepository = offerRepository;
         this.notificationFactory = notificationFactory;
@@ -55,16 +55,16 @@ public class FavoriteCommandService implements FavoriteCommandUseCase {
      * {@inheritDoc}
      */
     @Override
-    public Optional<Favorite> handle(CreateFavoriteCommand command) {
+    public Optional<SavedOffer> handle(SaveOfferCommand command) {
         try {
-            // Check if favorite already exists (prevent duplicates)
-            boolean exists = favoriteRepository.existsByUserIdAndOfferId(
+            // Check if saved offer already exists (prevent duplicates)
+            boolean exists = savedOfferRepository.existsByUserIdAndOfferId(
                     command.userId(),
                     command.offerId()
             );
 
             if (exists) {
-                System.err.println("Favorite already exists for userId: " +
+                System.err.println("SavedOffer already exists for userId: " +
                         command.userId() + " and offerId: " + command.offerId());
                 return Optional.empty();
             }
@@ -85,24 +85,24 @@ public class FavoriteCommandService implements FavoriteCommandUseCase {
                 return Optional.empty();
             }
 
-            // Create new favorite from command with user and offer entities
-            var favorite = new Favorite(command, userOptional.get(), offerOptional.get());
+            // Create new saved offer from command with user and offer entities
+            var savedOffer = new SavedOffer(command, userOptional.get(), offerOptional.get());
 
-            // Save the favorite to the repository
-            var savedFavorite = favoriteRepository.save(favorite);
+            // Save the saved offer to the repository
+            var savedSavedOffer = savedOfferRepository.save(savedOffer);
 
-            // Create notification for favorite added
+            // Create notification for saved offer added
             notificationFactory.createFavoriteAddedNotification(
                 command.userId(),
                 command.offerId().toString(),
                 "Oferta"
             );
 
-            return Optional.of(savedFavorite);
+            return Optional.of(savedSavedOffer);
 
         } catch (Exception e) {
             // Log the error with full stacktrace
-            System.err.println("Error creating favorite: " + e.getMessage());
+            System.err.println("Error creating savedOffer: " + e.getMessage());
             e.printStackTrace();
             return Optional.empty();
         }
@@ -118,18 +118,18 @@ public class FavoriteCommandService implements FavoriteCommandUseCase {
         }
 
         try {
-            // First check if favorite exists
-            if (!favoriteRepository.existsById(id)) {
+            // First check if saved offer exists
+            if (!savedOfferRepository.existsById(id)) {
                 return false;
             }
 
-            // Delete the favorite
-            favoriteRepository.deleteById(id);
+            // Delete the saved offer
+            savedOfferRepository.deleteById(id);
             return true;
 
         } catch (Exception e) {
             // Log the error with full stacktrace
-            System.err.println("Error deleting favorite: " + e.getMessage());
+            System.err.println("Error deleting savedOffer: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
@@ -139,22 +139,22 @@ public class FavoriteCommandService implements FavoriteCommandUseCase {
      * {@inheritDoc}
      */
     @Override
-    public boolean handleDelete(DeleteFavoriteCommand command) {
+    public boolean handleDelete(RemoveSavedOfferCommand command) {
         try {
-            // First check if favorite exists
-            boolean exists = favoriteRepository.existsByUserIdAndOfferId(
+            // First check if saved offer exists
+            boolean exists = savedOfferRepository.existsByUserIdAndOfferId(
                     command.userId(),
                     command.offerId()
             );
 
             if (!exists) {
-                System.err.println("Favorite not found for userId: " +
+                System.err.println("SavedOffer not found for userId: " +
                         command.userId() + " and offerId: " + command.offerId());
                 return false;
             }
 
-            // Delete the favorite by userId and offerId
-            long deletedCount = favoriteRepository.deleteByUserIdAndOfferId(
+            // Delete the saved offer by userId and offerId
+            long deletedCount = savedOfferRepository.deleteByUserIdAndOfferId(
                     command.userId(),
                     command.offerId()
             );
@@ -163,7 +163,7 @@ public class FavoriteCommandService implements FavoriteCommandUseCase {
 
         } catch (Exception e) {
             // Log the error with full stacktrace
-            System.err.println("Error deleting favorite by userId and offerId: " + e.getMessage());
+            System.err.println("Error deleting savedOffer by userId and offerId: " + e.getMessage());
             e.printStackTrace();
             return false;
         }

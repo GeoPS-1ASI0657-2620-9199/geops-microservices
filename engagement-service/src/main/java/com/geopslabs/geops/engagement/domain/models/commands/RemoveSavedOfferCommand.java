@@ -1,20 +1,20 @@
 package com.geopslabs.geops.engagement.domain.models.commands;
 
 /**
- * DeleteFavoriteCommand
+ * RemoveSavedOfferCommand
  *
- * Command record that encapsulates the necessary data to delete a favorite entry
+ * Command record that encapsulates the necessary data to delete a saved offer entry
  * by user and offer identifiers. This command is used when a user wants to remove
- * a favorite offer (un-heart action)
+ * a saved offer offer (un-heart action)
  *
- * @summary Command to delete a favorite entry by userId and offerId
+ * @summary Command to delete a saved offer entry by userId and offerId
  * @param userId The unique identifier of the user
  * @param offerId The unique identifier of the offer
  *
  * @since 1.0
  * @author GeOps Labs
  */
-public record DeleteFavoriteCommand(
+public record RemoveSavedOfferCommand(
     Long userId,
     Long offerId
 ) {
@@ -23,7 +23,7 @@ public record DeleteFavoriteCommand(
      *
      * @throws IllegalArgumentException if validation fails
      */
-    public DeleteFavoriteCommand {
+    public RemoveSavedOfferCommand {
         if (userId == null) {
             throw new IllegalArgumentException("userId cannot be null");
         }

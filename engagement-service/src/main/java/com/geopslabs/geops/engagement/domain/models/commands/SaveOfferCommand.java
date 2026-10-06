@@ -1,21 +1,21 @@
 package com.geopslabs.geops.engagement.domain.models.commands;
 
 /**
- * CreateFavoriteCommand
+ * SaveOfferCommand
  *
- * Command record that encapsulates all the necessary data to create a new favorite entry.
+ * Command record that encapsulates all the necessary data to create a new saved offer entry.
  * This command validates input data and ensures that required fields are properly provided
- * for favorite creation
+ * for saved offer creation
  *
- * @summary Command to create a new favorite entry
- * @param userId The unique identifier of the user creating the favorite
- * @param offerId The unique identifier of the offer being favorite
+ * @summary Command to create a new saved offer entry
+ * @param userId The unique identifier of the user creating the saved offer
+ * @param offerId The unique identifier of the offer being saved offer
  *
  * @since 1.0
  * @author GeOps Labs
  */
 
-public record CreateFavoriteCommand(
+public record SaveOfferCommand(
         Long userId,
         Long offerId
 ) {
@@ -24,7 +24,7 @@ public record CreateFavoriteCommand(
      *
      * @throws IllegalArgumentException if validation fails
      */
-    public CreateFavoriteCommand {
+    public SaveOfferCommand {
         if (userId == null) {
             throw new IllegalArgumentException("userId cannot be null or empty");
         }
