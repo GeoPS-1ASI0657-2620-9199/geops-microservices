@@ -31,8 +31,8 @@ public class CampaignJpaAdapter implements CampaignRepositoryPort {
     }
 
     @Override
-    public List<Campaign> findByUserId(Long userId) {
-        return repository.findAllByUser_Id(userId).stream().map(CampaignPersistenceMapper::toDomain).toList();
+    public List<Campaign> findByBusinessId(Long businessId) {
+        return repository.findAllByBusinessId(businessId).stream().map(CampaignPersistenceMapper::toDomain).toList();
     }
 
     @Override

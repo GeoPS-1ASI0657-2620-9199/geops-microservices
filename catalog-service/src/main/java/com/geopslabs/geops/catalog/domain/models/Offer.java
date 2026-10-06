@@ -11,7 +11,7 @@ public class Offer {
     private Long id;
     private Campaign campaign;
     private String title;
-    private String partner;
+    private Long businessId;
     private BigDecimal price;
     private String codePrefix;
     private LocalDate validTo;
@@ -25,7 +25,7 @@ public class Offer {
     public Offer(Campaign campaign, CreateOfferCommand command) {
         this.campaign = campaign;
         this.title = command.title();
-        this.partner = command.partner();
+        this.businessId = command.businessId();
         this.price = command.price();
         this.codePrefix = command.codePrefix();
         this.validTo = command.validTo();
@@ -36,13 +36,13 @@ public class Offer {
     }
 
     @SuppressWarnings("java:S107")
-    public Offer(Long id, Campaign campaign, String title, String partner, BigDecimal price, String codePrefix,
+    public Offer(Long id, Campaign campaign, String title, Long businessId, BigDecimal price, String codePrefix,
                  LocalDate validTo, Integer rating, String location, String category, String imageUrl,
                  Date createdAt, Date updatedAt) {
         this.id = id;
         this.campaign = campaign;
         this.title = title;
-        this.partner = partner;
+        this.businessId = businessId;
         this.price = price;
         this.codePrefix = codePrefix;
         this.validTo = validTo;
@@ -58,8 +58,8 @@ public class Offer {
         if (command.title() != null) {
             this.title = command.title();
         }
-        if (command.partner() != null) {
-            this.partner = command.partner();
+        if (command.businessId() != null) {
+            this.businessId = command.businessId();
         }
         if (command.price() != null) {
             this.price = command.price();
@@ -100,8 +100,8 @@ public class Offer {
         return title;
     }
 
-    public String getPartner() {
-        return partner;
+    public Long getBusinessId() {
+        return businessId;
     }
 
     public BigDecimal getPrice() {

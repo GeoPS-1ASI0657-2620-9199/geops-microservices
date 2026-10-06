@@ -25,7 +25,7 @@ import java.time.LocalDate;
 public record CreateOfferResource(
     Long campaignId,
     String title,
-    String partner,
+    Long businessId,
     BigDecimal price,
     String codePrefix,
     LocalDate validTo,
@@ -47,8 +47,8 @@ public record CreateOfferResource(
             throw new IllegalArgumentException("title cannot be null or empty");
         }
 
-        if (partner == null || partner.isBlank()) {
-            throw new IllegalArgumentException("partner cannot be null or empty");
+        if (businessId == null || businessId < 1) {
+            throw new IllegalArgumentException("businessId cannot be null or less than 1");
         }
 
         if (price == null || price.compareTo(BigDecimal.ZERO) < 0) {

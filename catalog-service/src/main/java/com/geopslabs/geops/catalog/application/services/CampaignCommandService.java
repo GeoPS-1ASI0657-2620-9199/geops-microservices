@@ -7,35 +7,24 @@ import com.geopslabs.geops.catalog.domain.models.commands.UpdateCampaignCommand;
 import com.geopslabs.geops.catalog.domain.models.ECampaignStatus;
 import com.geopslabs.geops.catalog.application.usecases.CampaignCommandUseCase;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
-import com.geopslabs.geops.backend.identity.infrastructure.persistence.jpa.UserRepository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.Optional;
 
 @Transactional
 public class CampaignCommandService implements CampaignCommandUseCase {
 
     private final CampaignRepositoryPort campaignRepository;
-    private final UserRepository userRepository;
 
-    public CampaignCommandService(CampaignRepositoryPort campaignRepository, UserRepository userRepository) {
+    public CampaignCommandService(CampaignRepositoryPort campaignRepository) {
         this.campaignRepository = campaignRepository;
-        this.userRepository = userRepository;
     }
 
     @Override
     public Optional<Campaign> handle(CreateCampaignCommand command) {
         try{
-            //Verifies if user is found by a user id
-            var foundUser = userRepository.findById(command.userId());
-            if(foundUser.isEmpty()) return Optional.empty();
-            //Verifies if user is OWNER role
-            if(!Objects.equals(foundUser.get().getRole(), "OWNER"))
-                throw new IllegalArgumentException("The user does not have OWNER role");
-
-            var campaign = new Campaign(foundUser.get(),command);
+            var campaign = new Campaign(command);
 
             var savedCampaign = campaignRepository.save(campaign);
 

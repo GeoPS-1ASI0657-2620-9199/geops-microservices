@@ -29,7 +29,7 @@ public class OfferResourceFromEntityAssembler {
             entity.getId(),
             entity.getCampaign().getId(),
             entity.getTitle(),
-            entity.getPartner(),
+            entity.getBusinessId(),
             entity.getPrice(),
             entity.getCodePrefix(),
             entity.getValidTo(),

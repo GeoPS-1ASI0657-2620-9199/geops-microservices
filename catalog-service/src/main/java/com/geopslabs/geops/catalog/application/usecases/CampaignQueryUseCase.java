@@ -1,7 +1,7 @@
 package com.geopslabs.geops.catalog.application.usecases;
 
 import com.geopslabs.geops.catalog.domain.models.Campaign;
-import com.geopslabs.geops.catalog.domain.models.queries.GetAllCampaignsByUserIdQuery;
+import com.geopslabs.geops.catalog.domain.models.queries.GetAllCampaignsByBusinessIdQuery;
 import com.geopslabs.geops.catalog.domain.models.queries.GetAllCampaignsQuery;
 import com.geopslabs.geops.catalog.domain.models.queries.GetCampaignByIdQuery;
 
@@ -17,5 +17,5 @@ public interface CampaignQueryUseCase {
 
     List<Campaign> handle(GetAllCampaignsQuery query);
 
-    List<Campaign> handle(GetAllCampaignsByUserIdQuery query);
+    List<Campaign> handle(GetAllCampaignsByBusinessIdQuery query);
 }

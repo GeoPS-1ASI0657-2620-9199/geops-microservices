@@ -8,7 +8,7 @@ final class CampaignPersistenceMapper {
     }
 
     static Campaign toDomain(CampaignJpaEntity entity) {
-        return new Campaign(entity.getId(), entity.getUser(), entity.getName(), entity.getDescription(),
+        return new Campaign(entity.getId(), entity.getBusinessId(), entity.getName(), entity.getDescription(),
                 entity.getStartDate(), entity.getEndDate(), entity.getStatus(), entity.getEstimatedBudget(),
                 entity.getTotalImpressions(), entity.getTotalClicks(), entity.getCtr(), entity.getCreatedAt(),
                 entity.getUpdatedAt());
@@ -17,7 +17,7 @@ final class CampaignPersistenceMapper {
     static CampaignJpaEntity toEntity(Campaign campaign) {
         var entity = new CampaignJpaEntity();
         entity.setId(campaign.getId());
-        entity.setUser(campaign.getUser());
+        entity.setBusinessId(campaign.getBusinessId());
         entity.setName(campaign.getName());
         entity.setDescription(campaign.getDescription());
         entity.setStartDate(campaign.getStartDate());

@@ -26,8 +26,8 @@ public class OfferJpaEntity extends AuditableAbstractAggregateRoot<OfferJpaEntit
     @Column(name = "title", nullable = false, length = 255)
     private String title;
 
-    @Column(name = "partner", nullable = false, length = 150)
-    private String partner;
+    @Column(name = "business_id", nullable = false)
+    private Long businessId;
 
     @Column(name = "price", nullable = false, precision = 10, scale = 2)
     private BigDecimal price;

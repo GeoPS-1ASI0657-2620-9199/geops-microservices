@@ -30,7 +30,7 @@ public record OfferResource(
     Long id,
     Long campaignId,
     String title,
-    String partner,
+    Long businessId,
     BigDecimal price,
     String codePrefix,
     LocalDate validTo,

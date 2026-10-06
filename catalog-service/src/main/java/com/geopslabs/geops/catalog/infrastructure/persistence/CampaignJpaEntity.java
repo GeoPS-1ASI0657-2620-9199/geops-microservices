@@ -1,15 +1,11 @@
 package com.geopslabs.geops.catalog.infrastructure.persistence;
 
-import com.geopslabs.geops.backend.identity.domain.model.aggregates.User;
 import com.geopslabs.geops.catalog.domain.models.ECampaignStatus;
 import com.geopslabs.geops.catalog.shared.AuditableAbstractAggregateRoot;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -22,9 +18,8 @@ import java.time.LocalDate;
 @Setter
 public class CampaignJpaEntity extends AuditableAbstractAggregateRoot<CampaignJpaEntity> {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Column(name = "business_id", nullable = false)
+    private Long businessId;
 
     @Column(name = "name", nullable = false)
     private String name;

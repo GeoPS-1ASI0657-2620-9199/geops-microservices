@@ -12,5 +12,5 @@ public interface CampaignJpaRepository extends JpaRepository<CampaignJpaEntity, 
 
     void deleteCampaignById(Long id);
 
-    List<CampaignJpaEntity> findAllByUser_Id(Long userId);
+    List<CampaignJpaEntity> findAllByBusinessId(Long businessId);
 }

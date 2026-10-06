@@ -1,7 +1,7 @@
 package com.geopslabs.geops.catalog.infrastructure.web;
 
 import com.geopslabs.geops.catalog.domain.models.commands.DeleteCampaignCommand;
-import com.geopslabs.geops.catalog.domain.models.queries.GetAllCampaignsByUserIdQuery;
+import com.geopslabs.geops.catalog.domain.models.queries.GetAllCampaignsByBusinessIdQuery;
 import com.geopslabs.geops.catalog.domain.models.queries.GetAllCampaignsQuery;
 import com.geopslabs.geops.catalog.domain.models.queries.GetCampaignByIdQuery;
 import com.geopslabs.geops.catalog.application.usecases.CampaignCommandUseCase;
@@ -79,13 +79,13 @@ public class CampaignController {
         return ResponseEntity.ok(campaignResource);
     }
 
-    @GetMapping("/user/{userId}/campaigns")
+    @GetMapping("/business/{businessId}/campaigns")
     @Operation(summary = "Gets all the campaigns registered with the user",
             description = "Gets all campaigns from the user by giving the user unique identifier")
-    public ResponseEntity<List<CampaignResource>> getCampaignsByUserId(
-            @Parameter(description = "User unique identifier") @PathVariable Long userId)
+    public ResponseEntity<List<CampaignResource>> getCampaignsByBusinessId(
+            @Parameter(description = "Business unique identifier") @PathVariable Long businessId)
     {
-        var campaigns = campaignQueryService.handle(new GetAllCampaignsByUserIdQuery(userId));
+        var campaigns = campaignQueryService.handle(new GetAllCampaignsByBusinessIdQuery(businessId));
         var campaignResources = campaigns.stream()
                 .map(CampaignResourceFromEntityAssembler::toResourceFromEntity)
                 .toList();

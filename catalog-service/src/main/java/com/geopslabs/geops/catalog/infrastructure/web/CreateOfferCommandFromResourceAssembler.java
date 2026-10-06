@@ -29,7 +29,7 @@ public class CreateOfferCommandFromResourceAssembler {
         return new CreateOfferCommand(
             resource.campaignId(),
             resource.title(),
-            resource.partner(),
+            resource.businessId(),
             resource.price(),
             resource.codePrefix(),
             resource.validTo(),

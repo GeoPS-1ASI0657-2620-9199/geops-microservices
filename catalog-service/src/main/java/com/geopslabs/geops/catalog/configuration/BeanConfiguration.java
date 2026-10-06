@@ -1,6 +1,5 @@
 package com.geopslabs.geops.catalog.configuration;
 
-import com.geopslabs.geops.backend.identity.infrastructure.persistence.jpa.UserRepository;
 import com.geopslabs.geops.catalog.application.services.CampaignCommandService;
 import com.geopslabs.geops.catalog.application.services.CampaignQueryService;
 import com.geopslabs.geops.catalog.application.services.OfferCommandService;
@@ -30,14 +29,12 @@ public class BeanConfiguration {
     }
 
     @Bean
-    public CampaignCommandUseCase campaignCommandUseCase(CampaignRepositoryPort campaignRepository,
-                                                         UserRepository userRepository) {
-        return new CampaignCommandService(campaignRepository, userRepository);
+    public CampaignCommandUseCase campaignCommandUseCase(CampaignRepositoryPort campaignRepository) {
+        return new CampaignCommandService(campaignRepository);
     }
 
     @Bean
-    public CampaignQueryUseCase campaignQueryUseCase(CampaignRepositoryPort campaignRepository,
-                                                     UserRepository userRepository) {
-        return new CampaignQueryService(campaignRepository, userRepository);
+    public CampaignQueryUseCase campaignQueryUseCase(CampaignRepositoryPort campaignRepository) {
+        return new CampaignQueryService(campaignRepository);
     }
 }

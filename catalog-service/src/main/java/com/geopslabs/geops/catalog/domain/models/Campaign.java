@@ -1,6 +1,5 @@
 package com.geopslabs.geops.catalog.domain.models;
 
-import com.geopslabs.geops.backend.identity.domain.model.aggregates.User;
 import com.geopslabs.geops.catalog.domain.models.commands.CreateCampaignCommand;
 
 import java.time.LocalDate;
@@ -8,7 +7,7 @@ import java.util.Date;
 
 public class Campaign {
     private Long id;
-    private User user;
+    private Long businessId;
     private String name;
     private String description;
     private LocalDate startDate;
@@ -21,8 +20,8 @@ public class Campaign {
     private Date createdAt;
     private Date updatedAt;
 
-    public Campaign(User user, CreateCampaignCommand command) {
-        this.user = user;
+    public Campaign(CreateCampaignCommand command) {
+        this.businessId = command.businessId();
         this.name = command.name();
         this.description = command.description();
         this.startDate = command.startDate();
@@ -35,11 +34,11 @@ public class Campaign {
     }
 
     @SuppressWarnings("java:S107")
-    public Campaign(Long id, User user, String name, String description, LocalDate startDate, LocalDate endDate,
+    public Campaign(Long id, Long businessId, String name, String description, LocalDate startDate, LocalDate endDate,
                     ECampaignStatus status, float estimatedBudget, Long totalImpressions, Long totalClicks,
                     float ctr, Date createdAt, Date updatedAt) {
         this.id = id;
-        this.user = user;
+        this.businessId = businessId;
         this.name = name;
         this.description = description;
         this.startDate = startDate;
@@ -74,16 +73,12 @@ public class Campaign {
         }
     }
 
-    public Long getUserId() {
-        return this.user != null ? this.user.getId() : null;
+    public Long getBusinessId() {
+        return businessId;
     }
 
     public Long getId() {
         return id;
-    }
-
-    public User getUser() {
-        return user;
     }
 
     public String getName() {

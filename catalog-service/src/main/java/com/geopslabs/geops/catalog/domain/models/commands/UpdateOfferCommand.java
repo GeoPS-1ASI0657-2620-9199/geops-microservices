@@ -25,7 +25,7 @@ package com.geopslabs.geops.catalog.domain.models.commands;
 public record UpdateOfferCommand (
         Long id,
         String title,
-        String partner,
+        Long businessId,
         java.math.BigDecimal price,
         String codePrefix,
         java.time.LocalDate validTo,

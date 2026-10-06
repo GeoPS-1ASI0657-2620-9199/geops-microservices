@@ -1,12 +1,11 @@
 package com.geopslabs.geops.catalog.application.services;
 
 import com.geopslabs.geops.catalog.domain.models.Campaign;
-import com.geopslabs.geops.catalog.domain.models.queries.GetAllCampaignsByUserIdQuery;
+import com.geopslabs.geops.catalog.domain.models.queries.GetAllCampaignsByBusinessIdQuery;
 import com.geopslabs.geops.catalog.domain.models.queries.GetAllCampaignsQuery;
 import com.geopslabs.geops.catalog.domain.models.queries.GetCampaignByIdQuery;
 import com.geopslabs.geops.catalog.application.usecases.CampaignQueryUseCase;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
-import com.geopslabs.geops.backend.identity.infrastructure.persistence.jpa.UserRepository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -16,11 +15,9 @@ import java.util.Optional;
 public class CampaignQueryService implements CampaignQueryUseCase {
 
     private final CampaignRepositoryPort campaignRepository;
-    private final UserRepository userRepository;
 
-    public CampaignQueryService(CampaignRepositoryPort campaignRepository,  UserRepository userRepository) {
+    public CampaignQueryService(CampaignRepositoryPort campaignRepository) {
         this.campaignRepository = campaignRepository;
-        this.userRepository = userRepository;
     }
 
     @Override
@@ -42,9 +39,7 @@ public class CampaignQueryService implements CampaignQueryUseCase {
     public List<Campaign> handle(GetAllCampaignsQuery query) {return campaignRepository.findAll();}
 
     @Override
-    public List<Campaign> handle(GetAllCampaignsByUserIdQuery query) {
-        if (!userRepository.existsById(query.userId()))
-            throw new IllegalArgumentException("User with id " + query.userId() + " not found");
-        return campaignRepository.findByUserId(query.userId());
+    public List<Campaign> handle(GetAllCampaignsByBusinessIdQuery query) {
+        return campaignRepository.findByBusinessId(query.businessId());
     }
 }

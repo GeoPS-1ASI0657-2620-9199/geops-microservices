@@ -26,7 +26,7 @@ import java.math.BigDecimal;
 public record CreateOfferCommand (
         Long campaignId,
         String title,
-        String partner,
+        Long businessId,
         java.math.BigDecimal price,
         String codePrefix,
         java.time.LocalDate validTo,
@@ -50,8 +50,8 @@ public record CreateOfferCommand (
             throw new IllegalArgumentException("title cannot be null or empty");
         }
 
-        if (partner == null || partner.isBlank()) {
-            throw new IllegalArgumentException("partner cannot be null or empty");
+        if (businessId == null || businessId < 1) {
+            throw new IllegalArgumentException("businessId cannot be null or less than 1");
         }
 
         if (price == null || price.compareTo(BigDecimal.ZERO) < 0) {

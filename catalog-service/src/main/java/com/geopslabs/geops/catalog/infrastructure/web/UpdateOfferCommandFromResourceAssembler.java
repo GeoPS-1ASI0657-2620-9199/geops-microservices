@@ -31,7 +31,7 @@ public class UpdateOfferCommandFromResourceAssembler {
         return new UpdateOfferCommand(
             id,
             resource.title(),
-            resource.partner(),
+            resource.businessId(),
             resource.price(),
             resource.codePrefix(),
             resource.validTo(),

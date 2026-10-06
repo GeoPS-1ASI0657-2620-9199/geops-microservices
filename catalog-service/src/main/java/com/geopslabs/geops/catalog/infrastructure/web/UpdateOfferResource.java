@@ -26,7 +26,7 @@ import java.time.LocalDate;
  */
 public record UpdateOfferResource(
     String title,
-    String partner,
+    Long businessId,
     BigDecimal price,
     String codePrefix,
     LocalDate validTo,
@@ -53,8 +53,8 @@ public record UpdateOfferResource(
             throw new IllegalArgumentException("title cannot be blank if provided");
         }
 
-        if (partner != null && partner.isBlank()) {
-            throw new IllegalArgumentException("partner cannot be blank if provided");
+        if (businessId != null && businessId < 1) {
+            throw new IllegalArgumentException("businessId cannot be less than 1 if provided");
         }
 
         if (codePrefix != null && codePrefix.isBlank()) {

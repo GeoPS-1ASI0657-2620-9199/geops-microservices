@@ -12,7 +12,7 @@ public interface CampaignRepositoryPort {
 
     List<Campaign> findAll();
 
-    List<Campaign> findByUserId(Long userId);
+    List<Campaign> findByBusinessId(Long businessId);
 
     void deleteById(Long id);
 }
