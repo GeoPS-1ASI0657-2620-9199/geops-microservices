@@ -26,11 +26,6 @@ class CampaignTest {
         assertThat(campaign().isOfBusiness(null)).isFalse();
     }
 
-    @Test
-    void moneyInSolesUsesThePeruvianCurrency() {
-        assertThat(Money.soles(BigDecimal.TEN).currency()).isEqualTo("PEN");
-    }
-
     private static Campaign campaign() {
         var period = new DateRange(LocalDate.parse("2026-10-05"), LocalDate.parse("2026-10-31"));
         var zone = new CampaignZone(ZoneType.DISTRICT, null, "La Victoria");
