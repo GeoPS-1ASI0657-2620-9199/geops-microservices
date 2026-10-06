@@ -13,6 +13,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.locationtech.jts.geom.Point;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -32,6 +33,7 @@ public class OfferJpaEntity {
     private static final int AMOUNT_PRECISION = 10;
     private static final int AMOUNT_SCALE = 2;
     private static final String TEXT = "text";
+    private static final String GEOGRAPHY_POINT = "geography(Point,4326)";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -78,4 +80,7 @@ public class OfferJpaEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = STATUS_LENGTH)
     private OfferStatus status;
+
+    @Column(name = "location", columnDefinition = GEOGRAPHY_POINT)
+    private Point location;
 }
