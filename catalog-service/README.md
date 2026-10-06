@@ -46,6 +46,12 @@ Reglas:
 - `CREATE EXTENSION postgis` no va en las migraciones: la crea `platform/postgres/init-databases.sh` con el superusuario.
 - `clean` está deshabilitado y no hay baseline automático: la base solo se borra desde `platform`.
 
+Para revertir un cambio que ya está en `develop` se agrega otra migración que lo deshace; Flyway
+Community no tiene `undo` y la historia de `flyway_schema_history` queda completa. Por ejemplo, si
+`V3__add_offer_stock.sql` agregó `offers.stock`, la reversión es
+`V4__revert_offer_stock.sql` con `ALTER TABLE offers DROP COLUMN stock;`, y la entidad JPA deja de
+mapear esa columna en el mismo commit.
+
 Para empezar de cero en local se borra el volumen de la plataforma, lo que borra todas las bases:
 `docker compose down -v` y `docker compose up -d` en `platform`. Si aparece «Detected resolved
 migration not applied» es porque la base tiene una versión posterior a otra que falta (por ejemplo,
