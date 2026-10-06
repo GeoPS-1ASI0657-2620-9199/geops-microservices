@@ -30,10 +30,26 @@ Los errores responden `{"code": "...", "message": "..."}`. Los ejemplos de cada 
 
 ## Base de datos
 
-`catalog_db` con PostGIS. `V1__baseline.sql` crea las tablas del diagrama de base de datos del
-informe sin `offers.location` ni su índice espacial, que llegan en
-`V2__add_offer_location_and_spatial_index.sql` con US01. Las migraciones de este servicio siguen
-desde `V3`. Una migración que ya está en `develop` no se edita: se corrige con otra nueva.
+`catalog_db` con PostGIS. El esquema solo cambia con migraciones de Flyway en
+`src/main/resources/db/migration`; Hibernate se limita a validarlo (`ddl-auto: validate`).
+
+| Versión | Archivo | Contenido |
+|---|---|---|
+| V1 | `V1__baseline.sql` | Tablas del diagrama de base de datos del informe, sin `offers.location` ni su índice espacial |
+| V2 | `V2__add_offer_location_and_spatial_index.sql` | Reservada para US01 (`offers.location` e `ix_offers_location`) |
+| V3 en adelante | — | Siguientes cambios de Catalog |
+
+Reglas:
+
+- Cada cambio de esquema es un archivo nuevo `V<n>__<descripcion_en_ingles>.sql`, con la versión siguiente a la última.
+- Una migración que ya está en `develop` no se edita: Flyway compara su checksum y el servicio no arranca. Se corrige con otra nueva.
+- `CREATE EXTENSION postgis` no va en las migraciones: la crea `platform/postgres/init-databases.sh` con el superusuario.
+- `clean` está deshabilitado y no hay baseline automático: la base solo se borra desde `platform`.
+
+Para empezar de cero en local se borra el volumen de la plataforma, lo que borra todas las bases:
+`docker compose down -v` y `docker compose up -d` en `platform`. Si aparece «Detected resolved
+migration not applied» es porque la base tiene una versión posterior a otra que falta (por ejemplo,
+una V3 aplicada antes de recibir la V2); se resuelve igual.
 
 ## Escenarios de aceptación
 
@@ -43,6 +59,7 @@ PostgreSQL con PostGIS en Testcontainers, con tokens firmados con una clave de p
 | Historia | Archivo | Escenarios |
 |---|---|---|
 | Consultas del catálogo (GEO-207) | `query-catalog.feature` | 11 |
+| Migraciones versionadas (GEO-9, GEO-51) | `schema-migrations.feature` | 3 |
 
 ## Ejecución local
 
