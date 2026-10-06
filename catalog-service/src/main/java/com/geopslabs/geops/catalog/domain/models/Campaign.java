@@ -23,6 +23,10 @@ public class Campaign {
         this.estimatedBudget = estimatedBudget;
     }
 
+    public boolean isOfBusiness(Long candidateBusinessId) {
+        return businessId.equals(candidateBusinessId);
+    }
+
     public Long getId() {
         return id;
     }

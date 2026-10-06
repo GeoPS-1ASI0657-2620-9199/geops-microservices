@@ -5,17 +5,22 @@ import com.geopslabs.geops.catalog.application.usecases.ListBusinessCampaignsUse
 import com.geopslabs.geops.catalog.application.usecases.ListCampaignOffersUseCase;
 import com.geopslabs.geops.catalog.domain.models.Campaign;
 import com.geopslabs.geops.catalog.domain.models.Offer;
+import com.geopslabs.geops.catalog.domain.models.exceptions.CampaignAccessDeniedException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.CampaignNotFoundException;
 import com.geopslabs.geops.catalog.domain.models.queries.GetCampaignByIdQuery;
 import com.geopslabs.geops.catalog.domain.models.queries.GetCampaignsByBusinessIdQuery;
 import com.geopslabs.geops.catalog.domain.models.queries.GetOffersByCampaignIdQuery;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.OfferRepositoryPort;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
 public class CampaignQueryService
         implements GetCampaignByIdUseCase, ListBusinessCampaignsUseCase, ListCampaignOffersUseCase {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CampaignQueryService.class);
+
     private final CampaignRepositoryPort campaignRepository;
     private final OfferRepositoryPort offerRepository;
 
@@ -26,8 +31,13 @@ public class CampaignQueryService
 
     @Override
     public Campaign getById(GetCampaignByIdQuery query) {
-        return campaignRepository.findById(query.campaignId())
+        var campaign = campaignRepository.findById(query.campaignId())
                 .orElseThrow(() -> new CampaignNotFoundException(query.campaignId()));
+        if (!campaign.isOfBusiness(query.businessId())) {
+            LOGGER.info("campaign.access-denied campaignId={} reason=other-business", campaign.getId());
+            throw new CampaignAccessDeniedException(campaign.getId());
+        }
+        return campaign;
     }
 
     @Override
@@ -37,7 +47,7 @@ public class CampaignQueryService
 
     @Override
     public List<Offer> list(GetOffersByCampaignIdQuery query) {
-        var campaign = getById(new GetCampaignByIdQuery(query.campaignId()));
+        var campaign = getById(new GetCampaignByIdQuery(query.campaignId(), query.businessId()));
         return offerRepository.findByCampaignId(campaign.getId());
     }
 }

@@ -1,4 +1,4 @@
 package com.geopslabs.geops.catalog.domain.models.queries;
 
-public record GetCampaignByIdQuery(Long campaignId) {
+public record GetCampaignByIdQuery(Long campaignId, Long businessId) {
 }

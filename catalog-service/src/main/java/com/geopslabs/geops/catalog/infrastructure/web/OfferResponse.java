@@ -3,8 +3,8 @@ package com.geopslabs.geops.catalog.infrastructure.web;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-public record OfferResource(
-        Long id,
+public record OfferResponse(
+        Long offerId,
         Long campaignId,
         Long businessId,
         String title,
