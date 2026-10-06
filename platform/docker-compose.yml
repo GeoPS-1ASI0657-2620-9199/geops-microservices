@@ -97,9 +97,12 @@ services:
       <<: *service-env
       SERVER_PORT: 8082
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/catalog_db
+      IDENTITY_JWKS_URI: http://identity-service:8081/.well-known/jwks.json
     depends_on:
       <<: *service-deps
       redis:
+        condition: service_healthy
+      identity-service:
         condition: service_healthy
     healthcheck:
       <<: *health
