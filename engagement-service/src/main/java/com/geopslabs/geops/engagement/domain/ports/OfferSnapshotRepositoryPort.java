@@ -6,4 +6,6 @@ import java.util.Optional;
 
 public interface OfferSnapshotRepositoryPort {
     Optional<OfferSnapshot> findById(Long offerId);
+
+    void upsert(OfferSnapshot offer);
 }
