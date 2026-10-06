@@ -451,6 +451,69 @@
           }
         }
       ]
+    },
+    {
+      "name": "US23",
+      "item": [
+        {
+          "name": "Log in business owner",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"returns the business role and businessId\", function () {",
+                  "    pm.expect(pm.response.json().role).to.eql(\"BUSINESS_OWNER\");",
+                  "    pm.expect(pm.response.json().businessId).to.be.a(\"number\");",
+                  "});",
+                  "pm.test(\"token carries ROLE_BUSINESS_OWNER and the same businessId\", function () {",
+                  "    var payload = pm.response.json().accessToken.split(\".\")[1].replace(/-/g, \"+\").replace(/_/g, \"/\");",
+                  "    var claims = JSON.parse(atob(payload + \"===\".slice((payload.length + 3) % 4)));",
+                  "    pm.expect(claims.roles).to.eql([\"ROLE_BUSINESS_OWNER\"]);",
+                  "    pm.expect(claims.businessId).to.eql(pm.response.json().businessId);",
+                  "    pm.expect(claims).to.not.have.property(\"consumerId\");",
+                  "});",
+                  "pm.collectionVariables.set(\"accessToken\", pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rosa.quispe@ejemplo.pe\",\n  \"password\": \"Bodega#2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   ],
   "variable": [

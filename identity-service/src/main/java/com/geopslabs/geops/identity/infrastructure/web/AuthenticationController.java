@@ -13,7 +13,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,7 +23,6 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @Tag(name = "Authentication", description = "User registration and login")
 @RestController
 @RequestMapping(value = "/api/v1/auth", produces = APPLICATION_JSON_VALUE)
-@CrossOrigin(origins = "*")
 public class AuthenticationController {
     private final RegisterUserUseCase registerUserUseCase;
     private final LogInUseCase logInUseCase;
@@ -107,15 +105,24 @@ public class AuthenticationController {
     @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @Content(
             mediaType = APPLICATION_JSON_VALUE,
             schema = @Schema(implementation = LogInRequest.class),
-            examples = @ExampleObject(name = "consumer", value = """
-                    {"email": "lucia.fernandez@ejemplo.pe", "password": "Ofertas#2026"}""")))
+            examples = {
+                    @ExampleObject(name = "consumer", value = """
+                            {"email": "lucia.fernandez@ejemplo.pe", "password": "Ofertas#2026"}"""),
+                    @ExampleObject(name = "businessOwner", value = """
+                            {"email": "rosa.quispe@ejemplo.pe", "password": "Bodega#2026"}""")}))
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Valid credentials; signed token issued",
-                    content = @Content(schema = @Schema(implementation = TokenResponse.class),
-                            examples = @ExampleObject(name = "consumerToken", value = """
-                                    {"accessToken": "eyJraWQiOiJpZGVudGl0eS0yMDI2LTEwIiwidHlwIjoiSldUIiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiI0MSIsInJvbGUiOiJDT05TVU1FUiIsImNvbnN1bWVySWQiOjQxfQ.c2lnbmF0dXJh",
+            @ApiResponse(responseCode = "200", description = "Valid credentials; signed token issued. The role "
+                    + "tells the web app which panel to open; businessId comes only for a business owner",
+                    content = @Content(schema = @Schema(implementation = TokenResponse.class), examples = {
+                            @ExampleObject(name = "consumerToken", value = """
+                                    {"accessToken": "eyJraWQiOiJpZGVudGl0eS0yMDI2LTEwIiwidHlwIjoiSldUIiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiI0MSIsImlzcyI6Imdlb3BzLWlkZW50aXR5IiwiYXVkIjoiZ2VvcHMtYXBpIiwicm9sZXMiOlsiUk9MRV9DT05TVU1FUiJdLCJpYXQiOjE3OTEwNTA0MDAsImV4cCI6MTc5MTA1NDAwMH0.c2lnbmF0dXJh",
                                      "tokenType": "Bearer", "expiresIn": 3600, "userId": 41,
-                                     "role": "CONSUMER", "consumerId": 41}"""))),
+                                     "role": "CONSUMER", "consumerId": 41}"""),
+                            @ExampleObject(name = "businessToken", value = """
+                                    {"accessToken": "eyJraWQiOiJpZGVudGl0eS0yMDI2LTEwIiwidHlwIjoiSldUIiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiI0MiIsImlzcyI6Imdlb3BzLWlkZW50aXR5IiwiYXVkIjoiZ2VvcHMtYXBpIiwicm9sZXMiOlsiUk9MRV9CVVNJTkVTU19PV05FUiJdLCJidXNpbmVzc0lkIjo3LCJpYXQiOjE3OTEwNTA0MDAsImV4cCI6MTc5MTA1NDAwMH0.c2lnbmF0dXJh",
+                                     "tokenType": "Bearer", "expiresIn": 3600, "userId": 42,
+                                     "role": "BUSINESS_OWNER", "businessId": 7,
+                                     "businessName": "Pollería El Buen Sabor"}""")})),
             @ApiResponse(responseCode = "400", description = "Missing or malformed email or password",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
                             examples = @ExampleObject(name = "invalidRequest", value = """

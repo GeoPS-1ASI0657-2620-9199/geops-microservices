@@ -5,8 +5,8 @@ import com.geopslabs.geops.identity.infrastructure.persistence.BusinessProfileJp
 import com.geopslabs.geops.identity.infrastructure.persistence.ConsumerProfileJpaRepository;
 import com.geopslabs.geops.identity.infrastructure.persistence.UserJpaRepository;
 import io.cucumber.java.Before;
-import io.cucumber.java.es.Entonces;
-import io.cucumber.java.es.Y;
+import io.cucumber.java.en.And;
+import io.cucumber.java.en.Then;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -31,17 +31,17 @@ public class CommonSteps {
         users.deleteAll();
     }
 
-    @Entonces("la respuesta tiene código {int}")
+    @Then("the response has status {int}")
     public void theResponseHasStatus(int status) {
         assertThat(http.lastStatus()).as(http.lastBody()).isEqualTo(status);
     }
 
-    @Y("el campo {string} es {string}")
+    @And("the field {string} is {string}")
     public void theFieldIs(String field, String value) throws JsonProcessingException {
         assertThat(http.field(field)).isEqualTo(value);
     }
 
-    @Y("la respuesta no contiene {string}")
+    @And("the response does not contain {string}")
     public void theResponseDoesNotContain(String text) {
         assertThat(http.lastBody()).doesNotContain(text);
     }

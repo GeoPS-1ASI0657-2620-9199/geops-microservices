@@ -41,8 +41,8 @@ public class RsaTokenIssuerAdapter implements TokenIssuerPort {
     }
 
     @Override
-    public IssuedToken issue(User user, Long profileId) {
-        var claims = claimsFor(user, profileId);
+    public IssuedToken issue(User user, Long businessId) {
+        var claims = claimsFor(user, businessId);
         var header = new JWSHeader.Builder(JWSAlgorithm.RS256)
                 .keyID(keyProvider.signingKey().getKeyID())
                 .type(JOSEObjectType.JWT)
@@ -55,7 +55,7 @@ public class RsaTokenIssuerAdapter implements TokenIssuerPort {
         return keyProvider.publicJwkSet();
     }
 
-    private JWTClaimsSet claimsFor(User user, Long profileId) {
+    private JWTClaimsSet claimsFor(User user, Long businessId) {
         var issuedAt = clock.instant();
         var builder = new JWTClaimsSet.Builder()
                 .issuer(properties.issuer())
@@ -65,7 +65,7 @@ public class RsaTokenIssuerAdapter implements TokenIssuerPort {
                 .issueTime(Date.from(issuedAt))
                 .expirationTime(Date.from(issuedAt.plus(TOKEN_LIFETIME)));
         if (user.getRole() == Role.BUSINESS_OWNER) {
-            builder.claim(BUSINESS_ID_CLAIM, profileId);
+            builder.claim(BUSINESS_ID_CLAIM, businessId);
         }
         return builder.build();
     }

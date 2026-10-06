@@ -7,9 +7,9 @@ import com.geopslabs.geops.identity.domain.ports.BusinessProfileRepositoryPort;
 import com.geopslabs.geops.identity.domain.ports.ConsumerProfileRepositoryPort;
 import com.geopslabs.geops.identity.domain.ports.PasswordHasherPort;
 import com.geopslabs.geops.identity.domain.ports.UserRepositoryPort;
-import io.cucumber.java.es.Cuando;
-import io.cucumber.java.es.Dado;
-import io.cucumber.java.es.Y;
+import io.cucumber.java.en.And;
+import io.cucumber.java.en.Given;
+import io.cucumber.java.en.When;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -45,31 +45,31 @@ public class RegistrationSteps {
         this.passwordHasher = passwordHasher;
     }
 
-    @Dado("que no existe una cuenta con el correo {string}")
+    @Given("no account exists with the email {string}")
     public void noAccountExistsWithEmail(String email) {
         assertThat(userRepository.existsByEmail(new Email(email).value())).isFalse();
     }
 
-    @Dado("que existe una cuenta de {string} con el correo {string}")
+    @Given("an account for {string} exists with the email {string}")
     public void anAccountExists(String fullName, String email) {
         userRepository.save(User.register(fullName, new Email(email), EXISTING_PHONE,
                 passwordHasher.encode(EXISTING_PASSWORD), Role.CONSUMER));
     }
 
-    @Cuando("se registra como {string} con nombre {string}, correo {string}, teléfono {string} y contraseña {string}")
+    @When("they register as {string} with name {string}, email {string}, phone {string} and password {string}")
     public void registers(String role, String fullName, String email, String phone, String password) {
         http.post(REGISTER_PATH, Map.of("role", role, "fullName", fullName, "email", email,
                 "phone", phone, "password", password));
     }
 
-    @Y("la cuenta {string} tiene perfil de consumidor")
+    @And("the account {string} has a consumer profile")
     public void theAccountHasConsumerProfile(String email) {
         var user = userRepository.findByEmail(new Email(email).value()).orElseThrow();
         assertThat(consumerProfileRepository.existsByUserId(user.getId())).isTrue();
     }
 
-    @Cuando("^registra el negocio \"([^\"]*)\" con RUC \"([^\"]*)\", dirección \"([^\"]*)\", "
-            + "latitud " + DECIMAL + " y longitud " + DECIMAL + "$")
+    @When("^they register the business \"([^\"]*)\" with RUC \"([^\"]*)\", address \"([^\"]*)\", "
+            + "latitude " + DECIMAL + " and longitude " + DECIMAL + "$")
     public void registersBusiness(String businessName, String ruc, String address, String latitude,
                                   String longitude) {
         var businessProfile = new LinkedHashMap<String, Object>();
@@ -84,7 +84,7 @@ public class RegistrationSteps {
                 "phone", OWNER_PHONE, "password", OWNER_PASSWORD, "businessProfile", businessProfile));
     }
 
-    @Y("la cuenta {string} tiene perfil de negocio")
+    @And("the account {string} has a business profile")
     public void theAccountHasBusinessProfile(String email) {
         var user = userRepository.findByEmail(new Email(email).value()).orElseThrow();
         assertThat(businessProfileRepository.existsByUserId(user.getId())).isTrue();

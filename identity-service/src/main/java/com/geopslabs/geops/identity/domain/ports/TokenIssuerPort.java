@@ -6,7 +6,7 @@ import com.geopslabs.geops.identity.domain.models.User;
 import java.util.Map;
 
 public interface TokenIssuerPort {
-    IssuedToken issue(User user, Long profileId);
+    IssuedToken issue(User user, Long businessId);
 
     Map<String, Object> publicKeys();
 }
