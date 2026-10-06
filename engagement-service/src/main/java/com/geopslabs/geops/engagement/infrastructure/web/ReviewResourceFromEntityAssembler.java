@@ -29,14 +29,14 @@ public class ReviewResourceFromEntityAssembler {
     public static ReviewResource toResourceFromEntity(Review entity) {
         return new ReviewResource(
             entity.getId(),
-            entity.getOfferId(),
-            entity.getUserId(),
+            entity.getReservationId(),
+            entity.getConsumerId(),
+            entity.getBusinessId(),
             entity.getUserName(),
             entity.getRating(),
             entity.getText(),
             entity.getLikes(),
-            entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : null,
-            entity.getUpdatedAt() != null ? entity.getUpdatedAt().toString() : null
+            entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : null
         );
     }
 }

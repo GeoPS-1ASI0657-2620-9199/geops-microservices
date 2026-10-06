@@ -20,30 +20,30 @@ import java.util.Optional;
 public interface SavedOfferJpaRepository extends JpaRepository<SavedOfferJpaEntity, Long> {
 
     /**
-     * Finds all saved offers for a specific user
+     * Finds all saved offers for a specific consumer
      *
-     * @param userId The unique identifier of the user
+     * @param consumerId The unique identifier of the user
      * @return A List of SavedOffer objects for the specified user
      */
-    List<SavedOfferJpaEntity> findByUser_Id(Long userId);
+    List<SavedOfferJpaEntity> findByConsumerId(Long consumerId);
 
     /**
-     * Finds a saved offer by user ID and offer ID
+     * Finds a saved offer by consumer ID and offer ID
      *
-     * @param userId The unique identifier of the user
+     * @param consumerId The unique identifier of the user
      * @param offerId The unique identifier of the offer
      * @return An Optional containing the SavedOffer if found, empty otherwise
      */
-    Optional<SavedOfferJpaEntity> findByUser_IdAndOffer_Id(Long userId, Long offerId);
+    Optional<SavedOfferJpaEntity> findByConsumerIdAndOfferId(Long consumerId, Long offerId);
 
     /**
      * Checks if a saved offer exists for a specific user and offer
      *
-     * @param userId The unique identifier of the user
+     * @param consumerId The unique identifier of the user
      * @param offerId The unique identifier of the offer
      * @return true if the saved offer exists, false otherwise
      */
-    boolean existsByUser_IdAndOffer_Id(Long userId, Long offerId);
+    boolean existsByConsumerIdAndOfferId(Long consumerId, Long offerId);
 
     /**
      * Counts the total number of saved offers for a specific offer
@@ -51,7 +51,7 @@ public interface SavedOfferJpaRepository extends JpaRepository<SavedOfferJpaEnti
      * @param offerId The unique identifier of the offer
      * @return The number of users who saved offers this offer
      */
-    long countByOffer_Id(Long offerId);
+    long countByOfferId(Long offerId);
 
     /**
      * Deletes all saved offers for a specific offer
@@ -60,16 +60,16 @@ public interface SavedOfferJpaRepository extends JpaRepository<SavedOfferJpaEnti
      * @param offerId The unique identifier of the offer
      * @return The number of deleted saved offers
      */
-    long deleteByOffer_Id(Long offerId);
+    long deleteByOfferId(Long offerId);
 
     /**
-     * Deletes a saved offer by user ID and offer ID
+     * Deletes a saved offer by consumer ID and offer ID
      * Useful for removing a specific saved offer relationship
      *
-     * @param userId The unique identifier of the user
+     * @param consumerId The unique identifier of the user
      * @param offerId The unique identifier of the offer
      * @return The number of deleted saved offers (0 or 1)
      */
-    long deleteByUser_IdAndOffer_Id(Long userId, Long offerId);
+    long deleteByConsumerIdAndOfferId(Long consumerId, Long offerId);
 }
 

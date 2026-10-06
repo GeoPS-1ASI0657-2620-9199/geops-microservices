@@ -7,15 +7,15 @@ package com.geopslabs.geops.engagement.domain.models.commands;
  * by user and offer identifiers. This command is used when a user wants to remove
  * a saved offer offer (un-heart action)
  *
- * @summary Command to delete a saved offer entry by userId and offerId
- * @param userId The unique identifier of the user
+ * @summary Command to delete a saved offer entry by consumerId and offerId
+ * @param consumerId The unique identifier of the user
  * @param offerId The unique identifier of the offer
  *
  * @since 1.0
  * @author GeOps Labs
  */
 public record RemoveSavedOfferCommand(
-    Long userId,
+    Long consumerId,
     Long offerId
 ) {
     /**
@@ -24,8 +24,8 @@ public record RemoveSavedOfferCommand(
      * @throws IllegalArgumentException if validation fails
      */
     public RemoveSavedOfferCommand {
-        if (userId == null) {
-            throw new IllegalArgumentException("userId cannot be null");
+        if (consumerId == null) {
+            throw new IllegalArgumentException("consumerId cannot be null");
         }
 
         if (offerId == null) {

@@ -1,12 +1,9 @@
 package com.geopslabs.geops.engagement.application.services;
-import com.geopslabs.geops.backend.identity.infrastructure.persistence.jpa.UserRepository;
-import com.geopslabs.geops.backend.offers.infrastructure.persistence.jpa.OfferRepository;
 import com.geopslabs.geops.engagement.domain.models.Review;
 import com.geopslabs.geops.engagement.domain.models.commands.CreateReviewCommand;
 import com.geopslabs.geops.engagement.domain.models.commands.UpdateReviewCommand;
 import com.geopslabs.geops.engagement.application.usecases.ReviewCommandUseCase;
 import com.geopslabs.geops.engagement.domain.ports.ReviewRepositoryPort;
-import com.geopslabs.geops.backend.notifications.application.internal.outboundservices.NotificationFactoryService;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
@@ -26,28 +23,14 @@ import java.util.Optional;
 public class ReviewCommandService implements ReviewCommandUseCase {
 
     private final ReviewRepositoryPort reviewRepository;
-    private final UserRepository userRepository;
-    private final OfferRepository offerRepository;
-    private final NotificationFactoryService notificationFactory;
 
     /**
      * Constructor for dependency injection
      *
      * @param reviewRepository The repository for review data access
-     * @param userRepository The repository for user data access
-     * @param offerRepository The repository for offer data access
-     * @param notificationFactory Service to create notifications
      */
-    public ReviewCommandService(
-        ReviewRepositoryPort reviewRepository,
-        UserRepository userRepository,
-        OfferRepository offerRepository,
-        NotificationFactoryService notificationFactory
-    ) {
+    public ReviewCommandService(ReviewRepositoryPort reviewRepository) {
         this.reviewRepository = reviewRepository;
-        this.userRepository = userRepository;
-        this.offerRepository = offerRepository;
-        this.notificationFactory = notificationFactory;
     }
 
     /**
@@ -56,27 +39,11 @@ public class ReviewCommandService implements ReviewCommandUseCase {
     @Override
     public Optional<Review> handle(CreateReviewCommand command) {
         try {
-            // Load User and Offer entities
-            var user = userRepository.findById(command.userId())
-                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + command.userId()));
-            
-            var offer = offerRepository.findById(command.offerId())
-                .orElseThrow(() -> new IllegalArgumentException("Offer not found with id: " + command.offerId()));
-
-            // Create review with entities
-            var review = new Review(command, user, offer);
+            // Create review with the consumer, business and reservation ids
+            var review = new Review(command);
 
             // Save the review to the repository
             var savedReview = reviewRepository.save(review);
-
-            // Create notification for review comment
-            // For now, notify the user who created the review as confirmation
-            notificationFactory.createReviewCommentNotification(
-                command.userId(),
-                command.offerId(),
-                offer.getTitle(),
-                "Tú"
-            );
 
             return Optional.of(savedReview);
 

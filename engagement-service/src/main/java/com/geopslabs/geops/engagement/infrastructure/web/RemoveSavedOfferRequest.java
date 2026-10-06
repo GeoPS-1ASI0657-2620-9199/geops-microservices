@@ -5,12 +5,12 @@ package com.geopslabs.geops.engagement.infrastructure.web;
  *
  * Resource representing the data required to delete a saved offer by user and offer
  *
- * @summary Resource for deleting a saved offer by userId and offerId
+ * @summary Resource for deleting a saved offer by consumerId and offerId
  * @since 1.0
  * @author GeOps Labs
  */
 public record RemoveSavedOfferRequest(
-    Long userId,
+    Long consumerId,
     Long offerId
 ) {
     /**
@@ -19,8 +19,8 @@ public record RemoveSavedOfferRequest(
      * @throws IllegalArgumentException if validation fails
      */
     public RemoveSavedOfferRequest {
-        if (userId == null) {
-            throw new IllegalArgumentException("userId cannot be null");
+        if (consumerId == null) {
+            throw new IllegalArgumentException("consumerId cannot be null");
         }
 
         if (offerId == null) {

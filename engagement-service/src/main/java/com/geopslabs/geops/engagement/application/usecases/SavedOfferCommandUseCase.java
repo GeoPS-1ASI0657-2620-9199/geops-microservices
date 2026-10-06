@@ -44,12 +44,12 @@ public interface SavedOfferCommandUseCase {
     boolean handleDelete(Long id);
 
     /**
-     * Handles the deletion of a saved offer by user ID and offer ID
+     * Handles the deletion of a saved offer by consumer ID and offer ID
      *
      * This method processes the deletion of a specific saved offer relationship
      * between a user and an offer. Useful for un-hearting an offer
      *
-     * @param command The command containing userId and offerId
+     * @param command The command containing consumerId and offerId
      * @return true if the saved offer was successfully deleted, false if not found
      * @throws IllegalArgumentException if the command contains invalid data
      */

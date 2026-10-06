@@ -29,9 +29,9 @@ public class SavedOfferResponseAssembler {
     public static SavedOfferResponse toResourceFromEntity(SavedOffer entity) {
         return new SavedOfferResponse(
                 entity.getId(),
-                entity.getUserId(),
+                entity.getConsumerId(),
                 entity.getOfferId(),
-                entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : null
+                entity.getSavedAt() != null ? entity.getSavedAt().toString() : null
         );
     }
 }

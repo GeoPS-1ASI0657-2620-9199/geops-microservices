@@ -29,7 +29,7 @@ public class SaveOfferCommandAssembler {
      */
     public static SaveOfferCommand toCommandFromResource(SaveOfferRequest resource) {
         return new SaveOfferCommand(
-            resource.userId(),
+            resource.consumerId(),
             resource.offerId()
         );
     }

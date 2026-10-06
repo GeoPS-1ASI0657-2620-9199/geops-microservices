@@ -1,64 +1,48 @@
 package com.geopslabs.geops.engagement.domain.models;
 
 import com.geopslabs.geops.engagement.domain.models.commands.SaveOfferCommand;
-import com.geopslabs.geops.backend.identity.domain.model.aggregates.User;
-import com.geopslabs.geops.backend.offers.domain.model.aggregates.Offer;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 public class SavedOffer {
     private Long id;
-    private User user;
-    private Offer offer;
-    private Date createdAt;
-    private Date updatedAt;
+    private Long consumerId;
+    private Long offerId;
+    private LocalDateTime savedAt;
 
-    public SavedOffer(SaveOfferCommand command, User user, Offer offer) {
-        this.user = user;
-        this.offer = offer;
+    public SavedOffer(SaveOfferCommand command) {
+        this.consumerId = command.consumerId();
+        this.offerId = command.offerId();
     }
 
-    public SavedOffer(Long id, User user, Offer offer, Date createdAt, Date updatedAt) {
+    public SavedOffer(Long id, Long consumerId, Long offerId, LocalDateTime savedAt) {
         this.id = id;
-        this.user = user;
-        this.offer = offer;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
+        this.consumerId = consumerId;
+        this.offerId = offerId;
+        this.savedAt = savedAt;
     }
 
     public Long getId() {
         return id;
     }
 
-    public User getUser() {
-        return user;
-    }
-
-    public Offer getOffer() {
-        return offer;
-    }
-
-    public Date getCreatedAt() {
-        return createdAt;
-    }
-
-    public Date getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public Long getUserId() {
-        return this.user != null ? this.user.getId() : null;
+    public Long getConsumerId() {
+        return consumerId;
     }
 
     public Long getOfferId() {
-        return this.offer != null ? this.offer.getId() : null;
+        return offerId;
     }
 
-    public boolean belongsToUser(Long userId) {
-        return this.user != null && this.user.getId().equals(userId);
+    public LocalDateTime getSavedAt() {
+        return savedAt;
     }
 
-    public boolean isForOffer(Long offerId) {
-        return this.offer != null && this.offer.getId().equals(offerId);
+    public boolean belongsToConsumer(Long candidateConsumerId) {
+        return consumerId.equals(candidateConsumerId);
+    }
+
+    public boolean isForOffer(Long candidateOfferId) {
+        return offerId.equals(candidateOfferId);
     }
 }

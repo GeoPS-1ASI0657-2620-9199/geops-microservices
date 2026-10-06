@@ -10,7 +10,7 @@ package com.geopslabs.geops.engagement.infrastructure.web;
  * @author GeOps Labs
  */
 public record SaveOfferRequest(
-    Long userId,
+    Long consumerId,
     Long offerId
 ) {
     /**
@@ -19,8 +19,8 @@ public record SaveOfferRequest(
      * @throws IllegalArgumentException if validation fails
      */
     public SaveOfferRequest {
-        if (userId == null) {
-            throw new IllegalArgumentException("userId cannot be null");
+        if (consumerId == null) {
+            throw new IllegalArgumentException("consumerId cannot be null");
         }
 
         if (offerId == null) {

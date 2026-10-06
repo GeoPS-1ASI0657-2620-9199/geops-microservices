@@ -3,7 +3,7 @@ package com.geopslabs.geops.engagement.application.usecases;
 import com.geopslabs.geops.engagement.domain.models.Review;
 import com.geopslabs.geops.engagement.domain.models.queries.GetAllReviewsQuery;
 import com.geopslabs.geops.engagement.domain.models.queries.GetReviewByIdQuery;
-import com.geopslabs.geops.engagement.domain.models.queries.GetReviewsByOfferIdQuery;
+import com.geopslabs.geops.engagement.domain.models.queries.GetReviewsByBusinessQuery;
 
 import java.util.List;
 import java.util.Optional;
@@ -46,16 +46,15 @@ public interface ReviewQueryUseCase {
     Optional<Review> handle(GetReviewByIdQuery query);
 
     /**
-     * Handles the query to retrieve all reviews for a specific offer.
+     * Handles the query to retrieve all reviews for a specific business.
      *
-     * This method processes the query to find all reviews associated with an offer.
-     * It's useful for displaying reviews on an offer detail page.
-     * Endpoint: GET /api/v1/reviews?offerId={id}
+     * This method processes the query to find all reviews associated with a business.
+     * Endpoint: GET /api/v1/reviews?businessId={id}
      *
-     * @param query The query containing the offer ID
-     * @return A List containing all Reviews for the specified offer
+     * @param query The query containing the business ID
+     * @return A List containing all Reviews for the specified business
      * @throws IllegalArgumentException if the query contains invalid data
      */
-    List<Review> handle(GetReviewsByOfferIdQuery query);
+    List<Review> handle(GetReviewsByBusinessQuery query);
 }
 

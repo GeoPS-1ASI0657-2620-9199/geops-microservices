@@ -1,8 +1,5 @@
 package com.geopslabs.geops.engagement.configuration;
 
-import com.geopslabs.geops.backend.identity.infrastructure.persistence.jpa.UserRepository;
-import com.geopslabs.geops.backend.notifications.application.internal.outboundservices.NotificationFactoryService;
-import com.geopslabs.geops.backend.offers.infrastructure.persistence.jpa.OfferRepository;
 import com.geopslabs.geops.engagement.application.services.SavedOfferCommandService;
 import com.geopslabs.geops.engagement.application.services.SavedOfferQueryService;
 import com.geopslabs.geops.engagement.application.services.ReviewCommandService;
@@ -20,11 +17,8 @@ import org.springframework.context.annotation.Configuration;
 public class BeanConfiguration {
 
     @Bean
-    public SavedOfferCommandUseCase savedOfferCommandUseCase(SavedOfferRepositoryPort savedOfferRepository,
-                                                         UserRepository userRepository,
-                                                         OfferRepository offerRepository,
-                                                         NotificationFactoryService notificationFactory) {
-        return new SavedOfferCommandService(savedOfferRepository, userRepository, offerRepository, notificationFactory);
+    public SavedOfferCommandUseCase savedOfferCommandUseCase(SavedOfferRepositoryPort savedOfferRepository) {
+        return new SavedOfferCommandService(savedOfferRepository);
     }
 
     @Bean
@@ -33,11 +27,8 @@ public class BeanConfiguration {
     }
 
     @Bean
-    public ReviewCommandUseCase reviewCommandUseCase(ReviewRepositoryPort reviewRepository,
-                                                     UserRepository userRepository,
-                                                     OfferRepository offerRepository,
-                                                     NotificationFactoryService notificationFactory) {
-        return new ReviewCommandService(reviewRepository, userRepository, offerRepository, notificationFactory);
+    public ReviewCommandUseCase reviewCommandUseCase(ReviewRepositoryPort reviewRepository) {
+        return new ReviewCommandService(reviewRepository);
     }
 
     @Bean

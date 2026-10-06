@@ -10,15 +10,15 @@ public interface SavedOfferRepositoryPort {
 
     Optional<SavedOffer> findById(Long id);
 
-    List<SavedOffer> findByUserId(Long userId);
+    List<SavedOffer> findByConsumerId(Long consumerId);
 
-    Optional<SavedOffer> findByUserIdAndOfferId(Long userId, Long offerId);
+    Optional<SavedOffer> findByConsumerIdAndOfferId(Long consumerId, Long offerId);
 
     boolean existsById(Long id);
 
-    boolean existsByUserIdAndOfferId(Long userId, Long offerId);
+    boolean existsByConsumerIdAndOfferId(Long consumerId, Long offerId);
 
     void deleteById(Long id);
 
-    long deleteByUserIdAndOfferId(Long userId, Long offerId);
+    long deleteByConsumerIdAndOfferId(Long consumerId, Long offerId);
 }

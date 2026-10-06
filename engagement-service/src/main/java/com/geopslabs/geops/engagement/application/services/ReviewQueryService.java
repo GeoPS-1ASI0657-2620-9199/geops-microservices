@@ -3,7 +3,7 @@ package com.geopslabs.geops.engagement.application.services;
 import com.geopslabs.geops.engagement.domain.models.Review;
 import com.geopslabs.geops.engagement.domain.models.queries.GetAllReviewsQuery;
 import com.geopslabs.geops.engagement.domain.models.queries.GetReviewByIdQuery;
-import com.geopslabs.geops.engagement.domain.models.queries.GetReviewsByOfferIdQuery;
+import com.geopslabs.geops.engagement.domain.models.queries.GetReviewsByBusinessQuery;
 import com.geopslabs.geops.engagement.application.usecases.ReviewQueryUseCase;
 import com.geopslabs.geops.engagement.domain.ports.ReviewRepositoryPort;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,12 +68,12 @@ public class ReviewQueryService implements ReviewQueryUseCase {
      * {@inheritDoc}
      */
     @Override
-    public List<Review> handle(GetReviewsByOfferIdQuery query) {
+    public List<Review> handle(GetReviewsByBusinessQuery query) {
         try {
-            return reviewRepository.findByOfferIdOrderByCreatedAtDesc(query.offerId());
+            return reviewRepository.findByBusinessIdOrderByCreatedAtDesc(query.businessId());
         } catch (Exception e) {
             // Log the error
-            System.err.println("Error retrieving reviews by offer ID: " + e.getMessage());
+            System.err.println("Error retrieving reviews by business ID: " + e.getMessage());
             return List.of();
         }
     }

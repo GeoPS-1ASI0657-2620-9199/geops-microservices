@@ -1,55 +1,58 @@
 package com.geopslabs.geops.engagement.domain.models;
 
-import com.geopslabs.geops.backend.identity.domain.model.aggregates.User;
-import com.geopslabs.geops.backend.offers.domain.model.aggregates.Offer;
 import com.geopslabs.geops.engagement.domain.models.commands.CreateReviewCommand;
 import com.geopslabs.geops.engagement.domain.models.commands.UpdateReviewCommand;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 public class Review {
     private Long id;
-    private Offer offer;
-    private User user;
+    private Long reservationId;
+    private Long consumerId;
+    private Long businessId;
     private String userName;
     private Integer rating;
     private String text;
     private Integer likes;
-    private Date createdAt;
-    private Date updatedAt;
+    private LocalDateTime createdAt;
 
-    public Review(CreateReviewCommand command, User user, Offer offer) {
-        this.offer = offer;
-        this.user = user;
+    public Review(CreateReviewCommand command) {
+        this.reservationId = command.reservationId();
+        this.consumerId = command.consumerId();
+        this.businessId = command.businessId();
         this.userName = command.userName();
         this.rating = command.rating();
         this.text = command.text();
         this.likes = 0;
     }
 
-    public Review(Long id, Offer offer, User user, String userName, Integer rating, String text, Integer likes,
-                  Date createdAt, Date updatedAt) {
+    public Review(Long id, Long reservationId, Long consumerId, Long businessId, String userName, Integer rating,
+                  String text, Integer likes, LocalDateTime createdAt) {
         this.id = id;
-        this.offer = offer;
-        this.user = user;
+        this.reservationId = reservationId;
+        this.consumerId = consumerId;
+        this.businessId = businessId;
         this.userName = userName;
         this.rating = rating;
         this.text = text;
         this.likes = likes;
         this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
     }
 
     public Long getId() {
         return id;
     }
 
-    public Offer getOffer() {
-        return offer;
+    public Long getReservationId() {
+        return reservationId;
     }
 
-    public User getUser() {
-        return user;
+    public Long getConsumerId() {
+        return consumerId;
+    }
+
+    public Long getBusinessId() {
+        return businessId;
     }
 
     public String getUserName() {
@@ -68,20 +71,8 @@ public class Review {
         return likes;
     }
 
-    public Date getCreatedAt() {
+    public LocalDateTime getCreatedAt() {
         return createdAt;
-    }
-
-    public Date getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public Long getOfferId() {
-        return this.offer != null ? this.offer.getId() : null;
-    }
-
-    public Long getUserId() {
-        return this.user != null ? this.user.getId() : null;
     }
 
     public void updateReview(UpdateReviewCommand command) {

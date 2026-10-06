@@ -24,7 +24,7 @@ public class RemoveSavedOfferCommandAssembler {
      */
     public static RemoveSavedOfferCommand toCommandFromResource(RemoveSavedOfferRequest resource) {
         return new RemoveSavedOfferCommand(
-            resource.userId(),
+            resource.consumerId(),
             resource.offerId()
         );
     }

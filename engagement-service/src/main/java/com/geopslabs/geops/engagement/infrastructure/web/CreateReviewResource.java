@@ -10,8 +10,9 @@ package com.geopslabs.geops.engagement.infrastructure.web;
  * @author GeOps Labs
  */
 public record CreateReviewResource(
-    Long offerId,
-    Long userId,
+    Long reservationId,
+    Long consumerId,
+    Long businessId,
     String userName,
     Integer rating,
     String text
@@ -22,12 +23,16 @@ public record CreateReviewResource(
      * @throws IllegalArgumentException if validation fails
      */
     public CreateReviewResource {
-        if (offerId == null) {
-            throw new IllegalArgumentException("offerId cannot be null");
+        if (reservationId == null) {
+            throw new IllegalArgumentException("reservationId cannot be null");
         }
 
-        if (userId == null) {
-            throw new IllegalArgumentException("userId cannot be null");
+        if (consumerId == null) {
+            throw new IllegalArgumentException("consumerId cannot be null");
+        }
+
+        if (businessId == null) {
+            throw new IllegalArgumentException("businessId cannot be null");
         }
 
         if (userName == null || userName.isBlank()) {

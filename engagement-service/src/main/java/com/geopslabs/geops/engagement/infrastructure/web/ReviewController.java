@@ -2,7 +2,7 @@ package com.geopslabs.geops.engagement.infrastructure.web;
 
 import com.geopslabs.geops.engagement.domain.models.queries.GetAllReviewsQuery;
 import com.geopslabs.geops.engagement.domain.models.queries.GetReviewByIdQuery;
-import com.geopslabs.geops.engagement.domain.models.queries.GetReviewsByOfferIdQuery;
+import com.geopslabs.geops.engagement.domain.models.queries.GetReviewsByBusinessQuery;
 import com.geopslabs.geops.engagement.application.usecases.ReviewCommandUseCase;
 import com.geopslabs.geops.engagement.application.usecases.ReviewQueryUseCase;
 import com.geopslabs.geops.engagement.infrastructure.web.CreateReviewResource;
@@ -27,7 +27,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 /**
  * ReviewController
  *
- * REST controller for managing reviews for offers
+ * REST controller for managing reviews of businesses
  * This controller provides endpoints to create, retrieve, update, and delete reviews
  *
  * @summary REST controller for review management
@@ -106,29 +106,29 @@ public class ReviewController {
     }
 
     /**
-     * Retrieves all reviews or reviews filtered by offer ID
+     * Retrieves all reviews or reviews filtered by business ID
      *
      * This endpoint support two modes:
      * 1. GET /reviews - retrieves all reviews
-     * 2. GET /reviews?offerId=1 - retrieves reviews for a specific offer ID
+     * 2. GET /reviews?businessId=1 - retrieves reviews for a specific business ID
      *
-     * @param offerId Optional offer ID to filter reviews
+     * @param businessId Optional business ID to filter reviews
      * @return ResponseEntity containing the list of reviews
      */
-    @Operation(summary = "Get all reviews or reviews by offer ID")
+    @Operation(summary = "Get all reviews or reviews by business ID")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Reviews retrieved successfully")
     })
     @GetMapping
     public ResponseEntity<List<ReviewResource>> getReviews(
-            @Parameter(description = "Optional offer ID to filter reviews")
-            @RequestParam(required = false) Long offerId) {
+            @Parameter(description = "Optional business ID to filter reviews")
+            @RequestParam(required = false) Long businessId) {
 
         List<ReviewResource> reviewResources;
 
-        if (offerId != null) {
-            // GET /reviews?offerId=1
-            var query = new GetReviewsByOfferIdQuery(offerId);
+        if (businessId != null) {
+            // GET /reviews?businessId=1
+            var query = new GetReviewsByBusinessQuery(businessId);
             var reviews = reviewQueryService.handle(query);
             reviewResources = reviews.stream()
                     .map(ReviewResourceFromEntityAssembler::toResourceFromEntity)

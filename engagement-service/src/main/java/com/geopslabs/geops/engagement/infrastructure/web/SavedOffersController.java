@@ -1,6 +1,6 @@
 package com.geopslabs.geops.engagement.infrastructure.web;
 
-import com.geopslabs.geops.engagement.domain.models.queries.GetSavedOfferByUserIdAndOfferIdQuery;
+import com.geopslabs.geops.engagement.domain.models.queries.GetSavedOfferByConsumerIdAndOfferIdQuery;
 import com.geopslabs.geops.engagement.domain.models.queries.GetSavedOffersByConsumerQuery;
 import com.geopslabs.geops.engagement.application.usecases.SavedOfferCommandUseCase;
 import com.geopslabs.geops.engagement.application.usecases.SavedOfferQueryUseCase;
@@ -79,28 +79,28 @@ public class SavedOffersController {
     }
 
     /**
-     * Retrieves saved offers by userId or checks if a specific saved offer exists
+     * Retrieves saved offers by consumerId or checks if a specific saved offer exists
      *
-     * @param userId The ID of the user whose saved offers are to be retrieved (required)
+     * @param consumerId The ID of the user whose saved offers are to be retrieved (required)
      * @param offerId The ID of the offer to check if saved offer (optional)
      * @return ResponseEntity containing the list of saved offers or specific saved offer, or error status
      */
-    @Operation(summary = "Get savedOffers by userId or check if savedOffer exists")
+    @Operation(summary = "Get savedOffers by consumerId or check if savedOffer exists")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "SavedOffers retrieved successfully"),
-        @ApiResponse(responseCode = "400", description = "userId is required")
+        @ApiResponse(responseCode = "400", description = "consumerId is required")
     })
     @GetMapping
     public ResponseEntity<?> getSavedOffers(
-            @Parameter(description = "User ID (required)")
-            @RequestParam(required = true) Long userId,
-            @Parameter(description = "Offer ID (optional - for checking if savedOfferD)")
+            @Parameter(description = "Consumer ID (required)")
+            @RequestParam(required = true) Long consumerId,
+            @Parameter(description = "Offer ID (optional - for checking if saved)")
             @RequestParam(required = false) Long offerId) {
 
         if (offerId != null) {
-            // GET /saved offers?userId=1&offerId=7
+            // GET /saved offers?consumerId=1&offerId=7
             // Check if specific saved offer exists (for heart button)
-            var query = new GetSavedOfferByUserIdAndOfferIdQuery(userId, offerId);
+            var query = new GetSavedOfferByConsumerIdAndOfferIdQuery(consumerId, offerId);
             var savedOffer = savedOfferQueryService.handle(query);
 
             if (savedOffer.isPresent()) {
@@ -112,9 +112,9 @@ public class SavedOffersController {
                 return ResponseEntity.ok().build();
             }
         } else {
-            // GET /saved offers?userId=1
+            // GET /saved offers?consumerId=1
             // Get all saved offers for user
-            var query = new GetSavedOffersByConsumerQuery(userId);
+            var query = new GetSavedOffersByConsumerQuery(consumerId);
             var savedOffers = savedOfferQueryService.handle(query);
             var savedOfferResources = savedOffers.stream()
                     .map(SavedOfferResponseAssembler::toResourceFromEntity)
@@ -149,20 +149,20 @@ public class SavedOffersController {
     }
 
     /**
-     * Deletes a saved offer by userId and offerId
+     * Deletes a saved offer by consumerId and offerId
      * This endpoint is useful for the frontend when un-hearting an offer
      *
-     * @param resource The delete saved offer resource containing userId and offerId
+     * @param resource The delete saved offer resource containing consumerId and offerId
      * @return ResponseEntity with no content or error status
      */
-    @Operation(summary = "Delete savedOffer by userId and offerId")
+    @Operation(summary = "Delete savedOffer by consumerId and offerId")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "204", description = "SavedOffer deleted successfully"),
         @ApiResponse(responseCode = "404", description = "SavedOffer not found"),
         @ApiResponse(responseCode = "400", description = "Invalid request data")
     })
     @DeleteMapping
-    public ResponseEntity<Void> deleteByUserIdAndOfferId(@RequestBody RemoveSavedOfferRequest resource) {
+    public ResponseEntity<Void> deleteByConsumerIdAndOfferId(@RequestBody RemoveSavedOfferRequest resource) {
         var command = RemoveSavedOfferCommandAssembler.toCommandFromResource(resource);
         boolean deleted = savedOfferCommandService.handleDelete(command);
 

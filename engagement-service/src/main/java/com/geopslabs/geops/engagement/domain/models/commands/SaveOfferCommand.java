@@ -8,7 +8,7 @@ package com.geopslabs.geops.engagement.domain.models.commands;
  * for saved offer creation
  *
  * @summary Command to create a new saved offer entry
- * @param userId The unique identifier of the user creating the saved offer
+ * @param consumerId The unique identifier of the user creating the saved offer
  * @param offerId The unique identifier of the offer being saved offer
  *
  * @since 1.0
@@ -16,7 +16,7 @@ package com.geopslabs.geops.engagement.domain.models.commands;
  */
 
 public record SaveOfferCommand(
-        Long userId,
+        Long consumerId,
         Long offerId
 ) {
     /**
@@ -25,8 +25,8 @@ public record SaveOfferCommand(
      * @throws IllegalArgumentException if validation fails
      */
     public SaveOfferCommand {
-        if (userId == null) {
-            throw new IllegalArgumentException("userId cannot be null or empty");
+        if (consumerId == null) {
+            throw new IllegalArgumentException("consumerId cannot be null or empty");
         }
 
         if (offerId == null) {

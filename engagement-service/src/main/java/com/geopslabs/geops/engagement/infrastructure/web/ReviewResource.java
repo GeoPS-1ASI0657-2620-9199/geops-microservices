@@ -22,14 +22,14 @@ package com.geopslabs.geops.engagement.infrastructure.web;
  */
 public record ReviewResource(
     Long id,
-    Long offerId,
-    Long userId,
+    Long reservationId,
+    Long consumerId,
+    Long businessId,
     String userName,
     Integer rating,
     String text,
     Integer likes,
-    String createdAt,
-    String updatedAt
+    String createdAt
 ) {
 
 }

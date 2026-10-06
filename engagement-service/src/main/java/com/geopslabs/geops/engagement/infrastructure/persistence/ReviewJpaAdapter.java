@@ -33,8 +33,8 @@ public class ReviewJpaAdapter implements ReviewRepositoryPort {
     }
 
     @Override
-    public List<Review> findByOfferIdOrderByCreatedAtDesc(Long offerId) {
-        return toDomain(repository.findByOffer_IdOrderByCreatedAtDesc(offerId));
+    public List<Review> findByBusinessIdOrderByCreatedAtDesc(Long businessId) {
+        return toDomain(repository.findByBusinessIdOrderByCreatedAtDesc(businessId));
     }
 
     @Override

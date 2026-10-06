@@ -1,38 +1,40 @@
 package com.geopslabs.geops.engagement.infrastructure.persistence;
 
-import com.geopslabs.geops.backend.identity.domain.model.aggregates.User;
-import com.geopslabs.geops.backend.offers.domain.model.aggregates.Offer;
-import com.geopslabs.geops.backend.shared.domain.model.aggregates.AuditableAbstractAggregateRoot;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
+
 @Entity
-@Table(name = "saved_offers",
-    uniqueConstraints = @UniqueConstraint(
-        name = "uk_saved_offers_1",
-        columnNames = {"user_id", "offer_id"}
-    ),
-    indexes = {
-        @Index(name = "idx_user_id", columnList = "user_id"),
-        @Index(name = "idx_offer_id", columnList = "offer_id")
-    }
-)
+@Table(name = "saved_offers")
 @Getter
 @Setter
-public class SavedOfferJpaEntity extends AuditableAbstractAggregateRoot<SavedOfferJpaEntity> {
+public class SavedOfferJpaEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "offer_id", nullable = false)
-    private Offer offer;
+    @Column(name = "consumer_id", nullable = false)
+    private Long consumerId;
+
+    @Column(name = "offer_id", nullable = false)
+    private Long offerId;
+
+    @Column(name = "saved_at", nullable = false)
+    private Instant savedAt;
+
+    @PrePersist
+    void stampSavedAt() {
+        if (savedAt == null) {
+            savedAt = Instant.now();
+        }
+    }
 }

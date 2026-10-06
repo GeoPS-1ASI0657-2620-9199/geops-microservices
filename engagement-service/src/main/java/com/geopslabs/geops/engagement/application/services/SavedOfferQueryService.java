@@ -2,7 +2,7 @@ package com.geopslabs.geops.engagement.application.services;
 
 import com.geopslabs.geops.engagement.domain.models.SavedOffer;
 import com.geopslabs.geops.engagement.domain.models.queries.GetSavedOfferByIdQuery;
-import com.geopslabs.geops.engagement.domain.models.queries.GetSavedOfferByUserIdAndOfferIdQuery;
+import com.geopslabs.geops.engagement.domain.models.queries.GetSavedOfferByConsumerIdAndOfferIdQuery;
 import com.geopslabs.geops.engagement.domain.models.queries.GetSavedOffersByConsumerQuery;
 import com.geopslabs.geops.engagement.application.usecases.SavedOfferQueryUseCase;
 import com.geopslabs.geops.engagement.domain.ports.SavedOfferRepositoryPort;
@@ -42,10 +42,10 @@ public class SavedOfferQueryService implements SavedOfferQueryUseCase {
     @Override
     public List<SavedOffer> handle(GetSavedOffersByConsumerQuery query) {
         try {
-            return savedOfferRepository.findByUserId(Long.valueOf(query.userId()));
+            return savedOfferRepository.findByConsumerId(query.consumerId());
         } catch (Exception e) {
             // Log the error
-            System.err.println("Error retrieving savedOffers by user ID: " + e.getMessage());
+            System.err.println("Error retrieving savedOffers by consumer ID: " + e.getMessage());
             return List.of();
         }
     }
@@ -54,15 +54,15 @@ public class SavedOfferQueryService implements SavedOfferQueryUseCase {
      * {@inheritDoc}
      */
     @Override
-    public Optional<SavedOffer> handle(GetSavedOfferByUserIdAndOfferIdQuery query) {
+    public Optional<SavedOffer> handle(GetSavedOfferByConsumerIdAndOfferIdQuery query) {
         try {
-            return savedOfferRepository.findByUserIdAndOfferId(
-                query.userId(),
+            return savedOfferRepository.findByConsumerIdAndOfferId(
+                query.consumerId(),
                 query.offerId()
             );
         } catch (Exception e) {
             // Log the error
-            System.err.println("Error retrieving savedOffer by userId and offerId: " + e.getMessage());
+            System.err.println("Error retrieving savedOffer by consumerId and offerId: " + e.getMessage());
             return Optional.empty();
         }
     }

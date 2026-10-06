@@ -5,9 +5,6 @@ import com.geopslabs.geops.engagement.domain.models.commands.SaveOfferCommand;
 import com.geopslabs.geops.engagement.domain.models.commands.RemoveSavedOfferCommand;
 import com.geopslabs.geops.engagement.application.usecases.SavedOfferCommandUseCase;
 import com.geopslabs.geops.engagement.domain.ports.SavedOfferRepositoryPort;
-import com.geopslabs.geops.backend.identity.infrastructure.persistence.jpa.UserRepository;
-import com.geopslabs.geops.backend.notifications.application.internal.outboundservices.NotificationFactoryService;
-import com.geopslabs.geops.backend.offers.infrastructure.persistence.jpa.OfferRepository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
@@ -27,28 +24,14 @@ import java.util.Optional;
 public class SavedOfferCommandService implements SavedOfferCommandUseCase {
 
     private final SavedOfferRepositoryPort savedOfferRepository;
-    private final UserRepository userRepository;
-    private final OfferRepository offerRepository;
-    private final NotificationFactoryService notificationFactory;
 
     /**
      * Constructor for dependency injection
      *
      * @param savedOfferRepository The repository for saved offer data access
-     * @param userRepository The repository for user data access
-     * @param offerRepository The repository for offer data access
-     * @param notificationFactory Service to create notifications
      */
-    public SavedOfferCommandService(
-        SavedOfferRepositoryPort savedOfferRepository,
-        UserRepository userRepository,
-        OfferRepository offerRepository,
-        NotificationFactoryService notificationFactory
-    ) {
+    public SavedOfferCommandService(SavedOfferRepositoryPort savedOfferRepository) {
         this.savedOfferRepository = savedOfferRepository;
-        this.userRepository = userRepository;
-        this.offerRepository = offerRepository;
-        this.notificationFactory = notificationFactory;
     }
 
     /**
@@ -58,45 +41,22 @@ public class SavedOfferCommandService implements SavedOfferCommandUseCase {
     public Optional<SavedOffer> handle(SaveOfferCommand command) {
         try {
             // Check if saved offer already exists (prevent duplicates)
-            boolean exists = savedOfferRepository.existsByUserIdAndOfferId(
-                    command.userId(),
+            boolean exists = savedOfferRepository.existsByConsumerIdAndOfferId(
+                    command.consumerId(),
                     command.offerId()
             );
 
             if (exists) {
-                System.err.println("SavedOffer already exists for userId: " +
-                        command.userId() + " and offerId: " + command.offerId());
+                System.err.println("SavedOffer already exists for consumerId: " +
+                        command.consumerId() + " and offerId: " + command.offerId());
                 return Optional.empty();
             }
 
-            // Fetch user entity
-            var userOptional = userRepository.findById(command.userId());
-            
-            if (userOptional.isEmpty()) {
-                System.err.println("User not found: " + command.userId());
-                return Optional.empty();
-            }
-
-            // Fetch offer entity
-            var offerOptional = offerRepository.findById(command.offerId());
-            
-            if (offerOptional.isEmpty()) {
-                System.err.println("Offer not found: " + command.offerId());
-                return Optional.empty();
-            }
-
-            // Create new saved offer from command with user and offer entities
-            var savedOffer = new SavedOffer(command, userOptional.get(), offerOptional.get());
+            // Create new saved offer from command with consumer and offer ids
+            var savedOffer = new SavedOffer(command);
 
             // Save the saved offer to the repository
             var savedSavedOffer = savedOfferRepository.save(savedOffer);
-
-            // Create notification for saved offer added
-            notificationFactory.createFavoriteAddedNotification(
-                command.userId(),
-                command.offerId().toString(),
-                "Oferta"
-            );
 
             return Optional.of(savedSavedOffer);
 
@@ -142,20 +102,20 @@ public class SavedOfferCommandService implements SavedOfferCommandUseCase {
     public boolean handleDelete(RemoveSavedOfferCommand command) {
         try {
             // First check if saved offer exists
-            boolean exists = savedOfferRepository.existsByUserIdAndOfferId(
-                    command.userId(),
+            boolean exists = savedOfferRepository.existsByConsumerIdAndOfferId(
+                    command.consumerId(),
                     command.offerId()
             );
 
             if (!exists) {
-                System.err.println("SavedOffer not found for userId: " +
-                        command.userId() + " and offerId: " + command.offerId());
+                System.err.println("SavedOffer not found for consumerId: " +
+                        command.consumerId() + " and offerId: " + command.offerId());
                 return false;
             }
 
-            // Delete the saved offer by userId and offerId
-            long deletedCount = savedOfferRepository.deleteByUserIdAndOfferId(
-                    command.userId(),
+            // Delete the saved offer by consumerId and offerId
+            long deletedCount = savedOfferRepository.deleteByConsumerIdAndOfferId(
+                    command.consumerId(),
                     command.offerId()
             );
 
@@ -163,7 +123,7 @@ public class SavedOfferCommandService implements SavedOfferCommandUseCase {
 
         } catch (Exception e) {
             // Log the error with full stacktrace
-            System.err.println("Error deleting savedOffer by userId and offerId: " + e.getMessage());
+            System.err.println("Error deleting savedOffer by consumerId and offerId: " + e.getMessage());
             e.printStackTrace();
             return false;
         }

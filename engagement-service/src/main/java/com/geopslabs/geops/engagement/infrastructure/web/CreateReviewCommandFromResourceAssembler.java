@@ -29,8 +29,9 @@ public class CreateReviewCommandFromResourceAssembler {
      */
     public static CreateReviewCommand toCommandFromResource(CreateReviewResource resource) {
         return new CreateReviewCommand(
-            resource.offerId(),
-            resource.userId(),
+            resource.reservationId(),
+            resource.consumerId(),
+            resource.businessId(),
             resource.userName(),
             resource.rating(),
             resource.text()

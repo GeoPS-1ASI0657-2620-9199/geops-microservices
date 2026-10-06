@@ -12,7 +12,7 @@ public interface ReviewRepositoryPort {
 
     List<Review> findAll();
 
-    List<Review> findByOfferIdOrderByCreatedAtDesc(Long offerId);
+    List<Review> findByBusinessIdOrderByCreatedAtDesc(Long businessId);
 
     boolean existsById(Long id);
 

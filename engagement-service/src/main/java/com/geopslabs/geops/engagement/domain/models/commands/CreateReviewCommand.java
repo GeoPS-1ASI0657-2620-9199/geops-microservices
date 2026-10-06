@@ -7,8 +7,9 @@ package com.geopslabs.geops.engagement.domain.models.commands;
  * Contains all necessary data for review creation with validations
  *
  * @summary Command to create a new review
- * @param offerId  The ID of the offer being reviewed
- * @param userId   The ID of the user creating the review
+ * @param reservationId The ID of the redeemed reservation behind the review
+ * @param consumerId The ID of the consumer creating the review
+ * @param businessId The ID of the business being reviewed
  * @param userName The name of the user creating the review
  * @param rating   The rating given (1-5)
  * @param text     The review text/comment
@@ -17,8 +18,9 @@ package com.geopslabs.geops.engagement.domain.models.commands;
  * @author GeOps Labs
  */
 public record CreateReviewCommand(
-        Long offerId,
-        Long userId,
+        Long reservationId,
+        Long consumerId,
+        Long businessId,
         String userName,
         Integer rating,
         String text
@@ -29,12 +31,16 @@ public record CreateReviewCommand(
      * @throws IllegalArgumentException if validation fails
      */
     public CreateReviewCommand {
-        if (offerId == null) {
-            throw new IllegalArgumentException("offerId cannot be null");
+        if (reservationId == null) {
+            throw new IllegalArgumentException("reservationId cannot be null");
         }
 
-        if (userId == null) {
-            throw new IllegalArgumentException("userId cannot be null");
+        if (consumerId == null) {
+            throw new IllegalArgumentException("consumerId cannot be null");
+        }
+
+        if (businessId == null) {
+            throw new IllegalArgumentException("businessId cannot be null");
         }
 
         if (userName == null || userName.isBlank()) {

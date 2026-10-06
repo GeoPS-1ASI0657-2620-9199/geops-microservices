@@ -19,42 +19,42 @@ import java.util.List;
 public interface ReviewJpaRepository extends JpaRepository<ReviewJpaEntity, Long> {
 
     /**
-     * Finds all reviews for a specific offer
+     * Finds all reviews for a specific business
      *
-     * @param offerId The unique identifier of the offer
-     * @return A List of Review objects for the specified offer
+     * @param businessId The unique identifier of the business
+     * @return A List of Review objects for the specified business
      */
-    List<ReviewJpaEntity> findByOffer_Id(Long offerId);
+    List<ReviewJpaEntity> findByBusinessId(Long businessId);
 
     /**
-     * Finds all reviews by a specific user
+     * Finds all reviews by a specific consumer
      *
-     * @param userId The unique identifier of the user
-     * @return A List of Review objects created by the specified user
+     * @param consumerId The unique identifier of the consumer
+     * @return A List of Review objects created by the specified consumer
      */
-    List<ReviewJpaEntity> findByUser_Id(Long userId);
+    List<ReviewJpaEntity> findByConsumerId(Long consumerId);
 
     /**
-     * Finds all reviews for an offer ordered by creation date (most recent first)
+     * Finds all reviews for a business ordered by creation date (most recent first)
      *
-     * @param offerId The unique identifier of the offer
+     * @param businessId The unique identifier of the business
      * @return A List of Review objects ordered by creation date descending
      */
-    List<ReviewJpaEntity> findByOffer_IdOrderByCreatedAtDesc(Long offerId);
+    List<ReviewJpaEntity> findByBusinessIdOrderByCreatedAtDesc(Long businessId);
 
     /**
-     * Finds all reviews for an offer ordered by likes (most liked first)
+     * Finds all reviews for a business ordered by likes (most liked first)
      *
-     * @param offerId The unique identifier of the offer
+     * @param businessId The unique identifier of the business
      * @return A List of Review objects ordered by likes descending
      */
-    List<ReviewJpaEntity> findByOffer_IdOrderByLikesDesc(Long offerId);
+    List<ReviewJpaEntity> findByBusinessIdOrderByLikesDesc(Long businessId);
 
     /**
-     * Counts the total number of reviews for a specific offer.
+     * Counts the total number of reviews for a specific business.
      *
-     * @param offerId The unique identifier of the offer
-     * @return The number of reviews for the offer
+     * @param businessId The unique identifier of the business
+     * @return The number of reviews for the business
      */
-    long countByOffer_Id(Long offerId);
+    long countByBusinessId(Long businessId);
 }

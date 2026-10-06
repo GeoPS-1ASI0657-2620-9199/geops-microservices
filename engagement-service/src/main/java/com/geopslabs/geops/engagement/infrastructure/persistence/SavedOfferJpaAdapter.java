@@ -29,13 +29,13 @@ public class SavedOfferJpaAdapter implements SavedOfferRepositoryPort {
     }
 
     @Override
-    public List<SavedOffer> findByUserId(Long userId) {
-        return repository.findByUser_Id(userId).stream().map(SavedOfferPersistenceMapper::toDomain).toList();
+    public List<SavedOffer> findByConsumerId(Long consumerId) {
+        return repository.findByConsumerId(consumerId).stream().map(SavedOfferPersistenceMapper::toDomain).toList();
     }
 
     @Override
-    public Optional<SavedOffer> findByUserIdAndOfferId(Long userId, Long offerId) {
-        return repository.findByUser_IdAndOffer_Id(userId, offerId).map(SavedOfferPersistenceMapper::toDomain);
+    public Optional<SavedOffer> findByConsumerIdAndOfferId(Long consumerId, Long offerId) {
+        return repository.findByConsumerIdAndOfferId(consumerId, offerId).map(SavedOfferPersistenceMapper::toDomain);
     }
 
     @Override
@@ -44,8 +44,8 @@ public class SavedOfferJpaAdapter implements SavedOfferRepositoryPort {
     }
 
     @Override
-    public boolean existsByUserIdAndOfferId(Long userId, Long offerId) {
-        return repository.existsByUser_IdAndOffer_Id(userId, offerId);
+    public boolean existsByConsumerIdAndOfferId(Long consumerId, Long offerId) {
+        return repository.existsByConsumerIdAndOfferId(consumerId, offerId);
     }
 
     @Override
@@ -54,7 +54,7 @@ public class SavedOfferJpaAdapter implements SavedOfferRepositoryPort {
     }
 
     @Override
-    public long deleteByUserIdAndOfferId(Long userId, Long offerId) {
-        return repository.deleteByUser_IdAndOffer_Id(userId, offerId);
+    public long deleteByConsumerIdAndOfferId(Long consumerId, Long offerId) {
+        return repository.deleteByConsumerIdAndOfferId(consumerId, offerId);
     }
 }
