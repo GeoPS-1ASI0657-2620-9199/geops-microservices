@@ -30,9 +30,9 @@ import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 
 import javax.sql.DataSource;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +55,6 @@ public class ProximitySearchSteps {
     private static final String NEARBY = "/api/v1/offers/nearby?lat=%s&lng=%s";
     private static final String RADIUS = "&radiusMinutes=%d";
     private static final String SIZE = "&size=%d";
-    private static final ZoneId LIMA = ZoneId.of("America/Lima");
     private static final double METERS_PER_DEGREE = Math.toRadians(1) * GeoPoint.EARTH_MEAN_RADIUS_METERS;
     private static final double SAME_COORDINATE = 1e-9;
     private static final double PERCENTILE_95 = 0.95;
@@ -87,6 +86,7 @@ public class ProximitySearchSteps {
     private final HttpScenario http;
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
+    private final Clock clock;
     private GeoPoint origin;
     private Long savedOfferId;
     private Offer readOffer;
@@ -98,13 +98,14 @@ public class ProximitySearchSteps {
     @SuppressWarnings("java:S107")
     public ProximitySearchSteps(OfferRepositoryPort offers, CampaignRepositoryPort campaigns,
                                 MerchantStandingRepositoryPort standings, HttpScenario http, JdbcTemplate jdbc,
-                                DataSource dataSource) {
+                                DataSource dataSource, Clock clock) {
         this.offers = offers;
         this.campaigns = campaigns;
         this.standings = standings;
         this.http = http;
         this.jdbc = jdbc;
         this.dataSource = dataSource;
+        this.clock = clock;
     }
 
     @After
@@ -172,9 +173,9 @@ public class ProximitySearchSteps {
 
     @Given("these offers exist around the origin:")
     public void theseOffersExist(DataTable table) {
-        var today = LocalDate.now(LIMA);
+        var today = LocalDate.now(clock);
         standings.save(new MerchantStanding(BUSINESS_ID, BUSINESS_NAME, true, 0, FULL_COMPLIANCE, true,
-                LocalDateTime.now()));
+                LocalDateTime.now(clock)));
         var period = new DateRange(today.minusDays(1), today.plusDays(DAYS_LEFT));
         var activeCampaign = campaign(period, CampaignStatus.ACTIVE);
         var pausedCampaign = campaign(period, CampaignStatus.PAUSED);
@@ -240,13 +241,13 @@ public class ProximitySearchSteps {
 
     @Given("these valid offers exist around the origin, each from its own business:")
     public void theseValidOffersExist(DataTable table) {
-        var today = LocalDate.now(LIMA);
+        var today = LocalDate.now(clock);
         var period = new DateRange(today.minusDays(1), today.plusDays(DAYS_LEFT));
         var businessId = FIRST_NEARBY_BUSINESS_ID;
         for (Map<String, String> row : table.asMaps()) {
             var openReports = Integer.parseInt(row.getOrDefault(OPEN_REPORTS, NO_REPORTS));
             standings.save(new MerchantStanding(businessId, row.get(TITLE), false, openReports, FULL_COMPLIANCE, false,
-                    LocalDateTime.now()));
+                    LocalDateTime.now(clock)));
             var campaignId = campaigns.save(new Campaign(null, businessId, row.get(TITLE), row.get(TITLE), period,
                     new CampaignZone(ZoneType.RADIUS, null, CAMPAIGN_RADIUS_METERS, null), CampaignStatus.ACTIVE,
                     Money.soles(PRICE))).getId();
@@ -269,7 +270,7 @@ public class ProximitySearchSteps {
 
     @Given("there are no valid offers within {int} meters of the origin")
     public void noValidOffersNearby(int meters) {
-        assertThat(offers.findPublishedWithin(origin, meters, LocalDate.now(LIMA))).isEmpty();
+        assertThat(offers.findPublishedWithin(origin, meters, LocalDate.now(clock))).isEmpty();
     }
 
     @Then("the offers come in this order:")
