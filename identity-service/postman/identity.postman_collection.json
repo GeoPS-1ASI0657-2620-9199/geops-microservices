@@ -1,0 +1,529 @@
+{
+  "info": {
+    "name": "GeoPS Identity",
+    "description": "Identity service requests. baseUrl points to the gateway; use http://localhost:8081 to call the service directly.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "US20",
+      "item": [
+        {
+          "name": "Register consumer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"role is CONSUMER\", function () {",
+                  "    pm.expect(pm.response.json().role).to.eql(\"CONSUMER\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"CONSUMER\",\n  \"fullName\": \"Lucía Fernández Ríos\",\n  \"email\": \"lucia.fernandez@ejemplo.pe\",\n  \"phone\": \"987123456\",\n  \"password\": \"Ofertas#2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Register consumer with repeated email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test(\"code is EMAIL_ALREADY_REGISTERED\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"EMAIL_ALREADY_REGISTERED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"CONSUMER\",\n  \"fullName\": \"Mario Salas Paz\",\n  \"email\": \"lucia.fernandez@ejemplo.pe\",\n  \"phone\": \"987000111\",\n  \"password\": \"Ofertas#2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Register consumer with invalid data",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"code is INVALID_REQUEST\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_REQUEST\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"CONSUMER\",\n  \"fullName\": \"Lucía Fernández Ríos\",\n  \"email\": \"mario.salas@ejemplo.pe\",\n  \"phone\": \"12345\",\n  \"password\": \"corta\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "US21",
+      "item": [
+        {
+          "name": "Log in consumer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"returns a bearer token for the consumer\", function () {",
+                  "    pm.expect(pm.response.json().tokenType).to.eql(\"Bearer\");",
+                  "    pm.expect(pm.response.json().role).to.eql(\"CONSUMER\");",
+                  "});",
+                  "pm.collectionVariables.set(\"accessToken\", pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"lucia.fernandez@ejemplo.pe\",\n  \"password\": \"Ofertas#2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Log in with wrong password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"code is INVALID_CREDENTIALS\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_CREDENTIALS\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"lucia.fernandez@ejemplo.pe\",\n  \"password\": \"Otra#2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get JWK set",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"publishes an RS256 signing key\", function () {",
+                  "    const key = pm.response.json().keys[0];",
+                  "    pm.expect(key.alg).to.eql(\"RS256\");",
+                  "    pm.expect(key.use).to.eql(\"sig\");",
+                  "    pm.expect(key).to.not.have.property(\"d\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/.well-known/jwks.json",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                ".well-known",
+                "jwks.json"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "US22",
+      "item": [
+        {
+          "name": "Register business owner",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"business profile created and unverified\", function () {",
+                  "    pm.expect(pm.response.json().role).to.eql(\"BUSINESS_OWNER\");",
+                  "    pm.expect(pm.response.json().businessProfileId).to.be.a(\"number\");",
+                  "    pm.expect(pm.response.json().verificationStatus).to.eql(\"UNVERIFIED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"BUSINESS_OWNER\",\n  \"fullName\": \"Rosa Quispe Mamani\",\n  \"email\": \"rosa.quispe@ejemplo.pe\",\n  \"phone\": \"987654321\",\n  \"password\": \"Bodega#2026\",\n  \"businessProfile\": {\n    \"businessName\": \"Bodega Doña Rosa\",\n    \"businessType\": \"Bodega\",\n    \"ruc\": \"10456789019\",\n    \"address\": \"Jr. Huánuco 1250, La Victoria\",\n    \"latitude\": -12.0681,\n    \"longitude\": -77.035,\n    \"openingHours\": \"Lun-Sáb 07:00-22:00\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Register business with repeated RUC",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test(\"code is RUC_ALREADY_REGISTERED\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"RUC_ALREADY_REGISTERED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"BUSINESS_OWNER\",\n  \"fullName\": \"Jorge Ramos Díaz\",\n  \"email\": \"jorge.ramos@ejemplo.pe\",\n  \"phone\": \"987654322\",\n  \"password\": \"Bodega#2026\",\n  \"businessProfile\": {\n    \"businessName\": \"Minimarket Ramos\",\n    \"businessType\": \"Minimarket\",\n    \"ruc\": \"10456789019\",\n    \"address\": \"Av. Iquitos 820, La Victoria\",\n    \"latitude\": -12.0702,\n    \"longitude\": -77.0298,\n    \"openingHours\": \"Lun-Dom 08:00-21:00\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Register business with invalid latitude",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"code is INVALID_LOCATION\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_LOCATION\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"BUSINESS_OWNER\",\n  \"fullName\": \"Rosa Quispe Mamani\",\n  \"email\": \"rosa.bodega@ejemplo.pe\",\n  \"phone\": \"987654323\",\n  \"password\": \"Bodega#2026\",\n  \"businessProfile\": {\n    \"businessName\": \"Bodega Doña Rosa\",\n    \"businessType\": \"Bodega\",\n    \"ruc\": \"10456789027\",\n    \"address\": \"Jr. Huánuco 1250, La Victoria\",\n    \"latitude\": 95.0,\n    \"longitude\": -77.035,\n    \"openingHours\": \"Lun-Sáb 07:00-22:00\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "US23",
+      "item": [
+        {
+          "name": "Log in business owner",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"returns the business role and businessId\", function () {",
+                  "    pm.expect(pm.response.json().role).to.eql(\"BUSINESS_OWNER\");",
+                  "    pm.expect(pm.response.json().businessId).to.be.a(\"number\");",
+                  "});",
+                  "pm.test(\"token carries ROLE_BUSINESS_OWNER and the same businessId\", function () {",
+                  "    var payload = pm.response.json().accessToken.split(\".\")[1].replace(/-/g, \"+\").replace(/_/g, \"/\");",
+                  "    var claims = JSON.parse(atob(payload + \"===\".slice((payload.length + 3) % 4)));",
+                  "    pm.expect(claims.roles).to.eql([\"ROLE_BUSINESS_OWNER\"]);",
+                  "    pm.expect(claims.businessId).to.eql(pm.response.json().businessId);",
+                  "    pm.expect(claims).to.not.have.property(\"consumerId\");",
+                  "});",
+                  "pm.collectionVariables.set(\"accessToken\", pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rosa.quispe@ejemplo.pe\",\n  \"password\": \"Bodega#2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    }
+  ]
+}

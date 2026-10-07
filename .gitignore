@@ -15,3 +15,5 @@ CLAUDE.md
 AGENTS.md
 *.zip
 *.docx
+*.pem
+platform/keys/

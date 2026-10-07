@@ -1,0 +1,1646 @@
+{
+  "info": {
+    "name": "GeoPS Catalog",
+    "description": "Catalog service requests. baseUrl is the service port; point it to the gateway to go through nginx. identityUrl points to the gateway, which routes /api/v1/auth to Identity. The two login requests fill token and businessToken; List my campaigns fills campaignId. The seed leaves offer 1 valid and offer 2 expired. The Internal folder only answers with baseUrl on the service port. US05 computes the campaign dates from today in a pre-request script; Create campaign fills campaignId and offerId with the new campaign. US06 creates a campaign with a district zone in Miraflores and searches from inside and outside the zone; it does not change campaignId.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Identity",
+      "item": [
+        {
+          "name": "Log in as consumer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{identityUrl}}/api/v1/auth/login",
+              "host": [
+                "{{identityUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{consumerEmail}}\",\n  \"password\": \"{{consumerPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.collectionVariables.set(\"token\", pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Log in as business owner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{identityUrl}}/api/v1/auth/login",
+              "host": [
+                "{{identityUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{ownerEmail}}\",\n  \"password\": \"{{ownerPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.collectionVariables.set(\"businessToken\", pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Offers",
+      "item": [
+        {
+          "name": "Get offer detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/{{offerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "{{offerId}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"available is true\", function () {",
+                  "    pm.expect(pm.response.json().available).to.eql(true);",
+                  "});",
+                  "pm.test(\"detail has coordinates\", function () {",
+                  "    pm.expect(pm.response.json().latitude).to.be.a(\"number\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get expired offer detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/{{expiredOfferId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "{{expiredOfferId}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"available is false\", function () {",
+                  "    pm.expect(pm.response.json().available).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get unknown offer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "999999"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test(\"error code is OFFER_NOT_FOUND\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"OFFER_NOT_FOUND\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get offer with an invalid id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/abc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "abc"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"error code is INVALID_REQUEST\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_REQUEST\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Internal",
+      "description": "Only on the service port: the gateway does not publish /internal.",
+      "item": [
+        {
+          "name": "Get offer availability",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/internal/v1/offers/{{offerId}}/availability",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "v1",
+                "offers",
+                "{{offerId}}",
+                "availability"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"available is true\", function () {",
+                  "    pm.expect(pm.response.json().available).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get availability of an expired offer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/internal/v1/offers/{{expiredOfferId}}/availability",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "v1",
+                "offers",
+                "{{expiredOfferId}}",
+                "availability"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"available is false\", function () {",
+                  "    pm.expect(pm.response.json().available).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get availability of an unknown offer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/internal/v1/offers/999999/availability",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "v1",
+                "offers",
+                "999999",
+                "availability"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test(\"error code is OFFER_NOT_FOUND\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"OFFER_NOT_FOUND\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Availability is not published by the gateway",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/internal/v1/offers/{{offerId}}/availability",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "internal",
+                "v1",
+                "offers",
+                "{{offerId}}",
+                "availability"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Nearby",
+      "item": [
+        {
+          "name": "Search nearby offers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/nearby?lat=-12.0697&lng=-77.0240&radiusMinutes=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "-12.0697"
+                },
+                {
+                  "key": "lng",
+                  "value": "-77.0240"
+                },
+                {
+                  "key": "radiusMinutes",
+                  "value": "10"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"the seed offer is about 300 m away\", function () {",
+                  "    const first = pm.response.json().content[0];",
+                  "    pm.expect(first.title).to.eql(\"Menú ejecutivo a mitad de precio\");",
+                  "    pm.expect(first.distanceMeters).to.be.within(290, 310);",
+                  "    pm.expect(first.walkMinutes).to.eql(4);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search a zone without offers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/nearby?lat=-12.2500&lng=-76.9000&radiusMinutes=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "-12.2500"
+                },
+                {
+                  "key": "lng",
+                  "value": "-76.9000"
+                },
+                {
+                  "key": "radiusMinutes",
+                  "value": "5"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"the page is empty\", function () {",
+                  "    pm.expect(pm.response.json().content).to.be.empty;",
+                  "    pm.expect(pm.response.json().totalPages).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search with 4 minutes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/nearby?lat=-12.0697&lng=-77.0240&radiusMinutes=4",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "-12.0697"
+                },
+                {
+                  "key": "lng",
+                  "value": "-77.0240"
+                },
+                {
+                  "key": "radiusMinutes",
+                  "value": "4"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"code is RADIUS_OUT_OF_RANGE\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"RADIUS_OUT_OF_RANGE\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search with 21 minutes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/nearby?lat=-12.0697&lng=-77.0240&radiusMinutes=21",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "-12.0697"
+                },
+                {
+                  "key": "lng",
+                  "value": "-77.0240"
+                },
+                {
+                  "key": "radiusMinutes",
+                  "value": "21"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"code is RADIUS_OUT_OF_RANGE\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"RADIUS_OUT_OF_RANGE\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search from an invalid latitude",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/nearby?lat=95&lng=-77.0240&radiusMinutes=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "95"
+                },
+                {
+                  "key": "lng",
+                  "value": "-77.0240"
+                },
+                {
+                  "key": "radiusMinutes",
+                  "value": "10"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"code is INVALID_COORDINATES\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_COORDINATES\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search without radius",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/nearby?lat=-12.0697&lng=-77.0240",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "-12.0697"
+                },
+                {
+                  "key": "lng",
+                  "value": "-77.0240"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"code is MISSING_PARAMETER\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"MISSING_PARAMETER\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "US05",
+      "item": [
+        {
+          "name": "Create campaign",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/campaigns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "campaigns"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{businessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"{{businessName}}\",\n  \"name\": \"Almuerzos de la semana\",\n  \"description\": \"Menú ejecutivo a mitad de precio para oficinas cercanas\",\n  \"period\": {\n    \"start\": \"{{campaignStart}}\",\n    \"end\": \"{{campaignEnd}}\"\n  },\n  \"estimatedBudget\": {\n    \"amount\": 500,\n    \"currency\": \"PEN\"\n  },\n  \"storeLocation\": {\n    \"address\": \"Jr. Huánuco 1250, La Victoria\",\n    \"latitude\": -12.067,\n    \"longitude\": -77.024\n  },\n  \"zone\": {\n    \"type\": \"RADIUS\",\n    \"center\": {\n      \"latitude\": -12.067,\n      \"longitude\": -77.024\n    },\n    \"radiusMeters\": 800\n  },\n  \"offers\": [\n    {\n      \"title\": \"2x1 en almuerzos ejecutivos\",\n      \"conditions\": \"Válido de lunes a viernes de 12:00 a 15:00.\",\n      \"price\": 15,\n      \"validTo\": \"{{offerValidTo}}\",\n      \"category\": \"Gastronomía\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const day = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);",
+                  "pm.collectionVariables.set(\"campaignStart\", day(0));",
+                  "pm.collectionVariables.set(\"campaignEnd\", day(25));",
+                  "pm.collectionVariables.set(\"offerValidTo\", day(10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"campaign is ACTIVE\", function () {",
+                  "    pm.expect(pm.response.json().status).to.eql(\"ACTIVE\");",
+                  "});",
+                  "pm.collectionVariables.set(\"campaignId\", pm.response.json().campaignId);",
+                  "pm.collectionVariables.set(\"offerId\", pm.response.json().offers[0].offerId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create campaign whose validity ended",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/campaigns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "campaigns"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{businessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"{{businessName}}\",\n  \"name\": \"Almuerzos de la semana\",\n  \"description\": \"Menú ejecutivo a mitad de precio para oficinas cercanas\",\n  \"period\": {\n    \"start\": \"2026-09-01\",\n    \"end\": \"2026-09-30\"\n  },\n  \"estimatedBudget\": {\n    \"amount\": 500,\n    \"currency\": \"PEN\"\n  },\n  \"storeLocation\": {\n    \"address\": \"Jr. Huánuco 1250, La Victoria\",\n    \"latitude\": -12.067,\n    \"longitude\": -77.024\n  },\n  \"zone\": {\n    \"type\": \"RADIUS\",\n    \"center\": {\n      \"latitude\": -12.067,\n      \"longitude\": -77.024\n    },\n    \"radiusMeters\": 800\n  },\n  \"offers\": [\n    {\n      \"title\": \"2x1 en almuerzos ejecutivos\",\n      \"conditions\": \"Válido de lunes a viernes de 12:00 a 15:00.\",\n      \"price\": 15,\n      \"validTo\": \"2026-09-30\",\n      \"category\": \"Gastronomía\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"error code is CAMPAIGN_ALREADY_ENDED\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"CAMPAIGN_ALREADY_ENDED\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create campaign as consumer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/campaigns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "campaigns"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"{{businessName}}\",\n  \"name\": \"Almuerzos de la semana\",\n  \"description\": \"Menú ejecutivo a mitad de precio para oficinas cercanas\",\n  \"period\": {\n    \"start\": \"{{campaignStart}}\",\n    \"end\": \"{{campaignEnd}}\"\n  },\n  \"estimatedBudget\": {\n    \"amount\": 500,\n    \"currency\": \"PEN\"\n  },\n  \"storeLocation\": {\n    \"address\": \"Jr. Huánuco 1250, La Victoria\",\n    \"latitude\": -12.067,\n    \"longitude\": -77.024\n  },\n  \"zone\": {\n    \"type\": \"RADIUS\",\n    \"center\": {\n      \"latitude\": -12.067,\n      \"longitude\": -77.024\n    },\n    \"radiusMeters\": 800\n  },\n  \"offers\": [\n    {\n      \"title\": \"2x1 en almuerzos ejecutivos\",\n      \"conditions\": \"Válido de lunes a viernes de 12:00 a 15:00.\",\n      \"price\": 15,\n      \"validTo\": \"{{offerValidTo}}\",\n      \"category\": \"Gastronomía\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const day = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);",
+                  "pm.collectionVariables.set(\"campaignStart\", day(0));",
+                  "pm.collectionVariables.set(\"campaignEnd\", day(25));",
+                  "pm.collectionVariables.set(\"offerValidTo\", day(10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test(\"error code is FORBIDDEN\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"FORBIDDEN\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create campaign without token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/campaigns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "campaigns"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"{{businessName}}\",\n  \"name\": \"Almuerzos de la semana\",\n  \"description\": \"Menú ejecutivo a mitad de precio para oficinas cercanas\",\n  \"period\": {\n    \"start\": \"{{campaignStart}}\",\n    \"end\": \"{{campaignEnd}}\"\n  },\n  \"estimatedBudget\": {\n    \"amount\": 500,\n    \"currency\": \"PEN\"\n  },\n  \"storeLocation\": {\n    \"address\": \"Jr. Huánuco 1250, La Victoria\",\n    \"latitude\": -12.067,\n    \"longitude\": -77.024\n  },\n  \"zone\": {\n    \"type\": \"RADIUS\",\n    \"center\": {\n      \"latitude\": -12.067,\n      \"longitude\": -77.024\n    },\n    \"radiusMeters\": 800\n  },\n  \"offers\": [\n    {\n      \"title\": \"2x1 en almuerzos ejecutivos\",\n      \"conditions\": \"Válido de lunes a viernes de 12:00 a 15:00.\",\n      \"price\": 15,\n      \"validTo\": \"{{offerValidTo}}\",\n      \"category\": \"Gastronomía\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const day = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);",
+                  "pm.collectionVariables.set(\"campaignStart\", day(0));",
+                  "pm.collectionVariables.set(\"campaignEnd\", day(25));",
+                  "pm.collectionVariables.set(\"offerValidTo\", day(10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"error code is UNAUTHORIZED\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"UNAUTHORIZED\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Campaigns",
+      "item": [
+        {
+          "name": "List my campaigns",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/campaigns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "campaigns"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{businessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "if (pm.response.json().length > 0) {",
+                  "    pm.collectionVariables.set(\"campaignId\", pm.response.json()[0].campaignId);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List campaigns without token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/campaigns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "campaigns"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"error code is UNAUTHORIZED\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"UNAUTHORIZED\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List campaigns as consumer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/campaigns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "campaigns"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test(\"error code is FORBIDDEN\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"FORBIDDEN\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get campaign",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/campaigns/{{campaignId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "campaigns",
+                "{{campaignId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{businessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get unknown campaign",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/campaigns/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "campaigns",
+                "999999"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{businessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test(\"error code is CAMPAIGN_NOT_FOUND\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"CAMPAIGN_NOT_FOUND\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List campaign offers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/campaigns/{{campaignId}}/offers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "campaigns",
+                "{{campaignId}}",
+                "offers"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{businessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List offers of an unknown campaign",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/campaigns/999999/offers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "campaigns",
+                "999999",
+                "offers"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{businessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test(\"error code is CAMPAIGN_NOT_FOUND\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"CAMPAIGN_NOT_FOUND\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "US06",
+      "description": "Campaign zones. The store is at Av. Larco 345, Miraflores (-12.1211, -77.0297) and the district zone is centered 1500 m south of it (-12.1346, -77.0297); a district covers 2000 m around its center. The searches use 20 walking minutes (1600 m), so the offer is always inside the search radius and only the zone decides whether it is shown.",
+      "item": [
+        {
+          "name": "Create campaign with a district zone",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/campaigns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "campaigns"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{businessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"{{businessName}}\",\n  \"name\": \"Ceviches en Miraflores\",\n  \"description\": \"Ceviche 2x1 para quienes están en el distrito\",\n  \"period\": {\n    \"start\": \"{{campaignStart}}\",\n    \"end\": \"{{campaignEnd}}\"\n  },\n  \"storeLocation\": {\n    \"address\": \"Av. Larco 345, Miraflores\",\n    \"latitude\": -12.1211,\n    \"longitude\": -77.0297\n  },\n  \"zone\": {\n    \"type\": \"DISTRICT\",\n    \"district\": \"Miraflores\",\n    \"center\": {\n      \"latitude\": -12.1346,\n      \"longitude\": -77.0297\n    }\n  },\n  \"offers\": [\n    {\n      \"title\": \"Ceviche 2x1 en Miraflores\",\n      \"conditions\": \"Un cupón por mesa.\",\n      \"price\": 35,\n      \"validTo\": \"{{offerValidTo}}\",\n      \"category\": \"Gastronomía\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const day = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);",
+                  "pm.collectionVariables.set(\"campaignStart\", day(0));",
+                  "pm.collectionVariables.set(\"campaignEnd\", day(25));",
+                  "pm.collectionVariables.set(\"offerValidTo\", day(10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"the zone is the district with its center\", function () {",
+                  "    const zone = pm.response.json().zone;",
+                  "    pm.expect(zone.type).to.eql(\"DISTRICT\");",
+                  "    pm.expect(zone.district).to.eql(\"Miraflores\");",
+                  "    pm.expect(zone.center.latitude).to.be.closeTo(-12.1346, 0.000001);",
+                  "    pm.expect(zone.radiusMeters).to.eql(null);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search inside the district zone",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/nearby?lat=-12.1256&lng=-77.0297&radiusMinutes=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "-12.1256"
+                },
+                {
+                  "key": "lng",
+                  "value": "-77.0297"
+                },
+                {
+                  "key": "radiusMinutes",
+                  "value": "20"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"500 m south of the store the campaign is shown\", function () {",
+                  "    const titles = pm.response.json().content.map((offer) => offer.title);",
+                  "    pm.expect(titles).to.include(\"Ceviche 2x1 en Miraflores\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search outside the district zone",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/nearby?lat=-12.1076&lng=-77.0297&radiusMinutes=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "-12.1076"
+                },
+                {
+                  "key": "lng",
+                  "value": "-77.0297"
+                },
+                {
+                  "key": "radiusMinutes",
+                  "value": "20"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"1500 m north of the store, 3000 m from the district center, the campaign is hidden\", function () {",
+                  "    const titles = pm.response.json().content.map((offer) => offer.title);",
+                  "    pm.expect(titles).to.not.include(\"Ceviche 2x1 en Miraflores\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create campaign with a district without name",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/campaigns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "campaigns"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{businessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"{{businessName}}\",\n  \"name\": \"Ceviches en Miraflores\",\n  \"description\": \"Ceviche 2x1 para quienes están en el distrito\",\n  \"period\": {\n    \"start\": \"{{campaignStart}}\",\n    \"end\": \"{{campaignEnd}}\"\n  },\n  \"storeLocation\": {\n    \"address\": \"Av. Larco 345, Miraflores\",\n    \"latitude\": -12.1211,\n    \"longitude\": -77.0297\n  },\n  \"zone\": {\n    \"type\": \"DISTRICT\",\n    \"center\": {\n      \"latitude\": -12.1346,\n      \"longitude\": -77.0297\n    }\n  },\n  \"offers\": [\n    {\n      \"title\": \"Ceviche 2x1 en Miraflores\",\n      \"conditions\": \"Un cupón por mesa.\",\n      \"price\": 35,\n      \"validTo\": \"{{offerValidTo}}\",\n      \"category\": \"Gastronomía\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const day = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);",
+                  "pm.collectionVariables.set(\"campaignStart\", day(0));",
+                  "pm.collectionVariables.set(\"campaignEnd\", day(25));",
+                  "pm.collectionVariables.set(\"offerValidTo\", day(10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"code is INVALID_CAMPAIGN_ZONE\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_CAMPAIGN_ZONE\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8082"
+    },
+    {
+      "key": "identityUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "consumerEmail",
+      "value": ""
+    },
+    {
+      "key": "consumerPassword",
+      "value": ""
+    },
+    {
+      "key": "ownerEmail",
+      "value": ""
+    },
+    {
+      "key": "ownerPassword",
+      "value": ""
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "businessToken",
+      "value": ""
+    },
+    {
+      "key": "offerId",
+      "value": "1"
+    },
+    {
+      "key": "campaignId",
+      "value": ""
+    },
+    {
+      "key": "expiredOfferId",
+      "value": "2"
+    },
+    {
+      "key": "gatewayUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "businessName",
+      "value": "Bodega Doña Rosa"
+    },
+    {
+      "key": "campaignStart",
+      "value": ""
+    },
+    {
+      "key": "campaignEnd",
+      "value": ""
+    },
+    {
+      "key": "offerValidTo",
+      "value": ""
+    }
+  ]
+}
