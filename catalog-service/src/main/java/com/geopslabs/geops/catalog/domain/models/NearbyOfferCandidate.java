@@ -13,7 +13,8 @@ public record NearbyOfferCandidate(
         Long businessId,
         String businessName,
         boolean verifiedSeal,
-        int openReports) {
+        int openReports,
+        CampaignZone zone) {
 
     public boolean hasOpenReports() {
         return openReports > 0;

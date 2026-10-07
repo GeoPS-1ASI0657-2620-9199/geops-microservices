@@ -45,6 +45,7 @@ class CampaignCommandServiceTest {
     private static final String ADDRESS = "Av. Larco 345, Miraflores";
     private static final GeoPoint STORE = new GeoPoint(-12.1211, -77.0297);
     private static final int RADIUS_METERS = 800;
+    private static final String DISTRICT = "Miraflores";
     private static final BigDecimal BUDGET = new BigDecimal("500.00");
     private static final LocalDate START = LocalDate.parse("2026-10-05");
     private static final LocalDate END = LocalDate.parse("2026-10-31");
@@ -136,10 +137,32 @@ class CampaignCommandServiceTest {
     }
 
     @Test
-    void districtZoneIsNotAcceptedYet() {
-        var district = command(START, END, BUDGET, ZoneType.DISTRICT, OFFER_VALID_TO);
+    void districtZoneIsSavedWithItsNameAndCenter() {
+        stubSaves();
 
-        assertThatThrownBy(() -> service.publish(district)).isInstanceOf(InvalidCampaignZoneException.class);
+        var published = service.publish(districtCommand(DISTRICT));
+
+        assertThat(published.campaign().getZone().type()).isEqualTo(ZoneType.DISTRICT);
+        assertThat(published.campaign().getZone().district()).isEqualTo(DISTRICT);
+        assertThat(published.campaign().getZone().center()).isEqualTo(STORE);
+        assertThat(published.campaign().getZone().radiusMeters()).isNull();
+    }
+
+    @Test
+    void nothingIsSavedWhenTheDistrictHasNoName() {
+        var withoutName = districtCommand(null);
+
+        assertThatThrownBy(() -> service.publish(withoutName)).isInstanceOf(InvalidCampaignZoneException.class);
+        verifyNoInteractions(merchantStandingRepository, campaignRepository, offerRepository);
+    }
+
+    @Test
+    void nothingIsSavedWhenTheRadiusZoneHasNoRadius() {
+        var withoutRadius = new CreateCampaignCommand(BUSINESS_ID, BUSINESS_NAME, "Almuerzos de octubre",
+                "Menú ejecutivo", START, END, BUDGET, ADDRESS, STORE, ZoneType.RADIUS, STORE, null, null,
+                List.of(offer(OFFER_VALID_TO)));
+
+        assertThatThrownBy(() -> service.publish(withoutRadius)).isInstanceOf(InvalidCampaignZoneException.class);
         verifyNoInteractions(merchantStandingRepository, campaignRepository, offerRepository);
     }
 
@@ -155,9 +178,19 @@ class CampaignCommandServiceTest {
 
     private static CreateCampaignCommand command(LocalDate start, LocalDate end, BigDecimal budget,
                                                  ZoneType zoneType, LocalDate offerValidTo) {
-        var offer = new CreateOfferCommand("2x1 en almuerzos ejecutivos", "Lunes a viernes de 12:00 a 15:00",
-                new BigDecimal("15.00"), offerValidTo, "Gastronomía", null);
         return new CreateCampaignCommand(BUSINESS_ID, BUSINESS_NAME, "Almuerzos de octubre", "Menú ejecutivo",
-                start, end, budget, ADDRESS, STORE, zoneType, STORE, RADIUS_METERS, null, List.of(offer));
+                start, end, budget, ADDRESS, STORE, zoneType, STORE, RADIUS_METERS, null,
+                List.of(offer(offerValidTo)));
+    }
+
+    private static CreateCampaignCommand districtCommand(String district) {
+        return new CreateCampaignCommand(BUSINESS_ID, BUSINESS_NAME, "Ceviches en Miraflores", "Ceviche 2x1",
+                START, END, BUDGET, ADDRESS, STORE, ZoneType.DISTRICT, STORE, null, district,
+                List.of(offer(OFFER_VALID_TO)));
+    }
+
+    private static CreateOfferCommand offer(LocalDate validTo) {
+        return new CreateOfferCommand("2x1 en almuerzos ejecutivos", "Lunes a viernes de 12:00 a 15:00",
+                new BigDecimal("15.00"), validTo, "Gastronomía", null);
     }
 }

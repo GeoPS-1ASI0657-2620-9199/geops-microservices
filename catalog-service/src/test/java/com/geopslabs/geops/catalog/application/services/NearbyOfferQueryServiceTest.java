@@ -1,5 +1,6 @@
 package com.geopslabs.geops.catalog.application.services;
 
+import com.geopslabs.geops.catalog.domain.models.CampaignZone;
 import com.geopslabs.geops.catalog.domain.models.GeoPoint;
 import com.geopslabs.geops.catalog.domain.models.NearbyOfferCandidate;
 import com.geopslabs.geops.catalog.domain.models.ProximitySearchService;
@@ -96,7 +97,8 @@ class NearbyOfferQueryServiceTest {
     private static List<RankedOffer> ranked(int count) {
         return LongStream.rangeClosed(1, count)
                 .mapToObj(id -> RankedOffer.of(new NearbyOfferCandidate(id, "Oferta " + id, BigDecimal.TEN,
-                        LocalDate.of(2026, 10, 15), "Gastronomía", ORIGIN, 84L, "Comercio", false, 0), id * 10.0))
+                        LocalDate.of(2026, 10, 15), "Gastronomía", ORIGIN, 84L, "Comercio", false, 0,
+                        CampaignZone.radius(ORIGIN, CampaignZone.MAX_RADIUS_METERS)), id * 10.0))
                 .toList();
     }
 }

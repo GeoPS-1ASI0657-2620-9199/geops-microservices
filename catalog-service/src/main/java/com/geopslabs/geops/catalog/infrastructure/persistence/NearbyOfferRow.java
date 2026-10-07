@@ -25,4 +25,14 @@ public interface NearbyOfferRow {
     Boolean getVerifiedSeal();
 
     Integer getOpenReports();
+
+    String getZoneType();
+
+    Double getZoneLatitude();
+
+    Double getZoneLongitude();
+
+    Integer getZoneRadiusMeters();
+
+    String getZoneDistrict();
 }

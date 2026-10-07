@@ -53,6 +53,15 @@ public class CampaignsController {
                          "conditions": "Válido de lunes a viernes de 12:00 a 15:00. Un cupón por mesa.",
                          "price": 15.00, "validTo": "2026-10-15", "category": "Gastronomía",
                          "imageUrl": "https://images.geops.pe/offers/1052.jpg"}]}""";
+    private static final String CREATE_DISTRICT_CAMPAIGN_EXAMPLE = """
+            {"businessName": "Restaurante Don Pepe", "name": "Ceviches en Miraflores",
+             "description": "Ceviche 2x1 para quienes están en el distrito",
+             "period": {"start": "2026-10-05", "end": "2026-10-31"},
+             "storeLocation": {"address": "Av. Larco 345, Miraflores", "latitude": -12.1211, "longitude": -77.0297},
+             "zone": {"type": "DISTRICT", "district": "Miraflores",
+                      "center": {"latitude": -12.1211, "longitude": -77.0297}},
+             "offers": [{"title": "Ceviche 2x1", "conditions": "Un cupón por mesa.",
+                         "price": 35.00, "validTo": "2026-10-20", "category": "Gastronomía"}]}""";
     private static final String PUBLISHED_CAMPAIGN_EXAMPLE = """
             {"campaignId": 31, "businessId": 84, "name": "Almuerzos de octubre", "status": "ACTIVE",
              "period": {"start": "2026-10-05", "end": "2026-10-31"},
@@ -93,10 +102,13 @@ public class CampaignsController {
             description = "Requires ROLE_BUSINESS_OWNER. The campaign belongs to the businessId of the token, "
                     + "never to an id in the body. businessName creates the local copy of the business the first "
                     + "time (until BusinessRegistered arrives with US33). Each offer is published with the store "
-                    + "address and coordinates. Without estimatedBudget the budget is 0.00 PEN. This step accepts "
-                    + "radius zones; district zones arrive with US06.")
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = @ExampleObject(
-            name = "radiusZone", value = CREATE_CAMPAIGN_EXAMPLE)))
+                    + "address and coordinates. Without estimatedBudget the budget is 0.00 PEN. The zone is RADIUS "
+                    + "(center and radiusMeters from 400 to 5000) or DISTRICT (district name and its center, "
+                    + "covering 2000 meters around it); consumers outside the zone do not see the campaign in the "
+                    + "nearby search.")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = {
+            @ExampleObject(name = "radiusZone", value = CREATE_CAMPAIGN_EXAMPLE),
+            @ExampleObject(name = "districtZone", value = CREATE_DISTRICT_CAMPAIGN_EXAMPLE)}))
     @ApiResponse(responseCode = "201", description = "Campaign published with its offers",
             content = @Content(examples = @ExampleObject(value = PUBLISHED_CAMPAIGN_EXAMPLE)))
     @ApiResponse(responseCode = "400", description = "Invalid request, ended period, invalid zone or offer outside "
@@ -107,6 +119,8 @@ public class CampaignsController {
                             {"code": "INVALID_CAMPAIGN_PERIOD", "message": "La fecha de fin de la campaña es anterior a su fecha de inicio."}"""),
                     @ExampleObject(name = "invalidZone", value = """
                             {"code": "INVALID_CAMPAIGN_ZONE", "message": "El radio de la zona debe estar entre 400 y 5000 metros y tener un centro."}"""),
+                    @ExampleObject(name = "invalidDistrictZone", value = """
+                            {"code": "INVALID_CAMPAIGN_ZONE", "message": "La zona por distrito necesita el nombre del distrito y su centro."}"""),
                     @ExampleObject(name = "offerOutsideCampaign", value = """
                             {"code": "OFFER_VALIDITY_OUTSIDE_CAMPAIGN", "message": "La vigencia de la oferta «Desayuno 2x1» debe estar dentro del periodo de la campaña."}"""),
                     @ExampleObject(name = "invalidRequest", value = """

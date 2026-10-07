@@ -35,6 +35,16 @@ class CampaignTest {
     }
 
     @Test
+    void coversThePointsInsideItsZoneOnly() {
+        var campaign = publish(OCTOBER);
+        var metersPerDegree = Math.toRadians(1) * GeoPoint.EARTH_MEAN_RADIUS_METERS;
+
+        assertThat(campaign.covers(STORE)).isTrue();
+        assertThat(campaign.covers(new GeoPoint(STORE.latitude() + RADIUS_METERS * 2 / metersPerDegree,
+                STORE.longitude()))).isFalse();
+    }
+
+    @Test
     void publishedCampaignStartsActiveForItsBusiness() {
         var campaign = publish(OCTOBER);
 
