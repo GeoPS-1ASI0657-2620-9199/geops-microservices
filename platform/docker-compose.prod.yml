@@ -1,24 +1,47 @@
+x-deps-identity: &deps-identity
+  postgres:
+    condition: service_healthy
+  identity-service:
+    condition: service_healthy
+
 services:
   postgres:
     ports: !reset []
+
   redis:
+    profiles: [messaging]
     ports: !reset []
+
   kafka:
+    profiles: [messaging]
     ports: !reset []
+
+  identity-service:
+    depends_on: !override
+      postgres:
+        condition: service_healthy
 
   catalog-service:
-    deploy:
-      replicas: 2
+    depends_on: !override
+      <<: *deps-identity
 
   reservation-service:
-    deploy:
-      replicas: 2
+    depends_on: !override
+      <<: *deps-identity
+
+  engagement-service:
+    depends_on: !override
+      <<: *deps-identity
+
+  notification-service:
+    depends_on: !override
+      <<: *deps-identity
 
   gateway:
-    ports: !reset
+    ports: !override
       - "80:80"
       - "443:443"
     volumes:
-      - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./gateway/nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /var/www/certbot:/var/www/certbot:ro
