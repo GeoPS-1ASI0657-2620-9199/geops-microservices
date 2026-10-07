@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.cucumber.spring.ScenarioScope;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StreamUtils;
@@ -33,6 +34,16 @@ public class HttpScenario {
 
     public HttpResult get(String path, String token) {
         var request = restClient.get().uri(path);
+        if (token != null) {
+            request.header(HttpHeaders.AUTHORIZATION, BEARER + token);
+        }
+        last = request.exchange((ignored, response) -> new HttpResult(response.getStatusCode().value(),
+                StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8)));
+        return last;
+    }
+
+    public HttpResult post(String path, String token, String jsonBody) {
+        var request = restClient.post().uri(path).contentType(MediaType.APPLICATION_JSON).body(jsonBody);
         if (token != null) {
             request.header(HttpHeaders.AUTHORIZATION, BEARER + token);
         }
