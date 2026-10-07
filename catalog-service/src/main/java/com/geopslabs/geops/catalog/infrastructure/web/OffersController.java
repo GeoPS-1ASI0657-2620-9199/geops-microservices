@@ -1,6 +1,6 @@
 package com.geopslabs.geops.catalog.infrastructure.web;
 
-import com.geopslabs.geops.catalog.application.usecases.GetOfferByIdUseCase;
+import com.geopslabs.geops.catalog.application.usecases.GetOfferDetailUseCase;
 import com.geopslabs.geops.catalog.domain.models.queries.GetOfferByIdQuery;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -22,31 +22,41 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 public class OffersController {
     static final String OFFERS_PATH = "/api/v1/offers";
 
-    private final GetOfferByIdUseCase getOfferById;
+    private final GetOfferDetailUseCase getOfferDetail;
 
-    public OffersController(GetOfferByIdUseCase getOfferById) {
-        this.getOfferById = getOfferById;
+    public OffersController(GetOfferDetailUseCase getOfferDetail) {
+        this.getOfferDetail = getOfferDetail;
     }
 
-    @Operation(summary = "Get one offer of the catalog",
-            description = "Public lookup of an offer with its conditions, price, validity and address.")
+    @Operation(summary = "Get the detail of an offer with its conditions and merchant seal",
+            description = "Public. available is false when the offer expired or is past its validity date in "
+                    + "Lima time. An offer from a public source has no businessId, shows its source as "
+                    + "businessName and never carries the verified seal. A removed offer answers 404.")
     @SecurityRequirements
-    @ApiResponse(responseCode = "200", description = "Offer found",
-            content = @Content(examples = @ExampleObject(value = """
-                    {"offerId": 1052, "campaignId": 14, "businessId": 1, "title": "Menú ejecutivo a mitad de precio",
-                     "conditions": "De lunes a viernes de 12:00 a 15:00. No acumulable.", "price": 12.50,
-                     "validTo": "2026-10-31", "category": "Gastronomía", "address": "Jr. Huánuco 1250, La Victoria",
+    @ApiResponse(responseCode = "200", description = "Offer detail", content = @Content(examples = {
+            @ExampleObject(name = "validOffer", value = """
+                    {"offerId": 1052, "title": "2x1 en almuerzos ejecutivos",
+                     "conditions": "Válido de lunes a viernes de 12:00 a 15:00. Un cupón por mesa.",
+                     "price": 15.00, "validTo": "2026-10-15", "category": "Gastronomía",
+                     "address": "Av. Larco 345, Miraflores", "latitude": -12.1211, "longitude": -77.0297,
                      "imageUrl": "https://images.geops.pe/offers/1052.jpg", "source": "AFFILIATED",
-                     "sourceName": null, "status": "PUBLISHED"}""")))
+                     "businessId": 84, "businessName": "Restaurante Don Pepe", "verifiedSeal": false,
+                     "available": true}"""),
+            @ExampleObject(name = "expiredOffer", value = """
+                    {"offerId": 1053, "title": "Desayuno 2x1", "conditions": "Solo hasta las 10:00.",
+                     "price": 9.90, "validTo": "2026-10-01", "category": "Gastronomía",
+                     "address": "Av. Larco 345, Miraflores", "latitude": -12.1211, "longitude": -77.0297,
+                     "imageUrl": null, "source": "AFFILIATED", "businessId": 84,
+                     "businessName": "Restaurante Don Pepe", "verifiedSeal": false, "available": false}""")}))
     @ApiResponse(responseCode = "400", description = "The id is not a number",
             content = @Content(examples = @ExampleObject(value = """
                     {"code": "INVALID_REQUEST", "message": "offerId has an invalid value"}""")))
-    @ApiResponse(responseCode = "404", description = "Offer does not exist",
+    @ApiResponse(responseCode = "404", description = "Offer not found or removed",
             content = @Content(examples = @ExampleObject(value = """
-                    {"code": "OFFER_NOT_FOUND", "message": "Offer 9999 was not found"}""")))
+                    {"code": "OFFER_NOT_FOUND", "message": "La oferta 9999 no existe."}""")))
     @GetMapping("/{offerId}")
-    public OfferResponse getOffer(
+    public OfferDetailResponse getOffer(
             @Parameter(description = "Offer id", example = "1052") @PathVariable Long offerId) {
-        return OfferResponseAssembler.toResponse(getOfferById.getById(new GetOfferByIdQuery(offerId)));
+        return OfferDetailResponseAssembler.toResponse(getOfferDetail.getDetail(new GetOfferByIdQuery(offerId)));
     }
 }

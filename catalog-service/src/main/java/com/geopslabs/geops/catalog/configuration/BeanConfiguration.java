@@ -3,16 +3,26 @@ package com.geopslabs.geops.catalog.configuration;
 import com.geopslabs.geops.catalog.application.services.CampaignQueryService;
 import com.geopslabs.geops.catalog.application.services.OfferQueryService;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
+import com.geopslabs.geops.catalog.domain.ports.MerchantStandingRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.OfferRepositoryPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.time.Clock;
 
 @Configuration
 public class BeanConfiguration {
 
     @Bean
-    public OfferQueryService offerQueryService(OfferRepositoryPort offerRepository) {
-        return new OfferQueryService(offerRepository);
+    public Clock clock() {
+        return Clock.system(OfferQueryService.OFFER_ZONE);
+    }
+
+    @Bean
+    public OfferQueryService offerQueryService(OfferRepositoryPort offerRepository,
+                                               MerchantStandingRepositoryPort merchantStandingRepository,
+                                               Clock clock) {
+        return new OfferQueryService(offerRepository, merchantStandingRepository, clock);
     }
 
     @Bean

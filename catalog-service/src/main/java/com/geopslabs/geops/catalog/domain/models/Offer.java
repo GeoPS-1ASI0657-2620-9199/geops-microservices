@@ -41,6 +41,14 @@ public class Offer {
         this.location = location;
     }
 
+    public boolean isValidOn(LocalDate date) {
+        return status == OfferStatus.PUBLISHED && !validTo.isBefore(date);
+    }
+
+    public boolean isReservableOn(LocalDate date) {
+        return source == OfferSource.AFFILIATED && isValidOn(date);
+    }
+
     public Long getId() {
         return id;
     }

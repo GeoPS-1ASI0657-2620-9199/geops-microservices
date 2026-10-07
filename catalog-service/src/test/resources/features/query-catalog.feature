@@ -13,7 +13,7 @@ Feature: Query the catalog
     And the field "title" is "Menú ejecutivo a mitad de precio"
     And the field "price" is "12.5"
     And the field "validTo" is "2026-10-31"
-    And the field "status" is "PUBLISHED"
+    And the field "available" is "true"
 
   Scenario: The offer does not exist
     When a visitor views an offer that does not exist

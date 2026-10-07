@@ -10,10 +10,17 @@ las ofertas de cada una.
 | Operación | Acceso | Descripción |
 |---|---|---|
 | `GET /api/v1/offers/nearby` | Pública | Lista las ofertas vigentes a `radiusMinutes` (5 a 20) minutos a pie de `lat` y `lng`, con su distancia en metros y en minutos, ordenadas por tramos de 100 m y, dentro de cada tramo, primero los comercios sin reportes abiertos y luego los verificados. Paginada por `page` y `size` (hasta 20) |
-| `GET /api/v1/offers/{offerId}` | Pública | Devuelve la oferta con sus condiciones, precio, vigencia, dirección, fuente y estado |
+| `GET /api/v1/offers/{offerId}` | Pública | Detalle de US04: precio, vigencia, condiciones, dirección, coordenadas, categoría, fuente, nombre y sello del comercio, y `available` |
+| `GET /internal/v1/offers/{offerId}/availability` | Interna, sin token | Para reservation-service: `offerId`, `businessId`, `title`, `validTo` y `available` |
 | `GET /api/v1/campaigns` | `ROLE_BUSINESS_OWNER` | Lista las campañas del comercio del token, de la más antigua a la más reciente |
 | `GET /api/v1/campaigns/{campaignId}` | `ROLE_BUSINESS_OWNER` dueño de la campaña | Devuelve la campaña con su periodo, zona, estado y presupuesto |
 | `GET /api/v1/campaigns/{campaignId}/offers` | `ROLE_BUSINESS_OWNER` dueño de la campaña | Lista las ofertas de la campaña |
+
+Una oferta está disponible (`available`) mientras está `PUBLISHED` y hoy, en hora de Lima, no es
+posterior a su `validTo`; es la misma regla que aplica reservation-service. Para reservar, además,
+tiene que ser de un comercio afiliado: una oferta de fuente pública responde `available: false` y
+sin `businessId`. Una oferta retirada (`REMOVED`) responde 404 en el detalle y `available: false`
+en la disponibilidad.
 
 El comercio es el claim `businessId` del token. El servicio valida el token con el JWKS de Identity
 (`IDENTITY_JWKS_URI`), el emisor `geops-identity` y la audiencia `geops-api`. Las rutas
@@ -73,6 +80,8 @@ PostgreSQL con PostGIS en Testcontainers, con tokens firmados con una clave de p
 | US01 Modelar coordenadas e índice espacial (GEO-26) | `US01-model-offer-coordinates.feature` | 4 |
 | US02 Consultar ofertas por radio (GEO-28) | `US02-query-offers-by-radius.feature` | 7 |
 | US03 Buscar ofertas por ubicación (GEO-29) | `US03-search-offers-by-location.feature` | 4 |
+| US04 Consultar el detalle de una oferta (GEO-23) | `US04-view-offer-detail.feature` | 4 |
+| Disponibilidad para Reservation (Tabla 38) | `offer-availability.feature` | 3 |
 | Migraciones versionadas (GEO-9, GEO-51) | `schema-migrations.feature` | 3 |
 
 ## Ejecución local
@@ -89,12 +98,14 @@ se publica: se toma el JWKS del gateway con
 
 La colección `postman/catalog.postman_collection.json` tiene un caso correcto y uno de error por
 endpoint; las dos peticiones de login de Identity llenan `token` y `businessToken`, y
-«List my campaigns» llena `campaignId`.
+«List my campaigns» llena `campaignId`. La carpeta `Internal` solo responde con `baseUrl` en el puerto
+del servicio; su última petición comprueba que el gateway no publica `/internal`.
 
 Hasta que llegue la creación de campañas (US05) no hay endpoint que cree datos. Para correr la
 colección con la base vacía se carga `postman/seed-catalog.sql`, que deja dos comercios con una
-campaña cada uno y una oferta, ubicada en La Victoria para que la carpeta `Nearby` la encuentre. El comercio `1` es el primero que se registra en Identity, así que
-su dueño ve la campaña «Almuerzos de octubre».
+campaña cada uno y dos ofertas en La Victoria: la `1` vigente, que la carpeta `Nearby` encuentra, y
+la `2` vencida, para ver el detalle «no disponible». El comercio `1` es el primero que se registra en
+Identity, así que su dueño ve la campaña «Almuerzos de octubre».
 
 | Git Bash | PowerShell |
 |---|---|

@@ -11,3 +11,9 @@ SELECT id, business_id, 'Menú ejecutivo a mitad de precio', 'De lunes a viernes
        'Gastronomía', 'GEOCODED', 'Jr. Huánuco 1250, La Victoria', 'AFFILIATED', 'PUBLISHED',
        ST_SetSRID(ST_MakePoint(-77.0240, -12.0670), 4326)::geography
 FROM campaigns WHERE name = 'Almuerzos de octubre';
+
+INSERT INTO offers (campaign_id, business_id, title, conditions, price, valid_to, category, geocoding_status, address, source, status, location)
+SELECT id, business_id, 'Desayuno 2x1', 'Solo hasta las 10:00.', 9.90, '2026-10-01',
+       'Gastronomía', 'GEOCODED', 'Av. Manco Cápac 820, La Victoria', 'AFFILIATED', 'PUBLISHED',
+       ST_SetSRID(ST_MakePoint(-77.0270, -12.0690), 4326)::geography
+FROM campaigns WHERE name = 'Pollo a la brasa';
