@@ -1,6 +1,8 @@
 package com.geopslabs.geops.catalog.application.services;
 
+import com.geopslabs.geops.catalog.application.usecases.GetOfferAvailabilityUseCase;
 import com.geopslabs.geops.catalog.application.usecases.GetOfferDetailUseCase;
+import com.geopslabs.geops.catalog.application.usecases.OfferAvailability;
 import com.geopslabs.geops.catalog.application.usecases.OfferDetail;
 import com.geopslabs.geops.catalog.domain.models.MerchantStanding;
 import com.geopslabs.geops.catalog.domain.models.Offer;
@@ -15,7 +17,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
 
-public class OfferQueryService implements GetOfferDetailUseCase {
+public class OfferQueryService implements GetOfferDetailUseCase, GetOfferAvailabilityUseCase {
     public static final ZoneId OFFER_ZONE = ZoneId.of("America/Lima");
 
     private final OfferRepositoryPort offerRepository;
@@ -42,6 +44,13 @@ public class OfferQueryService implements GetOfferDetailUseCase {
         var standing = merchantStandingRepository.findByBusinessId(offer.getBusinessId());
         return new OfferDetail(offer, standing.map(MerchantStanding::getBusinessName).orElse(null),
                 standing.map(MerchantStanding::hasVerifiedSeal).orElse(false), available);
+    }
+
+    @Override
+    public OfferAvailability getAvailability(GetOfferByIdQuery query) {
+        var offer = findOffer(query.offerId());
+        return new OfferAvailability(offer.getId(), offer.getBusinessId(), offer.getTitle(), offer.getValidTo(),
+                offer.isReservableOn(today()));
     }
 
     private Offer findOffer(Long offerId) {
