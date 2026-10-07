@@ -28,7 +28,7 @@ class CampaignTest {
 
     private static Campaign campaign() {
         var period = new DateRange(LocalDate.parse("2026-10-05"), LocalDate.parse("2026-10-31"));
-        var zone = new CampaignZone(ZoneType.DISTRICT, null, "La Victoria");
+        var zone = new CampaignZone(ZoneType.DISTRICT, null, null, "La Victoria");
         return new Campaign(14L, BUSINESS_ID, "Almuerzos de octubre", "Menú ejecutivo", period, zone,
                 CampaignStatus.ACTIVE, Money.soles(BigDecimal.TEN));
     }

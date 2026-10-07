@@ -107,7 +107,7 @@ class CampaignQueryServiceTest {
 
     private static Campaign campaign() {
         var period = new DateRange(LocalDate.parse("2026-10-05"), LocalDate.parse("2026-10-31"));
-        var zone = new CampaignZone(ZoneType.RADIUS, RADIUS_METERS, null);
+        var zone = new CampaignZone(ZoneType.RADIUS, null, RADIUS_METERS, null);
         return new Campaign(CAMPAIGN_ID, BUSINESS_ID, "Almuerzos de octubre", "Menú ejecutivo a mitad de precio",
                 period, zone, CampaignStatus.ACTIVE, Money.soles(BUDGET));
     }

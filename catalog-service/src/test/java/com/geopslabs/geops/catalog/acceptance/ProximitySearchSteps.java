@@ -248,7 +248,7 @@ public class ProximitySearchSteps {
             standings.save(new MerchantStanding(businessId, row.get(TITLE), false, openReports, FULL_COMPLIANCE, false,
                     LocalDateTime.now()));
             var campaignId = campaigns.save(new Campaign(null, businessId, row.get(TITLE), row.get(TITLE), period,
-                    new CampaignZone(ZoneType.RADIUS, CAMPAIGN_RADIUS_METERS, null), CampaignStatus.ACTIVE,
+                    new CampaignZone(ZoneType.RADIUS, null, CAMPAIGN_RADIUS_METERS, null), CampaignStatus.ACTIVE,
                     Money.soles(PRICE))).getId();
             offers.save(new Offer(null, campaignId, businessId, row.get(TITLE), CONDITIONS, Money.soles(PRICE),
                     today.plusDays(DAYS_LEFT), CATEGORY, GeocodingStatus.GEOCODED, ADDRESS, null,
@@ -296,7 +296,7 @@ public class ProximitySearchSteps {
 
     private Long campaign(DateRange period, CampaignStatus status) {
         return campaigns.save(new Campaign(null, BUSINESS_ID, status.name(), status.name(), period,
-                new CampaignZone(ZoneType.RADIUS, CAMPAIGN_RADIUS_METERS, null), status, Money.soles(PRICE))).getId();
+                new CampaignZone(ZoneType.RADIUS, null, CAMPAIGN_RADIUS_METERS, null), status, Money.soles(PRICE))).getId();
     }
 
     private static String nearby(GeoPoint point) {

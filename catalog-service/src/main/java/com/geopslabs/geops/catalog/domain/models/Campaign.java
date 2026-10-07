@@ -1,5 +1,9 @@
 package com.geopslabs.geops.catalog.domain.models;
 
+import com.geopslabs.geops.catalog.domain.models.exceptions.CampaignAlreadyEndedException;
+
+import java.time.LocalDate;
+
 public class Campaign {
     private final Long id;
     private final Long businessId;
@@ -21,6 +25,16 @@ public class Campaign {
         this.zone = zone;
         this.status = status;
         this.estimatedBudget = estimatedBudget;
+    }
+
+    @SuppressWarnings("java:S107")
+    public static Campaign publish(Long businessId, String name, String description, DateRange period,
+                                   CampaignZone zone, Money estimatedBudget, LocalDate today) {
+        if (period.hasEndedBefore(today)) {
+            throw new CampaignAlreadyEndedException(period.end());
+        }
+        return new Campaign(null, businessId, name, description, period, zone, CampaignStatus.ACTIVE,
+                estimatedBudget);
     }
 
     public boolean isOfBusiness(Long candidateBusinessId) {
