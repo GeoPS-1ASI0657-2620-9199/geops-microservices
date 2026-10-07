@@ -57,6 +57,10 @@ public final class TestIdentity {
         return sign(SIGNING_KEY, claims.build());
     }
 
+    public static String businessOwnerTokenWithoutBusinessId(Long userId) {
+        return sign(SIGNING_KEY, claims(userId, ISSUER, AUDIENCE, List.of("ROLE_BUSINESS_OWNER")).build());
+    }
+
     public static String tokenWithoutRoles(Long userId) {
         return sign(SIGNING_KEY, claims(userId, ISSUER, AUDIENCE, List.of()).build());
     }

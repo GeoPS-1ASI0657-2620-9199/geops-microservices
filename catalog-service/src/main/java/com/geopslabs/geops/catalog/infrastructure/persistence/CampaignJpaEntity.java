@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.locationtech.jts.geom.Point;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -55,6 +56,9 @@ public class CampaignJpaEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "zone_type", nullable = false, length = ZONE_TYPE_LENGTH)
     private ZoneType zoneType;
+
+    @Column(name = "zone_center", columnDefinition = GeographyPoints.GEOGRAPHY_POINT)
+    private Point zoneCenter;
 
     @Column(name = "zone_radius_m")
     private Integer zoneRadiusMeters;

@@ -1,7 +1,9 @@
 package com.geopslabs.geops.catalog.configuration;
 
+import com.geopslabs.geops.catalog.application.services.CampaignCommandService;
 import com.geopslabs.geops.catalog.application.services.CampaignQueryService;
 import com.geopslabs.geops.catalog.application.services.OfferQueryService;
+import com.geopslabs.geops.catalog.application.usecases.CreateCampaignUseCase;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.MerchantStandingRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.OfferRepositoryPort;
@@ -23,6 +25,14 @@ public class BeanConfiguration {
                                                MerchantStandingRepositoryPort merchantStandingRepository,
                                                Clock clock) {
         return new OfferQueryService(offerRepository, merchantStandingRepository, clock);
+    }
+
+    @Bean
+    public CreateCampaignUseCase createCampaignUseCase(CampaignRepositoryPort campaignRepository,
+                                                       OfferRepositoryPort offerRepository,
+                                                       MerchantStandingRepositoryPort merchantStandingRepository,
+                                                       Clock clock) {
+        return new CampaignCommandService(campaignRepository, offerRepository, merchantStandingRepository, clock);
     }
 
     @Bean

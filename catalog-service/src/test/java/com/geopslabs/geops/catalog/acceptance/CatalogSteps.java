@@ -83,7 +83,7 @@ public class CatalogSteps {
         standings.save(new MerchantStanding(businessId, businessName, false, NO_REPORTS, FULL_COMPLIANCE, false,
                 LocalDateTime.now()));
         var period = new DateRange(LocalDate.parse(start), LocalDate.parse(end));
-        var zone = new CampaignZone(ZoneType.RADIUS, RADIUS_METERS, null);
+        var zone = new CampaignZone(ZoneType.RADIUS, null, RADIUS_METERS, null);
         var campaign = campaigns.save(new Campaign(null, businessId, name, name, period, zone,
                 CampaignStatus.ACTIVE, Money.soles(BUDGET)));
         state.rememberCampaign(name, campaign.getId());

@@ -12,7 +12,8 @@ final class CampaignPersistenceMapper {
 
     static Campaign toDomain(CampaignJpaEntity entity) {
         var period = new DateRange(entity.getStartDate(), entity.getEndDate());
-        var zone = new CampaignZone(entity.getZoneType(), entity.getZoneRadiusMeters(), entity.getZoneDistrict());
+        var zone = new CampaignZone(entity.getZoneType(), GeographyPoints.toGeoPoint(entity.getZoneCenter()),
+                entity.getZoneRadiusMeters(), entity.getZoneDistrict());
         return new Campaign(entity.getId(), entity.getBusinessId(), entity.getName(), entity.getDescription(),
                 period, zone, entity.getStatus(), Money.soles(entity.getEstimatedBudget()));
     }
@@ -27,6 +28,7 @@ final class CampaignPersistenceMapper {
         entity.setEndDate(campaign.getPeriod().end());
         entity.setStatus(campaign.getStatus());
         entity.setZoneType(campaign.getZone().type());
+        entity.setZoneCenter(GeographyPoints.toPoint(campaign.getZone().center()));
         entity.setZoneRadiusMeters(campaign.getZone().radiusMeters());
         entity.setZoneDistrict(campaign.getZone().district());
         entity.setEstimatedBudget(campaign.getEstimatedBudget().amount());

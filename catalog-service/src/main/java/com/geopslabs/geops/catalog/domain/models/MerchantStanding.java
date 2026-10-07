@@ -4,6 +4,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class MerchantStanding {
+    public static final BigDecimal INITIAL_COMPLIANCE_INDEX = new BigDecimal("100.00");
+    private static final int NO_OPEN_REPORTS = 0;
+
     private final Long businessId;
     private final String businessName;
     private final boolean rucVerified;
@@ -21,6 +24,11 @@ public class MerchantStanding {
         this.complianceIndex = complianceIndex;
         this.verifiedSeal = verifiedSeal;
         this.updatedAt = updatedAt;
+    }
+
+    public static MerchantStanding provisional(Long businessId, String businessName, LocalDateTime createdAt) {
+        return new MerchantStanding(businessId, businessName, false, NO_OPEN_REPORTS, INITIAL_COMPLIANCE_INDEX,
+                false, createdAt);
     }
 
     public Long getBusinessId() {

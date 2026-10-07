@@ -16,7 +16,10 @@ public record CampaignResponse(
     public record Period(LocalDate start, LocalDate end) {
     }
 
-    public record Zone(String type, Integer radiusMeters, String district) {
+    public record Zone(String type, Center center, Integer radiusMeters, String district) {
+    }
+
+    public record Center(Double latitude, Double longitude) {
     }
 
     public record Budget(BigDecimal amount, String currency) {

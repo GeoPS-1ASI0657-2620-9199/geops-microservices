@@ -98,7 +98,7 @@ class OfferJpaAdapterNearbyTest extends CucumberSpringConfiguration {
 
     private Long campaign(String name, CampaignStatus status) {
         return campaigns.save(new Campaign(null, BUSINESS_ID, name, name, OCTOBER,
-                new CampaignZone(ZoneType.RADIUS, RADIUS_METERS, null), status, Money.soles(PRICE))).getId();
+                new CampaignZone(ZoneType.RADIUS, null, RADIUS_METERS, null), status, Money.soles(PRICE))).getId();
     }
 
     private void offer(String title, Long campaignId, LocalDate validTo, GeoPoint location) {
