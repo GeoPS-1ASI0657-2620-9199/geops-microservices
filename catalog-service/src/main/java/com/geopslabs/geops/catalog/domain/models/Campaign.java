@@ -41,6 +41,10 @@ public class Campaign {
         return businessId.equals(candidateBusinessId);
     }
 
+    public boolean covers(GeoPoint point) {
+        return zone.covers(point);
+    }
+
     public Long getId() {
         return id;
     }

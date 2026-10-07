@@ -11,7 +11,6 @@ import com.geopslabs.geops.catalog.domain.models.MerchantStanding;
 import com.geopslabs.geops.catalog.domain.models.Money;
 import com.geopslabs.geops.catalog.domain.models.Offer;
 import com.geopslabs.geops.catalog.domain.models.ZoneType;
-import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidCampaignZoneException;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.MerchantStandingRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.OfferRepositoryPort;
@@ -75,8 +74,8 @@ public class CampaignCommandService implements CreateCampaignUseCase {
     }
 
     private static CampaignZone zoneOf(CreateCampaignCommand command) {
-        if (command.zoneType() != ZoneType.RADIUS) {
-            throw new InvalidCampaignZoneException(CampaignZone.MIN_RADIUS_METERS, CampaignZone.MAX_RADIUS_METERS);
+        if (command.zoneType() == ZoneType.DISTRICT) {
+            return CampaignZone.district(command.district(), command.zoneCenter());
         }
         return CampaignZone.radius(command.zoneCenter(), command.radiusMeters());
     }
