@@ -41,6 +41,8 @@ class OfferJpaAdapterNearbyTest extends CucumberSpringConfiguration {
     private static final BigDecimal PRICE = new BigDecimal("15.00");
     private static final BigDecimal FULL_COMPLIANCE = new BigDecimal("100.00");
     private static final double SAME_METERS = 0.5;
+    private static final String DISTRICT = "Miraflores";
+    private static final int DISTRICT_CENTER_METERS_EAST = 500;
 
     @Autowired
     private OfferRepositoryPort offers;
@@ -94,6 +96,33 @@ class OfferJpaAdapterNearbyTest extends CucumberSpringConfiguration {
         assertThat(candidates).hasSize(1);
         assertThat(candidates.get(0).location().longitude()).isGreaterThan(ORIGIN.longitude());
         assertThat(candidates.get(0).location().latitude()).isCloseTo(ORIGIN.latitude(), within(1e-9));
+    }
+
+    @Test
+    void readsTheCampaignZoneWithItsCenter() {
+        var districtCenter = east(DISTRICT_CENTER_METERS_EAST);
+        var campaignId = campaigns.save(new Campaign(null, BUSINESS_ID, DISTRICT, DISTRICT, OCTOBER,
+                CampaignZone.district(DISTRICT, districtCenter), CampaignStatus.ACTIVE, Money.soles(PRICE))).getId();
+        offer("Vigente en el distrito", campaignId, VALID_TO, north(300));
+
+        var zone = offers.findPublishedWithin(ORIGIN, RADIUS_METERS, TODAY).get(0).zone();
+
+        assertThat(zone.type()).isEqualTo(ZoneType.DISTRICT);
+        assertThat(zone.district()).isEqualTo(DISTRICT);
+        assertThat(zone.radiusMeters()).isNull();
+        assertThat(zone.center().latitude()).isCloseTo(districtCenter.latitude(), within(1e-9));
+        assertThat(zone.center().longitude()).isCloseTo(districtCenter.longitude(), within(1e-9));
+    }
+
+    @Test
+    void readsACampaignSavedWithoutZoneCenter() {
+        offer("Vigente a 300 m", activeCampaignId, VALID_TO, north(300));
+
+        var zone = offers.findPublishedWithin(ORIGIN, RADIUS_METERS, TODAY).get(0).zone();
+
+        assertThat(zone.type()).isEqualTo(ZoneType.RADIUS);
+        assertThat(zone.center()).isNull();
+        assertThat(zone.radiusMeters()).isEqualTo(RADIUS_METERS);
     }
 
     private Long campaign(String name, CampaignStatus status) {
