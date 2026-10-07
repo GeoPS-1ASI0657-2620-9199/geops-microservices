@@ -3,6 +3,7 @@ package com.geopslabs.geops.catalog.acceptance;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.geopslabs.geops.catalog.domain.models.GeoPoint;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
@@ -22,11 +23,17 @@ public class CampaignSteps {
     private static final Long BUSINESS_OWNER_USER_ID = 9001L;
     private static final Long CONSUMER_ID = 2001L;
     private static final int DEFAULT_RADIUS_METERS = 800;
+    private static final String DEFAULT_NAME = "Campaña de prueba";
     private static final String DEFAULT_OFFER = "Oferta de prueba";
     private static final String DEFAULT_START = "2026-10-05";
     private static final String DEFAULT_END = "2026-10-31";
     private static final String DEFAULT_VALID_TO = "2026-10-15";
-    private static final double METERS_PER_DEGREE = 111_320;
+    private static final double METERS_PER_DEGREE = Math.toRadians(1) * GeoPoint.EARTH_MEAN_RADIUS_METERS;
+    private static final String NORTH = "north";
+    private static final String SOUTH = "south";
+    private static final String EAST = "east";
+    private static final int CREATED = 201;
+    private static final int OK = 200;
     private static final int DISTANCE_TOLERANCE_METERS = 20;
     private static final String WITHOUT_TOKEN = "without a token";
     private static final String CONSUMER_TOKEN = "with a consumer token";
@@ -64,14 +71,34 @@ public class CampaignSteps {
     @When("the business owner creates the campaign {string} from {string} to {string} with a radius zone of {int} meters and the offer {string} valid until {string}")
     public void theBusinessOwnerCreatesTheCampaign(String name, String start, String end, int radiusMeters,
                                                    String offerTitle, String validTo) throws JsonProcessingException {
-        http.post(CAMPAIGNS, token, campaignBody(name, start, end, radiusMeters, offerTitle, validTo));
+        http.post(CAMPAIGNS, token, campaignBody(name, start, end, radiusZone(radiusMeters), offerTitle, validTo));
     }
 
     @When("^the campaign \"([^\"]*)\" is sent (without a token|with a consumer token|with a business token without its id)$")
     public void theCampaignIsSent(String name, String credentials) throws JsonProcessingException {
-        var body = campaignBody(name, DEFAULT_START, DEFAULT_END, DEFAULT_RADIUS_METERS, DEFAULT_OFFER,
+        var body = campaignBody(name, DEFAULT_START, DEFAULT_END, radiusZone(DEFAULT_RADIUS_METERS), DEFAULT_OFFER,
                 DEFAULT_VALID_TO);
         http.post(CAMPAIGNS, tokenFor(credentials), body);
+    }
+
+    @Given("the business owner published the offer {string} in a campaign with a radius zone of {int} meters")
+    public void theBusinessOwnerPublishedWithARadiusZone(String offerTitle, int radiusMeters)
+            throws JsonProcessingException {
+        publish(offerTitle, radiusZone(radiusMeters));
+    }
+
+    @Given("the business owner published the offer {string} in a campaign with the district zone {string} centered {int} meters {word}")
+    public void theBusinessOwnerPublishedWithADistrictZone(String offerTitle, String district, int meters,
+                                                         String direction) throws JsonProcessingException {
+        var center = point(storeOffset(meters, direction));
+        publish(offerTitle, Map.of("type", "DISTRICT", "district", district, "center", center));
+    }
+
+    @When("the business owner creates a campaign with a radius zone without radiusMeters")
+    public void theBusinessOwnerCreatesACampaignWithoutRadius() throws JsonProcessingException {
+        var zone = Map.of("type", "RADIUS", "center", point(store()));
+        http.post(CAMPAIGNS, token, campaignBody(DEFAULT_NAME, DEFAULT_START, DEFAULT_END, zone, DEFAULT_OFFER,
+                DEFAULT_VALID_TO));
     }
 
     @And("the offer {string} is available in its public detail")
@@ -81,10 +108,20 @@ public class CampaignSteps {
         assertThat(detail.path("available").asBoolean()).isTrue();
     }
 
-    @And("a consumer searches for offers {int} meters east of the store within {int} walking minutes")
-    public void aConsumerSearchesEastOfTheStore(int meters, int minutes) {
-        var longitude = storeLongitude + meters / (METERS_PER_DEGREE * Math.cos(Math.toRadians(storeLatitude)));
-        http.get(NEARBY.formatted(storeLatitude, longitude, minutes), null);
+    @And("a consumer searches for offers {int} meters {word} of the store within {int} walking minutes")
+    public void aConsumerSearchesAroundTheStore(int meters, String direction, int minutes) {
+        var consumer = storeOffset(meters, direction);
+        http.get(NEARBY.formatted(consumer.latitude(), consumer.longitude(), minutes), null);
+    }
+
+    @Then("the search results contain {string}")
+    public void theSearchResultsContainTheOffer(String title) throws JsonProcessingException {
+        assertThat(searchResultTitles()).contains(title);
+    }
+
+    @Then("the search results do not contain {string}")
+    public void theSearchResultsDoNotContainTheOffer(String title) throws JsonProcessingException {
+        assertThat(searchResultTitles()).doesNotContain(title);
     }
 
     @Then("the search results contain {string} at about {int} meters")
@@ -112,9 +149,44 @@ public class CampaignSteps {
         return TestIdentity.businessOwnerTokenWithoutBusinessId(BUSINESS_OWNER_USER_ID);
     }
 
-    private String campaignBody(String name, String start, String end, int radiusMeters, String offerTitle,
+    private void publish(String offerTitle, Map<String, Object> zone) throws JsonProcessingException {
+        var published = http.post(CAMPAIGNS, token, campaignBody(DEFAULT_NAME, DEFAULT_START, DEFAULT_END, zone,
+                offerTitle, DEFAULT_VALID_TO));
+        assertThat(published.status()).as(published.body()).isEqualTo(CREATED);
+    }
+
+    private List<String> searchResultTitles() throws JsonProcessingException {
+        assertThat(http.last().status()).as(http.last().body()).isEqualTo(OK);
+        return StreamSupport.stream(http.json(http.last()).path("content").spliterator(), false)
+                .map(offer -> offer.path(TITLE).asText())
+                .toList();
+    }
+
+    private GeoPoint store() {
+        return new GeoPoint(storeLatitude, storeLongitude);
+    }
+
+    private GeoPoint storeOffset(int meters, String direction) {
+        var latitudeDegrees = meters / METERS_PER_DEGREE;
+        var longitudeDegrees = latitudeDegrees / Math.cos(Math.toRadians(storeLatitude));
+        return switch (direction) {
+            case NORTH -> new GeoPoint(storeLatitude + latitudeDegrees, storeLongitude);
+            case SOUTH -> new GeoPoint(storeLatitude - latitudeDegrees, storeLongitude);
+            case EAST -> new GeoPoint(storeLatitude, storeLongitude + longitudeDegrees);
+            default -> throw new IllegalArgumentException("Unknown direction " + direction);
+        };
+    }
+
+    private Map<String, Object> radiusZone(int radiusMeters) {
+        return Map.of("type", "RADIUS", "center", point(store()), "radiusMeters", radiusMeters);
+    }
+
+    private static Map<String, Object> point(GeoPoint point) {
+        return Map.of("latitude", point.latitude(), "longitude", point.longitude());
+    }
+
+    private String campaignBody(String name, String start, String end, Map<String, Object> zone, String offerTitle,
                                 String validTo) throws JsonProcessingException {
-        var store = Map.of("latitude", storeLatitude, "longitude", storeLongitude);
         var offer = Map.of("title", offerTitle, "conditions", "Válido de lunes a viernes de 12:00 a 15:00.",
                 "price", 15.00, "validTo", validTo, "category", "Gastronomía");
         return objectMapper.writeValueAsString(Map.of(
@@ -125,7 +197,7 @@ public class CampaignSteps {
                 "estimatedBudget", Map.of("amount", 500.00, "currency", "PEN"),
                 "storeLocation", Map.of("address", storeAddress, "latitude", storeLatitude,
                         "longitude", storeLongitude),
-                "zone", Map.of("type", "RADIUS", "center", store, "radiusMeters", radiusMeters),
+                "zone", zone,
                 "offers", List.of(offer)));
     }
 
