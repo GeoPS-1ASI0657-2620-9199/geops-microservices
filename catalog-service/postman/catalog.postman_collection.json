@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "GeoPS Catalog",
-    "description": "Catalog service requests. baseUrl is the service port; point it to the gateway to go through nginx. identityUrl points to the gateway, which routes /api/v1/auth to Identity. The two login requests fill token and businessToken; List my campaigns fills campaignId. The seed leaves offer 1 valid and offer 2 expired. The Internal folder only answers with baseUrl on the service port. US05 computes the campaign dates from today in a pre-request script; Create campaign fills campaignId and offerId with the new campaign.",
+    "description": "Catalog service requests. baseUrl is the service port; point it to the gateway to go through nginx. identityUrl points to the gateway, which routes /api/v1/auth to Identity. The two login requests fill token and businessToken; List my campaigns fills campaignId. The seed leaves offer 1 valid and offer 2 expired. The Internal folder only answers with baseUrl on the service port. US05 computes the campaign dates from today in a pre-request script; Create campaign fills campaignId and offerId with the new campaign. US06 creates a campaign with a district zone in Miraflores and searches from inside and outside the zone; it does not change campaignId.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -1312,6 +1312,262 @@
                   "});",
                   "pm.test(\"error code is CAMPAIGN_NOT_FOUND\", function () {",
                   "    pm.expect(pm.response.json().code).to.eql(\"CAMPAIGN_NOT_FOUND\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "US06",
+      "description": "Campaign zones. The store is at Av. Larco 345, Miraflores (-12.1211, -77.0297) and the district zone is centered 1500 m south of it (-12.1346, -77.0297); a district covers 2000 m around its center. The searches use 20 walking minutes (1600 m), so the offer is always inside the search radius and only the zone decides whether it is shown.",
+      "item": [
+        {
+          "name": "Create campaign with a district zone",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/campaigns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "campaigns"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{businessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"{{businessName}}\",\n  \"name\": \"Ceviches en Miraflores\",\n  \"description\": \"Ceviche 2x1 para quienes están en el distrito\",\n  \"period\": {\n    \"start\": \"{{campaignStart}}\",\n    \"end\": \"{{campaignEnd}}\"\n  },\n  \"storeLocation\": {\n    \"address\": \"Av. Larco 345, Miraflores\",\n    \"latitude\": -12.1211,\n    \"longitude\": -77.0297\n  },\n  \"zone\": {\n    \"type\": \"DISTRICT\",\n    \"district\": \"Miraflores\",\n    \"center\": {\n      \"latitude\": -12.1346,\n      \"longitude\": -77.0297\n    }\n  },\n  \"offers\": [\n    {\n      \"title\": \"Ceviche 2x1 en Miraflores\",\n      \"conditions\": \"Un cupón por mesa.\",\n      \"price\": 35,\n      \"validTo\": \"{{offerValidTo}}\",\n      \"category\": \"Gastronomía\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const day = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);",
+                  "pm.collectionVariables.set(\"campaignStart\", day(0));",
+                  "pm.collectionVariables.set(\"campaignEnd\", day(25));",
+                  "pm.collectionVariables.set(\"offerValidTo\", day(10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"the zone is the district with its center\", function () {",
+                  "    const zone = pm.response.json().zone;",
+                  "    pm.expect(zone.type).to.eql(\"DISTRICT\");",
+                  "    pm.expect(zone.district).to.eql(\"Miraflores\");",
+                  "    pm.expect(zone.center.latitude).to.be.closeTo(-12.1346, 0.000001);",
+                  "    pm.expect(zone.radiusMeters).to.eql(null);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search inside the district zone",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/nearby?lat=-12.1256&lng=-77.0297&radiusMinutes=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "-12.1256"
+                },
+                {
+                  "key": "lng",
+                  "value": "-77.0297"
+                },
+                {
+                  "key": "radiusMinutes",
+                  "value": "20"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"500 m south of the store the campaign is shown\", function () {",
+                  "    const titles = pm.response.json().content.map((offer) => offer.title);",
+                  "    pm.expect(titles).to.include(\"Ceviche 2x1 en Miraflores\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search outside the district zone",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/nearby?lat=-12.1076&lng=-77.0297&radiusMinutes=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "-12.1076"
+                },
+                {
+                  "key": "lng",
+                  "value": "-77.0297"
+                },
+                {
+                  "key": "radiusMinutes",
+                  "value": "20"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"1500 m north of the store, 3000 m from the district center, the campaign is hidden\", function () {",
+                  "    const titles = pm.response.json().content.map((offer) => offer.title);",
+                  "    pm.expect(titles).to.not.include(\"Ceviche 2x1 en Miraflores\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create campaign with a district without name",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/campaigns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "campaigns"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{businessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"{{businessName}}\",\n  \"name\": \"Ceviches en Miraflores\",\n  \"description\": \"Ceviche 2x1 para quienes están en el distrito\",\n  \"period\": {\n    \"start\": \"{{campaignStart}}\",\n    \"end\": \"{{campaignEnd}}\"\n  },\n  \"storeLocation\": {\n    \"address\": \"Av. Larco 345, Miraflores\",\n    \"latitude\": -12.1211,\n    \"longitude\": -77.0297\n  },\n  \"zone\": {\n    \"type\": \"DISTRICT\",\n    \"center\": {\n      \"latitude\": -12.1346,\n      \"longitude\": -77.0297\n    }\n  },\n  \"offers\": [\n    {\n      \"title\": \"Ceviche 2x1 en Miraflores\",\n      \"conditions\": \"Un cupón por mesa.\",\n      \"price\": 35,\n      \"validTo\": \"{{offerValidTo}}\",\n      \"category\": \"Gastronomía\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const day = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);",
+                  "pm.collectionVariables.set(\"campaignStart\", day(0));",
+                  "pm.collectionVariables.set(\"campaignEnd\", day(25));",
+                  "pm.collectionVariables.set(\"offerValidTo\", day(10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"code is INVALID_CAMPAIGN_ZONE\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_CAMPAIGN_ZONE\");",
                   "});"
                 ]
               }
