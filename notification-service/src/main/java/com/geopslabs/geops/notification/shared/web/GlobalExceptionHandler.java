@@ -4,6 +4,7 @@ import com.geopslabs.geops.notification.shared.domain.ConflictException;
 import com.geopslabs.geops.notification.shared.domain.DomainException;
 import com.geopslabs.geops.notification.shared.domain.ForbiddenException;
 import com.geopslabs.geops.notification.shared.domain.NotFoundException;
+import com.geopslabs.geops.notification.shared.domain.RuleViolationException;
 import com.geopslabs.geops.notification.shared.domain.UnavailableException;
 import jakarta.servlet.ServletException;
 import org.slf4j.Logger;
@@ -51,6 +52,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnavailableException.class)
     public ResponseEntity<ErrorResponse> handleUnavailable(UnavailableException exception) {
         return respondTo(HttpStatus.SERVICE_UNAVAILABLE, exception);
+    }
+
+    @ExceptionHandler(RuleViolationException.class)
+    public ResponseEntity<ErrorResponse> handleRuleViolation(RuleViolationException exception) {
+        return respondTo(HttpStatus.BAD_REQUEST, exception);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
