@@ -2,8 +2,8 @@
 
 Contextos offers y campaign de GeoPS: las campañas publicitarias de cada comercio y las ofertas
 que publican. Sale de los módulos `offers` y `campaign` del monolito por descomposición por
-subdominio. Cualquier persona consulta una oferta; el dueño de negocio consulta sus campañas y
-las ofertas de cada una.
+subdominio. Cualquier persona consulta una oferta; el dueño de negocio publica campañas con sus
+ofertas y consulta sus campañas y las ofertas de cada una.
 
 ## Endpoints
 
@@ -12,6 +12,7 @@ las ofertas de cada una.
 | `GET /api/v1/offers/nearby` | Pública | Lista las ofertas vigentes a `radiusMinutes` (5 a 20) minutos a pie de `lat` y `lng`, con su distancia en metros y en minutos, ordenadas por tramos de 100 m y, dentro de cada tramo, primero los comercios sin reportes abiertos y luego los verificados. Paginada por `page` y `size` (hasta 20) |
 | `GET /api/v1/offers/{offerId}` | Pública | Detalle de US04: precio, vigencia, condiciones, dirección, coordenadas, categoría, fuente, nombre y sello del comercio, y `available` |
 | `GET /internal/v1/offers/{offerId}/availability` | Interna, sin token | Para reservation-service: `offerId`, `businessId`, `title`, `validTo` y `available` |
+| `POST /api/v1/campaigns` | `ROLE_BUSINESS_OWNER` | Publica una campaña con zona por radio y sus ofertas para el comercio del token; responde `201` con la campaña, su zona y sus ofertas |
 | `GET /api/v1/campaigns` | `ROLE_BUSINESS_OWNER` | Lista las campañas del comercio del token, de la más antigua a la más reciente |
 | `GET /api/v1/campaigns/{campaignId}` | `ROLE_BUSINESS_OWNER` dueño de la campaña | Devuelve la campaña con su periodo, zona, estado y presupuesto |
 | `GET /api/v1/campaigns/{campaignId}/offers` | `ROLE_BUSINESS_OWNER` dueño de la campaña | Lista las ofertas de la campaña |
@@ -22,6 +23,14 @@ tiene que ser de un comercio afiliado: una oferta de fuente pública responde `a
 sin `businessId`. Una oferta retirada (`REMOVED`) responde 404 en el detalle y `available: false`
 en la disponibilidad.
 
+Al publicar una campaña, todo se valida antes de guardar: el periodo (fin desde hoy en Lima y no
+antes del inicio), la zona (centro y radio de 400 a 5 000 m) y que la vigencia de cada oferta esté
+dentro del periodo. Después, en una sola transacción, se crea la copia local del comercio en
+`merchant_standings` si no existe, con el `businessName` que envía el formulario (hasta que llegue
+`BusinessRegistered` con US33), y se guardan la campaña `ACTIVE` y sus ofertas `PUBLISHED` con la
+dirección y las coordenadas del local. Sin `estimatedBudget`, el presupuesto es 0.00 PEN. Las zonas
+por distrito llegan con US06.
+
 El comercio es el claim `businessId` del token. El servicio valida el token con el JWKS de Identity
 (`IDENTITY_JWKS_URI`), el emisor `geops-identity` y la audiencia `geops-api`. Las rutas
 `/internal/v1/**` quedan abiertas dentro de la red porque el gateway no las publica.
@@ -31,7 +40,11 @@ Los errores responden `{"code": "...", "message": "..."}`. Los ejemplos de cada 
 
 | Código | HTTP | Cuándo |
 |---|---|---|
-| `INVALID_REQUEST` | 400 | El id no es un número |
+| `INVALID_REQUEST` | 400 | El id no es un número, o falta un campo obligatorio de la campaña o no tiene ofertas |
+| `CAMPAIGN_ALREADY_ENDED` | 400 | La campaña termina antes de hoy en Lima |
+| `INVALID_CAMPAIGN_PERIOD` | 400 | La campaña termina antes de empezar |
+| `INVALID_CAMPAIGN_ZONE` | 400 | Zona sin centro, radio fuera de 400 a 5 000 m o zona por distrito (llega con US06) |
+| `OFFER_VALIDITY_OUTSIDE_CAMPAIGN` | 400 | La vigencia de una oferta queda fuera del periodo de la campaña |
 | `UNAUTHORIZED` | 401 | Sin token, o token vencido, de otro emisor, para otra audiencia o con otra firma |
 | `FORBIDDEN` | 403 | El token no tiene el rol, o la campaña es de otro comercio |
 | `OFFER_NOT_FOUND`, `CAMPAIGN_NOT_FOUND` | 404 | La oferta o la campaña no existen |
@@ -60,6 +73,7 @@ PostgreSQL con PostGIS en Testcontainers, con tokens firmados con una clave de p
 | US03 Buscar ofertas por ubicación (GEO-29) | `US03-search-offers-by-location.feature` | 4 |
 | US04 Consultar el detalle de una oferta (GEO-23) | `US04-view-offer-detail.feature` | 4 |
 | Disponibilidad para Reservation (Tabla 38) | `offer-availability.feature` | 3 |
+| US05 Crear una campaña publicitaria (GEO-30) | `US05-create-advertising-campaign.feature` | 6 |
 
 ## Ejecución local
 
@@ -75,7 +89,9 @@ se publica: se toma el JWKS del gateway con
 
 La colección `postman/catalog.postman_collection.json` tiene un caso correcto y uno de error por
 endpoint; las dos peticiones de login de Identity llenan `token` y `businessToken`, y
-«List my campaigns» llena `campaignId`. La carpeta `Internal` solo responde con `baseUrl` en el puerto
+«List my campaigns» llena `campaignId`. La carpeta `US05` publica una campaña con el token del
+negocio (las fechas se calculan desde hoy en un script previo) y prueba un periodo vencido, un
+token de consumidor y la falta de token. La carpeta `Internal` solo responde con `baseUrl` en el puerto
 del servicio; su última petición comprueba que el gateway no publica `/internal`.
 
 Hasta que llegue la creación de campañas (US05) no hay endpoint que cree datos. Para correr la

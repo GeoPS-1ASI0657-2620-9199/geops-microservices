@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "GeoPS Catalog",
-    "description": "Catalog service requests. baseUrl is the service port; point it to the gateway to go through nginx. identityUrl points to the gateway, which routes /api/v1/auth to Identity. The two login requests fill token and businessToken; List my campaigns fills campaignId. The seed leaves offer 1 valid and offer 2 expired. The Internal folder only answers with baseUrl on the service port.",
+    "description": "Catalog service requests. baseUrl is the service port; point it to the gateway to go through nginx. identityUrl points to the gateway, which routes /api/v1/auth to Identity. The two login requests fill token and businessToken; List my campaigns fills campaignId. The seed leaves offer 1 valid and offer 2 expired. The Internal folder only answers with baseUrl on the service port. US05 computes the campaign dates from today in a pre-request script; Create campaign fills campaignId and offerId with the new campaign.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -747,6 +747,274 @@
       ]
     },
     {
+      "name": "US05",
+      "item": [
+        {
+          "name": "Create campaign",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/campaigns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "campaigns"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{businessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"{{businessName}}\",\n  \"name\": \"Almuerzos de la semana\",\n  \"description\": \"Menú ejecutivo a mitad de precio para oficinas cercanas\",\n  \"period\": {\n    \"start\": \"{{campaignStart}}\",\n    \"end\": \"{{campaignEnd}}\"\n  },\n  \"estimatedBudget\": {\n    \"amount\": 500,\n    \"currency\": \"PEN\"\n  },\n  \"storeLocation\": {\n    \"address\": \"Jr. Huánuco 1250, La Victoria\",\n    \"latitude\": -12.067,\n    \"longitude\": -77.024\n  },\n  \"zone\": {\n    \"type\": \"RADIUS\",\n    \"center\": {\n      \"latitude\": -12.067,\n      \"longitude\": -77.024\n    },\n    \"radiusMeters\": 800\n  },\n  \"offers\": [\n    {\n      \"title\": \"2x1 en almuerzos ejecutivos\",\n      \"conditions\": \"Válido de lunes a viernes de 12:00 a 15:00.\",\n      \"price\": 15,\n      \"validTo\": \"{{offerValidTo}}\",\n      \"category\": \"Gastronomía\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const day = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);",
+                  "pm.collectionVariables.set(\"campaignStart\", day(0));",
+                  "pm.collectionVariables.set(\"campaignEnd\", day(25));",
+                  "pm.collectionVariables.set(\"offerValidTo\", day(10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"campaign is ACTIVE\", function () {",
+                  "    pm.expect(pm.response.json().status).to.eql(\"ACTIVE\");",
+                  "});",
+                  "pm.collectionVariables.set(\"campaignId\", pm.response.json().campaignId);",
+                  "pm.collectionVariables.set(\"offerId\", pm.response.json().offers[0].offerId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create campaign whose validity ended",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/campaigns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "campaigns"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{businessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"{{businessName}}\",\n  \"name\": \"Almuerzos de la semana\",\n  \"description\": \"Menú ejecutivo a mitad de precio para oficinas cercanas\",\n  \"period\": {\n    \"start\": \"2026-09-01\",\n    \"end\": \"2026-09-30\"\n  },\n  \"estimatedBudget\": {\n    \"amount\": 500,\n    \"currency\": \"PEN\"\n  },\n  \"storeLocation\": {\n    \"address\": \"Jr. Huánuco 1250, La Victoria\",\n    \"latitude\": -12.067,\n    \"longitude\": -77.024\n  },\n  \"zone\": {\n    \"type\": \"RADIUS\",\n    \"center\": {\n      \"latitude\": -12.067,\n      \"longitude\": -77.024\n    },\n    \"radiusMeters\": 800\n  },\n  \"offers\": [\n    {\n      \"title\": \"2x1 en almuerzos ejecutivos\",\n      \"conditions\": \"Válido de lunes a viernes de 12:00 a 15:00.\",\n      \"price\": 15,\n      \"validTo\": \"2026-09-30\",\n      \"category\": \"Gastronomía\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"error code is CAMPAIGN_ALREADY_ENDED\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"CAMPAIGN_ALREADY_ENDED\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create campaign as consumer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/campaigns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "campaigns"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"{{businessName}}\",\n  \"name\": \"Almuerzos de la semana\",\n  \"description\": \"Menú ejecutivo a mitad de precio para oficinas cercanas\",\n  \"period\": {\n    \"start\": \"{{campaignStart}}\",\n    \"end\": \"{{campaignEnd}}\"\n  },\n  \"estimatedBudget\": {\n    \"amount\": 500,\n    \"currency\": \"PEN\"\n  },\n  \"storeLocation\": {\n    \"address\": \"Jr. Huánuco 1250, La Victoria\",\n    \"latitude\": -12.067,\n    \"longitude\": -77.024\n  },\n  \"zone\": {\n    \"type\": \"RADIUS\",\n    \"center\": {\n      \"latitude\": -12.067,\n      \"longitude\": -77.024\n    },\n    \"radiusMeters\": 800\n  },\n  \"offers\": [\n    {\n      \"title\": \"2x1 en almuerzos ejecutivos\",\n      \"conditions\": \"Válido de lunes a viernes de 12:00 a 15:00.\",\n      \"price\": 15,\n      \"validTo\": \"{{offerValidTo}}\",\n      \"category\": \"Gastronomía\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const day = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);",
+                  "pm.collectionVariables.set(\"campaignStart\", day(0));",
+                  "pm.collectionVariables.set(\"campaignEnd\", day(25));",
+                  "pm.collectionVariables.set(\"offerValidTo\", day(10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test(\"error code is FORBIDDEN\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"FORBIDDEN\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create campaign without token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/campaigns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "campaigns"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"{{businessName}}\",\n  \"name\": \"Almuerzos de la semana\",\n  \"description\": \"Menú ejecutivo a mitad de precio para oficinas cercanas\",\n  \"period\": {\n    \"start\": \"{{campaignStart}}\",\n    \"end\": \"{{campaignEnd}}\"\n  },\n  \"estimatedBudget\": {\n    \"amount\": 500,\n    \"currency\": \"PEN\"\n  },\n  \"storeLocation\": {\n    \"address\": \"Jr. Huánuco 1250, La Victoria\",\n    \"latitude\": -12.067,\n    \"longitude\": -77.024\n  },\n  \"zone\": {\n    \"type\": \"RADIUS\",\n    \"center\": {\n      \"latitude\": -12.067,\n      \"longitude\": -77.024\n    },\n    \"radiusMeters\": 800\n  },\n  \"offers\": [\n    {\n      \"title\": \"2x1 en almuerzos ejecutivos\",\n      \"conditions\": \"Válido de lunes a viernes de 12:00 a 15:00.\",\n      \"price\": 15,\n      \"validTo\": \"{{offerValidTo}}\",\n      \"category\": \"Gastronomía\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const day = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);",
+                  "pm.collectionVariables.set(\"campaignStart\", day(0));",
+                  "pm.collectionVariables.set(\"campaignEnd\", day(25));",
+                  "pm.collectionVariables.set(\"offerValidTo\", day(10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"error code is UNAUTHORIZED\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"UNAUTHORIZED\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Campaigns",
       "item": [
         {
@@ -1101,6 +1369,22 @@
     {
       "key": "gatewayUrl",
       "value": "http://localhost:8080"
+    },
+    {
+      "key": "businessName",
+      "value": "Bodega Doña Rosa"
+    },
+    {
+      "key": "campaignStart",
+      "value": ""
+    },
+    {
+      "key": "campaignEnd",
+      "value": ""
+    },
+    {
+      "key": "offerValidTo",
+      "value": ""
     }
   ]
 }
