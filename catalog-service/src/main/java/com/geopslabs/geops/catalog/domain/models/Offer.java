@@ -1,5 +1,7 @@
 package com.geopslabs.geops.catalog.domain.models;
 
+import com.geopslabs.geops.catalog.domain.models.exceptions.OfferValidityOutsideCampaignException;
+
 import java.time.LocalDate;
 
 public class Offer {
@@ -39,6 +41,22 @@ public class Offer {
         this.sourceName = sourceName;
         this.status = status;
         this.location = location;
+    }
+
+    @SuppressWarnings("java:S107")
+    public static Offer publishFor(Campaign campaign, String title, String conditions, Money price, LocalDate validTo,
+                                   String category, String imageUrl, String address, GeoPoint location) {
+        if (!campaign.getPeriod().contains(validTo)) {
+            throw new OfferValidityOutsideCampaignException(title);
+        }
+        return new Offer(null, campaign.getId(), campaign.getBusinessId(), title, conditions, price, validTo,
+                category, GeocodingStatus.GEOCODED, address, imageUrl, OfferSource.AFFILIATED, null,
+                OfferStatus.PUBLISHED, location);
+    }
+
+    public Offer inCampaign(Long savedCampaignId) {
+        return new Offer(id, savedCampaignId, businessId, title, conditions, price, validTo, category,
+                geocodingStatus, address, imageUrl, source, sourceName, status, location);
     }
 
     public boolean isValidOn(LocalDate date) {
