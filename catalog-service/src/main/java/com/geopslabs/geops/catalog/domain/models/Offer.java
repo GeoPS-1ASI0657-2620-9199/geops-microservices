@@ -17,11 +17,13 @@ public class Offer {
     private final OfferSource source;
     private final String sourceName;
     private final OfferStatus status;
+    private final GeoPoint location;
 
     @SuppressWarnings("java:S107")
     public Offer(Long id, Long campaignId, Long businessId, String title, String conditions, Money price,
                  LocalDate validTo, String category, GeocodingStatus geocodingStatus, String address,
-                 String imageUrl, OfferSource source, String sourceName, OfferStatus status) {
+                 String imageUrl, OfferSource source, String sourceName, OfferStatus status,
+                 GeoPoint location) {
         this.id = id;
         this.campaignId = campaignId;
         this.businessId = businessId;
@@ -36,6 +38,7 @@ public class Offer {
         this.source = source;
         this.sourceName = sourceName;
         this.status = status;
+        this.location = location;
     }
 
     public Long getId() {
@@ -92,5 +95,9 @@ public class Offer {
 
     public OfferStatus getStatus() {
         return status;
+    }
+
+    public GeoPoint getLocation() {
+        return location;
     }
 }
