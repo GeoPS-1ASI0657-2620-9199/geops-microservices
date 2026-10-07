@@ -20,6 +20,11 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+    baseline-on-migrate: false
+    clean-disabled: true
+    out-of-order: false
   security:
     oauth2:
       resourceserver:

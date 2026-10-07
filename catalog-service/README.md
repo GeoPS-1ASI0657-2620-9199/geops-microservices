@@ -55,10 +55,32 @@ Los errores responden `{"code": "...", "message": "..."}`. Los ejemplos de cada 
 
 ## Base de datos
 
-`catalog_db` con PostGIS. `V1__baseline.sql` crea las tablas del diagrama de base de datos del
-informe sin `offers.location` ni su índice espacial, que llegan en
-`V2__add_offer_location_and_spatial_index.sql` con US01. Las migraciones de este servicio siguen
-desde `V3`. Una migración que ya está en `develop` no se edita: se corrige con otra nueva.
+`catalog_db` con PostGIS. El esquema solo cambia con migraciones de Flyway en
+`src/main/resources/db/migration`; Hibernate se limita a validarlo (`ddl-auto: validate`).
+
+| Versión | Archivo | Contenido |
+|---|---|---|
+| V1 | `V1__baseline.sql` | Tablas del diagrama de base de datos del informe, sin `offers.location` ni su índice espacial |
+| V2 | `V2__add_offer_location_and_spatial_index.sql` | `offers.location` e `ix_offers_location` (US01) |
+| V3 en adelante | — | Siguientes cambios de Catalog |
+
+Reglas:
+
+- Cada cambio de esquema es un archivo nuevo `V<n>__<descripcion_en_ingles>.sql`, con la versión siguiente a la última.
+- Una migración que ya está en `develop` no se edita: Flyway compara su checksum y el servicio no arranca. Se corrige con otra nueva.
+- `CREATE EXTENSION postgis` no va en las migraciones: la crea `platform/postgres/init-databases.sh` con el superusuario.
+- `clean` está deshabilitado y no hay baseline automático: la base solo se borra desde `platform`.
+
+Para revertir un cambio que ya está en `develop` se agrega otra migración que lo deshace; Flyway
+Community no tiene `undo` y la historia de `flyway_schema_history` queda completa. Por ejemplo, si
+`V3__add_offer_stock.sql` agregó `offers.stock`, la reversión es
+`V4__revert_offer_stock.sql` con `ALTER TABLE offers DROP COLUMN stock;`, y la entidad JPA deja de
+mapear esa columna en el mismo commit.
+
+Para empezar de cero en local se borra el volumen de la plataforma, lo que borra todas las bases:
+`docker compose down -v` y `docker compose up -d` en `platform`. Si aparece «Detected resolved
+migration not applied» es porque la base tiene una versión posterior a otra que falta (por ejemplo,
+una V3 aplicada antes de recibir la V2); se resuelve igual.
 
 ## Escenarios de aceptación
 
@@ -74,6 +96,7 @@ PostgreSQL con PostGIS en Testcontainers, con tokens firmados con una clave de p
 | US04 Consultar el detalle de una oferta (GEO-23) | `US04-view-offer-detail.feature` | 4 |
 | Disponibilidad para Reservation (Tabla 38) | `offer-availability.feature` | 3 |
 | US05 Crear una campaña publicitaria (GEO-30) | `US05-create-advertising-campaign.feature` | 6 |
+| Migraciones versionadas (GEO-9, GEO-51) | `schema-migrations.feature` | 3 |
 
 ## Ejecución local
 
