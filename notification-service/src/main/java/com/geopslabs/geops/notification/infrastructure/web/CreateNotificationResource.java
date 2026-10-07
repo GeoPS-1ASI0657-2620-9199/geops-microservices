@@ -19,7 +19,7 @@ import com.geopslabs.geops.notification.domain.models.NotificationType;
  * @author GeOps Labs
  */
 public record CreateNotificationResource(
-    Long userId,
+    Long recipientId,
     NotificationType type,
     String title,
     String message,

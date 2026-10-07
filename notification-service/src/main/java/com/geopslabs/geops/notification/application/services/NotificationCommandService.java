@@ -1,6 +1,5 @@
 package com.geopslabs.geops.notification.application.services;
 
-import com.geopslabs.geops.backend.identity.infrastructure.persistence.jpa.UserRepository;
 import com.geopslabs.geops.notification.domain.models.Notification;
 import com.geopslabs.geops.notification.domain.models.commands.CreateNotificationCommand;
 import com.geopslabs.geops.notification.domain.models.commands.DeleteNotificationCommand;
@@ -24,25 +23,15 @@ import java.util.Optional;
 public class NotificationCommandService implements NotificationCommandUseCase {
 
     private final NotificationRepositoryPort notificationRepository;
-    private final UserRepository userRepository;
 
-    public NotificationCommandService(NotificationRepositoryPort notificationRepository,
-                                          UserRepository userRepository) {
+    public NotificationCommandService(NotificationRepositoryPort notificationRepository) {
         this.notificationRepository = notificationRepository;
-        this.userRepository = userRepository;
     }
 
     @Override
     public Optional<Notification> handle(CreateNotificationCommand command) {
         try {
-            var userOptional = userRepository.findById(command.userId());
-            
-            if (userOptional.isEmpty()) {
-                System.err.println("User with ID " + command.userId() + " not found");
-                return Optional.empty();
-            }
-
-            var notification = new Notification(command, userOptional.get());
+            var notification = new Notification(command);
             var savedNotification = notificationRepository.save(notification);
             return Optional.of(savedNotification);
         } catch (Exception e) {
@@ -90,7 +79,7 @@ public class NotificationCommandService implements NotificationCommandUseCase {
     @Override
     public int markAllAsReadForUser(Long userId) {
         try {
-            return notificationRepository.markAllAsReadByUserId(userId);
+            return notificationRepository.markAllAsReadByRecipientId(userId);
         } catch (Exception e) {
             System.err.println("Error marking all notifications as read for user: " + e.getMessage());
             return 0;

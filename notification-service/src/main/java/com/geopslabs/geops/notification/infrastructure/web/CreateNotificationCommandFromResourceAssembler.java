@@ -22,7 +22,7 @@ public class CreateNotificationCommandFromResourceAssembler {
      */
     public static CreateNotificationCommand toCommandFromResource(CreateNotificationResource resource) {
         return new CreateNotificationCommand(
-            resource.userId(),
+            resource.recipientId(),
             resource.type(),
             resource.title(),
             resource.message(),

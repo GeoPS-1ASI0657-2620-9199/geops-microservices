@@ -26,7 +26,7 @@ public interface NotificationJpaRepository extends JpaRepository<NotificationJpa
      * @param userId User ID
      * @return List of notifications
      */
-    List<NotificationJpaEntity> findByUser_IdOrderByCreatedAtDesc(Long userId);
+    List<NotificationJpaEntity> findByRecipientIdOrderByCreatedAtDesc(Long recipientId);
 
     /**
      * Count unread notifications for a user
@@ -35,7 +35,7 @@ public interface NotificationJpaRepository extends JpaRepository<NotificationJpa
      * @param isRead Read status (false for unread)
      * @return Count of unread notifications
      */
-    Long countByUser_IdAndIsRead(Long userId, Boolean isRead);
+    Long countByRecipientIdAndIsRead(Long recipientId, Boolean isRead);
 
     /**
      * Find all unread notifications for a user
@@ -44,7 +44,7 @@ public interface NotificationJpaRepository extends JpaRepository<NotificationJpa
      * @param isRead Read status
      * @return List of notifications
      */
-    List<NotificationJpaEntity> findByUser_IdAndIsReadOrderByCreatedAtDesc(Long userId, Boolean isRead);
+    List<NotificationJpaEntity> findByRecipientIdAndIsReadOrderByCreatedAtDesc(Long recipientId, Boolean isRead);
 
     /**
      * Mark all notifications as read for a user
@@ -53,6 +53,6 @@ public interface NotificationJpaRepository extends JpaRepository<NotificationJpa
      * @return Number of updated notifications
      */
     @Modifying
-    @Query("UPDATE NotificationJpaEntity n SET n.isRead = true WHERE n.user.id = :userId AND n.isRead = false")
-    int markAllAsReadByUserId(@Param("userId") Long userId);
+    @Query("UPDATE NotificationJpaEntity n SET n.isRead = true WHERE n.recipientId = :recipientId AND n.isRead = false")
+    int markAllAsReadByRecipientId(@Param("recipientId") Long recipientId);
 }

@@ -1,33 +1,32 @@
 package com.geopslabs.geops.notification.infrastructure.persistence;
 
-import com.geopslabs.geops.backend.identity.domain.model.aggregates.User;
-import com.geopslabs.geops.backend.shared.domain.model.aggregates.AuditableAbstractAggregateRoot;
 import com.geopslabs.geops.notification.domain.models.NotificationType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
+
 @Entity
-@Table(name = "notifications", indexes = {
-    @Index(name = "idx_user_id", columnList = "user_id"),
-    @Index(name = "idx_is_read", columnList = "is_read"),
-    @Index(name = "idx_created_at", columnList = "created_at")
-})
+@Table(name = "notifications")
 @Getter
 @Setter
-public class NotificationJpaEntity extends AuditableAbstractAggregateRoot<NotificationJpaEntity> {
+public class NotificationJpaEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "recipient_id", nullable = false)
+    private Long recipientId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false, length = 50)
@@ -50,4 +49,14 @@ public class NotificationJpaEntity extends AuditableAbstractAggregateRoot<Notifi
 
     @Column(name = "action_url", length = 500)
     private String actionUrl;
+
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
+
+    @PrePersist
+    void stampCreatedAt() {
+        if (createdAt == null) {
+            createdAt = Instant.now();
+        }
+    }
 }

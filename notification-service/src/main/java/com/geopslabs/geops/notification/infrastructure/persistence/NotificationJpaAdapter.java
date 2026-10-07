@@ -29,15 +29,15 @@ public class NotificationJpaAdapter implements NotificationRepositoryPort {
     }
 
     @Override
-    public List<Notification> findByUserIdOrderByCreatedAtDesc(Long userId) {
-        return repository.findByUser_IdOrderByCreatedAtDesc(userId).stream()
+    public List<Notification> findByRecipientIdOrderByCreatedAtDesc(Long recipientId) {
+        return repository.findByRecipientIdOrderByCreatedAtDesc(recipientId).stream()
                 .map(NotificationPersistenceMapper::toDomain)
                 .toList();
     }
 
     @Override
-    public Long countByUserIdAndIsRead(Long userId, Boolean isRead) {
-        return repository.countByUser_IdAndIsRead(userId, isRead);
+    public Long countByRecipientIdAndIsRead(Long recipientId, Boolean isRead) {
+        return repository.countByRecipientIdAndIsRead(recipientId, isRead);
     }
 
     @Override
@@ -51,7 +51,7 @@ public class NotificationJpaAdapter implements NotificationRepositoryPort {
     }
 
     @Override
-    public int markAllAsReadByUserId(Long userId) {
-        return repository.markAllAsReadByUserId(userId);
+    public int markAllAsReadByRecipientId(Long recipientId) {
+        return repository.markAllAsReadByRecipientId(recipientId);
     }
 }

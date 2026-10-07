@@ -1,13 +1,12 @@
 package com.geopslabs.geops.notification.domain.models;
 
 import com.geopslabs.geops.notification.domain.models.commands.CreateNotificationCommand;
-import com.geopslabs.geops.backend.identity.domain.model.aggregates.User;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 public class Notification {
     private Long id;
-    private User user;
+    private Long recipientId;
     private NotificationType type;
     private String title;
     private String message;
@@ -15,11 +14,10 @@ public class Notification {
     private String relatedEntityId;
     private String relatedEntityType;
     private String actionUrl;
-    private Date createdAt;
-    private Date updatedAt;
+    private LocalDateTime createdAt;
 
-    public Notification(CreateNotificationCommand command, User user) {
-        this.user = user;
+    public Notification(CreateNotificationCommand command) {
+        this.recipientId = command.recipientId();
         this.type = command.type();
         this.title = command.title();
         this.message = command.message();
@@ -30,11 +28,11 @@ public class Notification {
     }
 
     @SuppressWarnings("java:S107")
-    public Notification(Long id, User user, NotificationType type, String title, String message, Boolean isRead,
-                        String relatedEntityId, String relatedEntityType, String actionUrl, Date createdAt,
-                        Date updatedAt) {
+    public Notification(Long id, Long recipientId, NotificationType type, String title, String message,
+                        Boolean isRead, String relatedEntityId, String relatedEntityType, String actionUrl,
+                        LocalDateTime createdAt) {
         this.id = id;
-        this.user = user;
+        this.recipientId = recipientId;
         this.type = type;
         this.title = title;
         this.message = message;
@@ -43,15 +41,14 @@ public class Notification {
         this.relatedEntityType = relatedEntityType;
         this.actionUrl = actionUrl;
         this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
     }
 
     public Long getId() {
         return id;
     }
 
-    public User getUser() {
-        return user;
+    public Long getRecipientId() {
+        return recipientId;
     }
 
     public NotificationType getType() {
@@ -82,16 +79,8 @@ public class Notification {
         return actionUrl;
     }
 
-    public Date getCreatedAt() {
+    public LocalDateTime getCreatedAt() {
         return createdAt;
-    }
-
-    public Date getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public Long getUserId() {
-        return this.user != null ? this.user.getId() : null;
     }
 
     public void markAsRead() {

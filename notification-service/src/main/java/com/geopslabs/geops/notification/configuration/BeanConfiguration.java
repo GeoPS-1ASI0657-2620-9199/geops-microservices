@@ -1,6 +1,5 @@
 package com.geopslabs.geops.notification.configuration;
 
-import com.geopslabs.geops.backend.identity.infrastructure.persistence.jpa.UserRepository;
 import com.geopslabs.geops.notification.application.services.NotificationCommandService;
 import com.geopslabs.geops.notification.application.services.NotificationFactoryService;
 import com.geopslabs.geops.notification.application.services.NotificationQueryService;
@@ -14,9 +13,8 @@ import org.springframework.context.annotation.Configuration;
 public class BeanConfiguration {
 
     @Bean
-    public NotificationCommandUseCase notificationCommandUseCase(NotificationRepositoryPort notificationRepository,
-                                                                 UserRepository userRepository) {
-        return new NotificationCommandService(notificationRepository, userRepository);
+    public NotificationCommandUseCase notificationCommandUseCase(NotificationRepositoryPort notificationRepository) {
+        return new NotificationCommandService(notificationRepository);
     }
 
     @Bean

@@ -23,7 +23,7 @@ public class NotificationResourceFromEntityAssembler {
     public static NotificationResource toResourceFromEntity(Notification entity) {
         return new NotificationResource(
             entity.getId(),
-            entity.getUserId(),
+            entity.getRecipientId(),
             entity.getType(),
             entity.getTitle(),
             entity.getMessage(),

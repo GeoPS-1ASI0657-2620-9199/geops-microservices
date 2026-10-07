@@ -7,7 +7,7 @@ import com.geopslabs.geops.notification.domain.models.NotificationType;
  *
  * Command to create a new notification in the system
  *
- * @param userId User who will receive the notification
+ * @param recipientId The recipient of the notification
  * @param type Type of notification
  * @param title Notification title
  * @param message Notification message
@@ -19,7 +19,7 @@ import com.geopslabs.geops.notification.domain.models.NotificationType;
  * @author GeOps Labs
  */
 public record CreateNotificationCommand(
-    Long userId,
+    Long recipientId,
     NotificationType type,
     String title,
     String message,
@@ -28,8 +28,8 @@ public record CreateNotificationCommand(
     String actionUrl
 ) {
     public CreateNotificationCommand {
-        if (userId == null) {
-            throw new IllegalArgumentException("User ID cannot be null");
+        if (recipientId == null) {
+            throw new IllegalArgumentException("Recipient ID cannot be null");
         }
         if (type == null) {
             throw new IllegalArgumentException("Notification type cannot be null");

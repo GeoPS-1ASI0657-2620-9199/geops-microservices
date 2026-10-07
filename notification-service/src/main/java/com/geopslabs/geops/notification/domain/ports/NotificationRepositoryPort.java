@@ -10,13 +10,13 @@ public interface NotificationRepositoryPort {
 
     Optional<Notification> findById(Long id);
 
-    List<Notification> findByUserIdOrderByCreatedAtDesc(Long userId);
+    List<Notification> findByRecipientIdOrderByCreatedAtDesc(Long recipientId);
 
-    Long countByUserIdAndIsRead(Long userId, Boolean isRead);
+    Long countByRecipientIdAndIsRead(Long recipientId, Boolean isRead);
 
     boolean existsById(Long id);
 
     void deleteById(Long id);
 
-    int markAllAsReadByUserId(Long userId);
+    int markAllAsReadByRecipientId(Long recipientId);
 }
