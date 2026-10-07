@@ -227,6 +227,323 @@
       ]
     },
     {
+      "name": "Nearby",
+      "item": [
+        {
+          "name": "Search nearby offers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/nearby?lat=-12.0697&lng=-77.0240&radiusMinutes=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "-12.0697"
+                },
+                {
+                  "key": "lng",
+                  "value": "-77.0240"
+                },
+                {
+                  "key": "radiusMinutes",
+                  "value": "10"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"the seed offer is about 300 m away\", function () {",
+                  "    const first = pm.response.json().content[0];",
+                  "    pm.expect(first.title).to.eql(\"Menú ejecutivo a mitad de precio\");",
+                  "    pm.expect(first.distanceMeters).to.be.within(290, 310);",
+                  "    pm.expect(first.walkMinutes).to.eql(4);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search a zone without offers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/nearby?lat=-12.2500&lng=-76.9000&radiusMinutes=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "-12.2500"
+                },
+                {
+                  "key": "lng",
+                  "value": "-76.9000"
+                },
+                {
+                  "key": "radiusMinutes",
+                  "value": "5"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"the page is empty\", function () {",
+                  "    pm.expect(pm.response.json().content).to.be.empty;",
+                  "    pm.expect(pm.response.json().totalPages).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search with 4 minutes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/nearby?lat=-12.0697&lng=-77.0240&radiusMinutes=4",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "-12.0697"
+                },
+                {
+                  "key": "lng",
+                  "value": "-77.0240"
+                },
+                {
+                  "key": "radiusMinutes",
+                  "value": "4"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"code is RADIUS_OUT_OF_RANGE\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"RADIUS_OUT_OF_RANGE\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search with 21 minutes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/nearby?lat=-12.0697&lng=-77.0240&radiusMinutes=21",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "-12.0697"
+                },
+                {
+                  "key": "lng",
+                  "value": "-77.0240"
+                },
+                {
+                  "key": "radiusMinutes",
+                  "value": "21"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"code is RADIUS_OUT_OF_RANGE\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"RADIUS_OUT_OF_RANGE\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search from an invalid latitude",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/nearby?lat=95&lng=-77.0240&radiusMinutes=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "95"
+                },
+                {
+                  "key": "lng",
+                  "value": "-77.0240"
+                },
+                {
+                  "key": "radiusMinutes",
+                  "value": "10"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"code is INVALID_COORDINATES\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_COORDINATES\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search without radius",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/nearby?lat=-12.0697&lng=-77.0240",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "-12.0697"
+                },
+                {
+                  "key": "lng",
+                  "value": "-77.0240"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"code is MISSING_PARAMETER\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"MISSING_PARAMETER\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Campaigns",
       "item": [
         {
