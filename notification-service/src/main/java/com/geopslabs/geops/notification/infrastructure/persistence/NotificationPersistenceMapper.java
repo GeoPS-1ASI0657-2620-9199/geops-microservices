@@ -2,7 +2,6 @@ package com.geopslabs.geops.notification.infrastructure.persistence;
 
 import com.geopslabs.geops.notification.domain.models.Notification;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 
@@ -12,8 +11,9 @@ final class NotificationPersistenceMapper {
     }
 
     static Notification toDomain(NotificationJpaEntity entity) {
-        return new Notification(entity.getId(), entity.getRecipientId(), entity.getType(), entity.getTitle(),
-                entity.getMessage(), entity.getRelatedEntityId(), toUtc(entity.getCreatedAt()));
+        return new Notification(entity.getId(), entity.getRecipientId(), entity.getType(), entity.getChannel(),
+                entity.getTitle(), entity.getMessage(), entity.getRelatedEntityId(), entity.getStatus(),
+                LocalDateTime.ofInstant(entity.getSentAt(), ZoneOffset.UTC));
     }
 
     static NotificationJpaEntity toEntity(Notification notification) {
@@ -21,18 +21,12 @@ final class NotificationPersistenceMapper {
         entity.setId(notification.getId());
         entity.setRecipientId(notification.getRecipientId());
         entity.setType(notification.getType());
+        entity.setChannel(notification.getChannel());
         entity.setTitle(notification.getTitle());
         entity.setMessage(notification.getMessage());
         entity.setRelatedEntityId(notification.getRelatedEntityId());
-        entity.setCreatedAt(toInstant(notification.getCreatedAt()));
+        entity.setStatus(notification.getStatus());
+        entity.setSentAt(notification.getSentAt().toInstant(ZoneOffset.UTC));
         return entity;
-    }
-
-    private static LocalDateTime toUtc(Instant instant) {
-        return instant == null ? null : LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
-    }
-
-    private static Instant toInstant(LocalDateTime dateTime) {
-        return dateTime == null ? null : dateTime.toInstant(ZoneOffset.UTC);
     }
 }

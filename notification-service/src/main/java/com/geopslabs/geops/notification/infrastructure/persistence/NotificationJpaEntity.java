@@ -1,5 +1,7 @@
 package com.geopslabs.geops.notification.infrastructure.persistence;
 
+import com.geopslabs.geops.notification.domain.models.Channel;
+import com.geopslabs.geops.notification.domain.models.DeliveryStatus;
 import com.geopslabs.geops.notification.domain.models.NotificationType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,7 +10,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -20,6 +21,12 @@ import java.time.Instant;
 @Getter
 @Setter
 public class NotificationJpaEntity {
+    private static final int TYPE_LENGTH = 40;
+    private static final int CHANNEL_LENGTH = 20;
+    private static final int TITLE_LENGTH = 200;
+    private static final int MESSAGE_LENGTH = 500;
+    private static final int RELATED_ENTITY_LENGTH = 50;
+    private static final int STATUS_LENGTH = 20;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,25 +36,26 @@ public class NotificationJpaEntity {
     private Long recipientId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "type", nullable = false, length = 50)
+    @Column(name = "notification_type", nullable = false, length = TYPE_LENGTH)
     private NotificationType type;
 
-    @Column(name = "title", nullable = false, length = 200)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "channel", nullable = false, length = CHANNEL_LENGTH)
+    private Channel channel;
+
+    @Column(name = "title", nullable = false, length = TITLE_LENGTH)
     private String title;
 
-    @Column(name = "message", nullable = false, length = 500)
+    @Column(name = "message", nullable = false, length = MESSAGE_LENGTH)
     private String message;
 
-    @Column(name = "related_entity_id", length = 50)
+    @Column(name = "related_entity_id", length = RELATED_ENTITY_LENGTH)
     private String relatedEntityId;
 
-    @Column(name = "created_at", nullable = false)
-    private Instant createdAt;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "delivery_status", nullable = false, length = STATUS_LENGTH)
+    private DeliveryStatus status;
 
-    @PrePersist
-    void stampCreatedAt() {
-        if (createdAt == null) {
-            createdAt = Instant.now();
-        }
-    }
+    @Column(name = "sent_at", nullable = false)
+    private Instant sentAt;
 }
