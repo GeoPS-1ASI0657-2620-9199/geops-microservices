@@ -94,7 +94,7 @@ public class CatalogSteps {
         var campaign = campaigns.findById(state.campaignId(campaignName)).orElseThrow();
         var offer = offers.save(new Offer(null, campaign.getId(), campaign.getBusinessId(), title, CONDITIONS,
                 Money.soles(price), LocalDate.parse(validTo), CATEGORY, GeocodingStatus.GEOCODED, ADDRESS, null,
-                OfferSource.AFFILIATED, null, OfferStatus.PUBLISHED));
+                OfferSource.AFFILIATED, null, OfferStatus.PUBLISHED, null));
         state.rememberOffer(title, offer.getId());
     }
 

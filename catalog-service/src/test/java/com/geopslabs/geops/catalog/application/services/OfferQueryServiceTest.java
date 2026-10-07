@@ -61,6 +61,6 @@ class OfferQueryServiceTest {
         return new Offer(OFFER_ID, CAMPAIGN_ID, BUSINESS_ID, "Menú ejecutivo a mitad de precio",
                 "De lunes a viernes de 12:00 a 15:00", Money.soles(PRICE), VALID_TO, "Gastronomía",
                 GeocodingStatus.GEOCODED, "Jr. Huánuco 1250, La Victoria", null, OfferSource.AFFILIATED, null,
-                OfferStatus.PUBLISHED);
+                OfferStatus.PUBLISHED, null);
     }
 }
