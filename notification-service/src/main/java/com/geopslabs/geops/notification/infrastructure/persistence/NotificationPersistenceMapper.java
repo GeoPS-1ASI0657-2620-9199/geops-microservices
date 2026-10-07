@@ -13,19 +13,17 @@ final class NotificationPersistenceMapper {
 
     static Notification toDomain(NotificationJpaEntity entity) {
         return new Notification(entity.getId(), entity.getRecipientId(), entity.getType(), entity.getTitle(),
-                entity.getMessage(), entity.getIsRead(), entity.getRelatedEntityId(), entity.getRelatedEntityType(),
-                entity.getActionUrl(), toUtc(entity.getCreatedAt()));
+                entity.getMessage(), entity.getRelatedEntityId(), toUtc(entity.getCreatedAt()));
     }
 
-    static NotificationJpaEntity toEntity(Notification notification, NotificationJpaEntity entity) {
+    static NotificationJpaEntity toEntity(Notification notification) {
+        var entity = new NotificationJpaEntity();
+        entity.setId(notification.getId());
         entity.setRecipientId(notification.getRecipientId());
         entity.setType(notification.getType());
         entity.setTitle(notification.getTitle());
         entity.setMessage(notification.getMessage());
-        entity.setIsRead(notification.getIsRead());
         entity.setRelatedEntityId(notification.getRelatedEntityId());
-        entity.setRelatedEntityType(notification.getRelatedEntityType());
-        entity.setActionUrl(notification.getActionUrl());
         entity.setCreatedAt(toInstant(notification.getCreatedAt()));
         return entity;
     }

@@ -38,17 +38,8 @@ public class NotificationJpaEntity {
     @Column(name = "message", nullable = false, length = 500)
     private String message;
 
-    @Column(name = "is_read", nullable = false)
-    private Boolean isRead;
-
     @Column(name = "related_entity_id", length = 50)
     private String relatedEntityId;
-
-    @Column(name = "related_entity_type", length = 50)
-    private String relatedEntityType;
-
-    @Column(name = "action_url", length = 500)
-    private String actionUrl;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
