@@ -8,15 +8,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Clock;
-import java.time.ZoneId;
 
 @Configuration
 public class ProximitySearchConfiguration {
-    private static final ZoneId LIMA = ZoneId.of("America/Lima");
-
     @Bean
-    public ProximitySearchService proximitySearchService(OfferRepositoryPort offerRepository) {
-        return new ProximitySearchService(offerRepository, Clock.system(LIMA));
+    public ProximitySearchService proximitySearchService(OfferRepositoryPort offerRepository, Clock clock) {
+        return new ProximitySearchService(offerRepository, clock);
     }
 
     @Bean
