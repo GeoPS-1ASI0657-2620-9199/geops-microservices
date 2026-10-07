@@ -19,7 +19,12 @@ public interface OfferJpaRepository extends JpaRepository<OfferJpaEntity, Long> 
                    c.business_id              AS "businessId",
                    m.business_name            AS "businessName",
                    m.verified_seal            AS "verifiedSeal",
-                   m.open_reports             AS "openReports"
+                   m.open_reports             AS "openReports",
+                   c.zone_type                AS "zoneType",
+                   ST_Y(c.zone_center::geometry) AS "zoneLatitude",
+                   ST_X(c.zone_center::geometry) AS "zoneLongitude",
+                   c.zone_radius_m            AS "zoneRadiusMeters",
+                   c.zone_district            AS "zoneDistrict"
             FROM offers o
             JOIN campaigns c ON c.id = o.campaign_id
             JOIN merchant_standings m ON m.business_id = c.business_id

@@ -24,6 +24,7 @@ class ProximitySearchServiceTest {
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-10-05T02:00:00Z"), LIMA);
     private static final GeoPoint ORIGIN = new GeoPoint(-12.1211, -77.0297);
     private static final double METERS_PER_DEGREE = Math.toRadians(1) * GeoPoint.EARTH_MEAN_RADIUS_METERS;
+    private static final CampaignZone WHOLE_AREA = CampaignZone.radius(ORIGIN, CampaignZone.MAX_RADIUS_METERS);
 
     private OfferRepositoryPort offers;
     private ProximitySearchService service;
@@ -90,6 +91,6 @@ class ProximitySearchServiceTest {
     private static NearbyOfferCandidate candidate(Long id, double metersNorth, boolean verified, int openReports) {
         var location = new GeoPoint(ORIGIN.latitude() + metersNorth / METERS_PER_DEGREE, ORIGIN.longitude());
         return new NearbyOfferCandidate(id, "Oferta " + id, new BigDecimal("15.00"), LocalDate.of(2026, 10, 15),
-                "Gastronomía", location, 84L, "Cevichería Doña Rosa", verified, openReports);
+                "Gastronomía", location, 84L, "Cevichería Doña Rosa", verified, openReports, WHOLE_AREA);
     }
 }

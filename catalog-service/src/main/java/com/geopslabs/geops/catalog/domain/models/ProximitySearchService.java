@@ -30,6 +30,7 @@ public class ProximitySearchService {
                 .filter(candidate -> category == null || category.equals(candidate.category()))
                 .map(candidate -> RankedOffer.of(candidate, origin.distanceTo(candidate.location())))
                 .filter(ranked -> ranked.distanceMeters() <= radiusMeters)
+                .filter(ranked -> ranked.offer().zone().covers(origin))
                 .sorted(RANKING)
                 .toList();
     }

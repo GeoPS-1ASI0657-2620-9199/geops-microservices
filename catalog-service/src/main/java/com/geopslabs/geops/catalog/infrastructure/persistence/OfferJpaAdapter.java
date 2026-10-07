@@ -1,10 +1,12 @@
 package com.geopslabs.geops.catalog.infrastructure.persistence;
 
 import com.geopslabs.geops.catalog.domain.models.CampaignStatus;
+import com.geopslabs.geops.catalog.domain.models.CampaignZone;
 import com.geopslabs.geops.catalog.domain.models.GeoPoint;
 import com.geopslabs.geops.catalog.domain.models.NearbyOfferCandidate;
 import com.geopslabs.geops.catalog.domain.models.Offer;
 import com.geopslabs.geops.catalog.domain.models.OfferStatus;
+import com.geopslabs.geops.catalog.domain.models.ZoneType;
 import com.geopslabs.geops.catalog.domain.ports.OfferRepositoryPort;
 import org.springframework.stereotype.Component;
 
@@ -48,6 +50,13 @@ public class OfferJpaAdapter implements OfferRepositoryPort {
     private static NearbyOfferCandidate toCandidate(NearbyOfferRow row) {
         return new NearbyOfferCandidate(row.getOfferId(), row.getTitle(), row.getPrice(), row.getValidTo(),
                 row.getCategory(), new GeoPoint(row.getLatitude(), row.getLongitude()), row.getBusinessId(),
-                row.getBusinessName(), row.getVerifiedSeal(), row.getOpenReports());
+                row.getBusinessName(), row.getVerifiedSeal(), row.getOpenReports(), zoneOf(row));
+    }
+
+    private static CampaignZone zoneOf(NearbyOfferRow row) {
+        var center = row.getZoneLatitude() == null ? null
+                : new GeoPoint(row.getZoneLatitude(), row.getZoneLongitude());
+        return new CampaignZone(ZoneType.valueOf(row.getZoneType()), center, row.getZoneRadiusMeters(),
+                row.getZoneDistrict());
     }
 }
