@@ -12,6 +12,10 @@ public record NearbyOfferResponse(
         long distanceMeters,
         int walkMinutes,
         String category,
+        String address,
+        String imageUrl,
+        double latitude,
+        double longitude,
         BigDecimal price,
         LocalDate validTo) {
 }

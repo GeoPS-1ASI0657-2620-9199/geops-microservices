@@ -14,6 +14,8 @@ public interface OfferJpaRepository extends JpaRepository<OfferJpaEntity, Long> 
                    o.price                    AS "price",
                    o.valid_to                 AS "validTo",
                    o.category                 AS "category",
+                   o.address                  AS "address",
+                   o.image_url                AS "imageUrl",
                    ST_Y(o.location::geometry) AS "latitude",
                    ST_X(o.location::geometry) AS "longitude",
                    c.business_id              AS "businessId",

@@ -49,7 +49,7 @@ public class OfferJpaAdapter implements OfferRepositoryPort {
 
     private static NearbyOfferCandidate toCandidate(NearbyOfferRow row) {
         return new NearbyOfferCandidate(row.getOfferId(), row.getTitle(), row.getPrice(), row.getValidTo(),
-                row.getCategory(), new GeoPoint(row.getLatitude(), row.getLongitude()), row.getBusinessId(),
+                row.getCategory(), row.getAddress(), row.getImageUrl(), new GeoPoint(row.getLatitude(), row.getLongitude()), row.getBusinessId(),
                 row.getBusinessName(), row.getVerifiedSeal(), row.getOpenReports(), zoneOf(row));
     }
 
