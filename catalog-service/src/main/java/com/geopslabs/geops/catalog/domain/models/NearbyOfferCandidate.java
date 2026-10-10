@@ -9,6 +9,8 @@ public record NearbyOfferCandidate(
         BigDecimal price,
         LocalDate validTo,
         String category,
+        String address,
+        String imageUrl,
         GeoPoint location,
         Long businessId,
         String businessName,

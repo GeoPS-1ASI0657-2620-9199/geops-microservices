@@ -14,6 +14,10 @@ public interface NearbyOfferRow {
 
     String getCategory();
 
+    String getAddress();
+
+    String getImageUrl();
+
     Double getLatitude();
 
     Double getLongitude();
