@@ -5,6 +5,8 @@ import com.geopslabs.geops.catalog.domain.models.Campaign;
 import com.geopslabs.geops.catalog.domain.models.CampaignStatus;
 import com.geopslabs.geops.catalog.domain.models.CampaignZone;
 import com.geopslabs.geops.catalog.domain.models.DateRange;
+import com.geopslabs.geops.catalog.domain.models.GeoCell;
+import com.geopslabs.geops.catalog.domain.models.GeohashCover;
 import com.geopslabs.geops.catalog.domain.models.GeoPoint;
 import com.geopslabs.geops.catalog.domain.models.GeocodingStatus;
 import com.geopslabs.geops.catalog.domain.models.MerchantStanding;
@@ -20,10 +22,13 @@ import com.geopslabs.geops.catalog.domain.ports.OfferRepositoryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -56,12 +61,17 @@ class OfferJpaAdapterNearbyTest extends CucumberSpringConfiguration {
     private CampaignJpaRepository campaignRows;
     @Autowired
     private MerchantStandingJpaRepository standingRows;
+    @Autowired
+    private JdbcTemplate jdbc;
+    @Autowired
+    private org.springframework.transaction.support.TransactionTemplate transactions;
 
     private Long activeCampaignId;
     private Long pausedCampaignId;
 
     @BeforeEach
     void startWithOneBusinessAndTwoCampaigns() {
+        jdbc.update("DELETE FROM standing_changes");
         offerRows.deleteAll();
         campaignRows.deleteAll();
         standingRows.deleteAll();
@@ -123,6 +133,54 @@ class OfferJpaAdapterNearbyTest extends CucumberSpringConfiguration {
         assertThat(zone.type()).isEqualTo(ZoneType.RADIUS);
         assertThat(zone.center()).isNull();
         assertThat(zone.radiusMeters()).isEqualTo(RADIUS_METERS);
+    }
+
+    @Test
+    void groupsTheOffersByTheSameCellTheServiceComputes() {
+        IntStream.range(0, 24).forEach(step -> offer("Oferta " + step, activeCampaignId, VALID_TO,
+                around(step * 15, 100 + step * 60)));
+        offer("Vencida", activeCampaignId, EXPIRED, north(100));
+        var cells = GeohashCover.cover(ORIGIN, 1_600);
+
+        var byCell = offers.findPublishedInCells(cells, TODAY);
+
+        var all = byCell.values().stream().flatMap(java.util.List::stream).toList();
+        assertThat(all).hasSize(24).noneMatch(candidate -> candidate.title().equals("Vencida"));
+        byCell.forEach((cell, inCell) -> inCell.forEach(candidate ->
+                assertThat(GeoCell.containing(candidate.location()).geohash()).isEqualTo(cell)));
+        assertThat(byCell.keySet()).isSubsetOf(cells.stream().map(GeoCell::geohash).collect(Collectors.toSet()));
+    }
+
+    @Test
+    void readsOnlyTheCellsAskedFor() {
+        offer("Aquí", activeCampaignId, VALID_TO, north(10));
+        offer("Lejos", activeCampaignId, VALID_TO, north(1_500));
+        var here = GeoCell.containing(north(10));
+
+        var byCell = offers.findPublishedInCells(java.util.Set.of(here), TODAY);
+
+        assertThat(byCell).containsOnlyKeys(here.geohash());
+        assertThat(byCell.get(here.geohash())).extracting(NearbyOfferCandidate::title).containsExactly("Aquí");
+    }
+
+    @Test
+    void expiresThePublishedOffersThatEndedAndReturnsWhereTheyWere() {
+        offer("Vencida", activeCampaignId, EXPIRED, north(100));
+        offer("Vigente", activeCampaignId, VALID_TO, north(200));
+
+        var expired = transactions.execute(status -> offers.expirePublishedBefore(TODAY));
+
+        assertThat(expired).singleElement().satisfies(point ->
+                assertThat(ORIGIN.distanceTo(point)).isCloseTo(100, within(SAME_METERS)));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM offers WHERE status = 'EXPIRED'", Integer.class))
+                .isEqualTo(1);
+        assertThat(offers.findPublishedLocationsOfBusiness(BUSINESS_ID, TODAY)).hasSize(1);
+    }
+
+    private static GeoPoint around(int degrees, double meters) {
+        var longitudeMeters = METERS_PER_DEGREE * Math.cos(Math.toRadians(ORIGIN.latitude()));
+        return new GeoPoint(ORIGIN.latitude() + meters * Math.cos(Math.toRadians(degrees)) / METERS_PER_DEGREE,
+                ORIGIN.longitude() + meters * Math.sin(Math.toRadians(degrees)) / longitudeMeters);
     }
 
     private Long campaign(String name, CampaignStatus status) {

@@ -23,8 +23,10 @@ public class SecurityConfiguration {
     private static final String ANY_CAMPAIGN_PATH = "/api/v1/campaigns/**";
     private static final String ANY_ADMIN_PATH = "/api/v1/admin/**";
     private static final String ANY_INTERNAL_PATH = "/internal/v1/**";
+    // The gateway routes only /api/v1/**: the metrics are reachable inside the compose network, never from outside.
     private static final String[] PUBLIC_PATHS = {
-            "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/health", "/actuator/health/**", "/error"
+            "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/health", "/actuator/health/**",
+            "/actuator/metrics", "/actuator/metrics/**", "/actuator/prometheus", "/error"
     };
 
     @Bean

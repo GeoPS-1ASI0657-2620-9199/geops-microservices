@@ -25,6 +25,13 @@ spring:
     baseline-on-migrate: false
     clean-disabled: true
     out-of-order: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      # QAS02: a Redis that does not answer in 200 ms counts as a cache miss and the search goes to PostgreSQL.
+      timeout: 200ms
+      connect-timeout: 200ms
   security:
     oauth2:
       resourceserver:
@@ -33,11 +40,27 @@ spring:
           issuer-uri: geops-identity
           audiences: geops-api
 
+geops:
+  cache:
+    # false: the search goes straight to PostgreSQL with the radius query of Sprint 1.
+    enabled: ${GEOPS_CACHE_ENABLED:true}
+    cell-ttl: 10m
+    # After a Redis error the search skips Redis for this long instead of waiting its timeout on every request.
+    pause-after-failure: 5s
+  expiration:
+    delay: 5m
+
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics,prometheus
+  metrics:
+    distribution:
+      percentiles:
+        http.server.requests: 0.95
+      percentiles-histogram:
+        http.server.requests: true
 
 springdoc:
   swagger-ui:

@@ -20,6 +20,7 @@ import com.geopslabs.geops.catalog.domain.ports.OfferRepositoryPort;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -57,15 +58,19 @@ public class NearbySearchSteps {
     private final CampaignRepositoryPort campaigns;
     private final MerchantStandingRepositoryPort standings;
     private final Clock clock;
+    private final MeterRegistry meters;
 
+    @SuppressWarnings("java:S107")
     public NearbySearchSteps(HttpScenario http, ScenarioState state, OfferRepositoryPort offers,
-                             CampaignRepositoryPort campaigns, MerchantStandingRepositoryPort standings, Clock clock) {
+                             CampaignRepositoryPort campaigns, MerchantStandingRepositoryPort standings, Clock clock,
+                             MeterRegistry meters) {
         this.http = http;
         this.state = state;
         this.offers = offers;
         this.campaigns = campaigns;
         this.standings = standings;
         this.clock = clock;
+        this.meters = meters;
     }
 
     @Given("{int} valid offers exist around the origin and only number {int} is of category {string}")
@@ -107,6 +112,8 @@ public class NearbySearchSteps {
     @Given("I searched within {int} minutes once")
     public void searchedOnce(int minutes) {
         search(minutes);
+        state.rememberCacheCounters(meters.counter("catalog.cell.cache.hits").count(),
+                meters.counter("catalog.cell.cache.misses").count());
     }
 
     @Then("the titles are {string} in that order")

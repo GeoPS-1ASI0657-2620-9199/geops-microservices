@@ -2,6 +2,7 @@ package com.geopslabs.geops.catalog.infrastructure.persistence;
 
 import com.geopslabs.geops.catalog.domain.models.CampaignStatus;
 import com.geopslabs.geops.catalog.domain.models.CampaignZone;
+import com.geopslabs.geops.catalog.domain.models.GeoCell;
 import com.geopslabs.geops.catalog.domain.models.GeoPoint;
 import com.geopslabs.geops.catalog.domain.models.NearbyOfferCandidate;
 import com.geopslabs.geops.catalog.domain.models.Offer;
@@ -12,7 +13,10 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component
 public class OfferJpaAdapter implements OfferRepositoryPort {
@@ -45,6 +49,39 @@ public class OfferJpaAdapter implements OfferRepositoryPort {
                         OfferStatus.PUBLISHED.name(), CampaignStatus.ACTIVE.name()).stream()
                 .map(OfferJpaAdapter::toCandidate)
                 .toList();
+    }
+
+    @Override
+    public Map<String, List<NearbyOfferCandidate>> findPublishedInCells(Set<GeoCell> cells, LocalDate today) {
+        if (cells.isEmpty()) {
+            return Map.of();
+        }
+        var envelope = GeoCell.envelopeOf(cells);
+        var geohashes = cells.stream().map(GeoCell::geohash).toList();
+        return repository.findPublishedInCells(envelope.center().latitude(), envelope.center().longitude(),
+                        envelope.radiusMeters(), geohashes, today, OfferStatus.PUBLISHED.name(),
+                        CampaignStatus.ACTIVE.name()).stream()
+                .collect(Collectors.groupingBy(OfferJpaRepository.CellOfferRow::getCell,
+                        Collectors.mapping(OfferJpaAdapter::toCandidate, Collectors.toList())));
+    }
+
+    @Override
+    public List<GeoPoint> findPublishedLocationsOfBusiness(Long businessId, LocalDate today) {
+        return repository.findLocationsOfBusiness(businessId, today, OfferStatus.PUBLISHED.name()).stream()
+                .map(OfferJpaAdapter::toPoint)
+                .toList();
+    }
+
+    @Override
+    public List<GeoPoint> expirePublishedBefore(LocalDate today) {
+        return repository.expirePublishedBefore(today, OfferStatus.PUBLISHED.name(), OfferStatus.EXPIRED.name())
+                .stream()
+                .map(OfferJpaAdapter::toPoint)
+                .toList();
+    }
+
+    private static GeoPoint toPoint(OfferJpaRepository.LocationRow row) {
+        return new GeoPoint(row.getLatitude(), row.getLongitude());
     }
 
     private static NearbyOfferCandidate toCandidate(NearbyOfferRow row) {
