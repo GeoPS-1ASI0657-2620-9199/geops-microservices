@@ -8,7 +8,12 @@ x-service: &service
   # 448 MB por servicio: los cinco, PostgreSQL, Kafka, Redis y nginx caben en la B2s (4 GB).
   mem_limit: 448m
   environment: &service-env
-    JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=60 -XX:+UseSerialGC -Xss512k
+    # Heap al 55 % del límite y techo a metaspace, code cache y memoria directa: lo que no es
+    # heap también cuenta contra los 448 MB del contenedor.
+    JAVA_TOOL_OPTIONS: >-
+      -XX:MaxRAMPercentage=55 -XX:+UseSerialGC -Xss512k -XX:MaxMetaspaceSize=128m
+      -XX:ReservedCodeCacheSize=64m -XX:MaxDirectMemorySize=32m
+    SERVER_TOMCAT_THREADS_MAX: 40
     SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
     KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     REDIS_HOST: redis
