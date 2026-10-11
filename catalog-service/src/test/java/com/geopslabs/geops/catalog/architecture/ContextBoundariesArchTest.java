@@ -57,6 +57,33 @@ class ContextBoundariesArchTest {
     }
 
     @Test
+    void domainDoesNotDependOnOuterLayers() {
+        noClasses().that().resideInAPackage(OWN_PACKAGE + "..domain..")
+                .should().dependOnClassesThat().resideInAnyPackage(
+                        OWN_PACKAGE + "..application..", OWN_PACKAGE + "..infrastructure..",
+                        OWN_PACKAGE + "..configuration..")
+                .check(classes);
+    }
+
+    @Test
+    void applicationDoesNotDependOnInfrastructure() {
+        noClasses().that().resideInAPackage(OWN_PACKAGE + "..application..")
+                .should().dependOnClassesThat().resideInAnyPackage(
+                        OWN_PACKAGE + "..infrastructure..", OWN_PACKAGE + "..configuration..")
+                .check(classes);
+    }
+
+    @Test
+    void localCopiesOfOtherContextsAreNotMappedAsAssociations() {
+        fields().that().areAnnotatedWith(ManyToOne.class)
+                .or().areAnnotatedWith(OneToOne.class)
+                .should(notMapSnapshotsOrProjections())
+                .allowEmptyShould(true)
+                .because("a snapshot or projection of another context is referenced by its identifier")
+                .check(classes);
+    }
+
+    @Test
     void entityRelationshipsStayInsideTheContext() {
         fields().that().areAnnotatedWith(ManyToOne.class)
                 .or().areAnnotatedWith(OneToMany.class)
@@ -67,10 +94,27 @@ class ContextBoundariesArchTest {
                 .check(classes);
     }
 
+    private static boolean isInsideOwnContext(String packageName) {
+        return packageName.equals(OWN_PACKAGE) || packageName.startsWith(OWN_PACKAGE + ".");
+    }
+
+    private static ArchCondition<JavaField> notMapSnapshotsOrProjections() {
+        return new ArchCondition<>("not map a snapshot or projection") {
+            @Override
+            public void check(JavaField field, ConditionEvents events) {
+                field.getType().getAllInvolvedRawTypes().stream()
+                        .filter(type -> type.getSimpleName().contains("Snapshot")
+                                || type.getSimpleName().contains("Projection"))
+                        .forEach(type -> events.add(SimpleConditionEvent.violated(field,
+                                field.getFullName() + " maps " + type.getName() + " as an association")));
+            }
+        };
+    }
+
     private static ArchCondition<JavaField> referToTypesOfThisContextOnly() {
         DescribedPredicate<JavaClass> outsideContext = DescribedPredicate.describe("outside " + OWN_PACKAGE,
                 type -> type.getPackageName().startsWith(ROOT_PACKAGE + ".")
-                        && !type.getPackageName().startsWith(OWN_PACKAGE));
+                        && !isInsideOwnContext(type.getPackageName()));
         return new ArchCondition<>("refer to types of this context only") {
             @Override
             public void check(JavaField field, ConditionEvents events) {
