@@ -4,7 +4,7 @@ x-deps-identity: &deps-identity
   identity-service:
     condition: service_healthy
 
-# Redis y Kafka viven en el perfil messaging. Los servicios no esperan a Kafka:
+# Redis, Kafka y kafka-init viven en el perfil messaging. Los servicios no esperan a Kafka:
 # la bandeja de salida guarda los eventos hasta que el broker responde.
 services:
   postgres:
@@ -17,6 +17,10 @@ services:
   kafka:
     profiles: [messaging]
     ports: !reset []
+
+  # Desde el Sprint 2 el despliegue enciende este perfil: --profile app --profile messaging.
+  kafka-init:
+    profiles: !override [messaging]
 
   identity-service:
     depends_on: !override
