@@ -1,8 +1,11 @@
 package com.geopslabs.geops.reservation.shared.web;
 
+import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationAlreadyRedeemedException;
 import com.geopslabs.geops.reservation.shared.domain.ConflictException;
 import com.geopslabs.geops.reservation.shared.domain.DomainException;
 import com.geopslabs.geops.reservation.shared.domain.ForbiddenException;
+import com.geopslabs.geops.reservation.shared.domain.GoneException;
+import com.geopslabs.geops.reservation.shared.domain.InvalidRequestException;
 import com.geopslabs.geops.reservation.shared.domain.NotFoundException;
 import com.geopslabs.geops.reservation.shared.domain.UnavailableException;
 import jakarta.servlet.ServletException;
@@ -19,6 +22,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import java.time.ZoneOffset;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -43,6 +47,24 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ErrorResponse> handleConflict(ConflictException exception) {
         return respondTo(HttpStatus.CONFLICT, exception);
+    }
+
+    @ExceptionHandler(ReservationAlreadyRedeemedException.class)
+    public ResponseEntity<ErrorResponse> handleAlreadyRedeemed(ReservationAlreadyRedeemedException exception) {
+        LOGGER.info("request.rejected code={}", exception.getCode());
+        var redeemedAt = exception.getRedeemedAt() == null ? null : exception.getRedeemedAt().toInstant(ZoneOffset.UTC);
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(exception.getCode(), exception.getMessage(), redeemedAt));
+    }
+
+    @ExceptionHandler(GoneException.class)
+    public ResponseEntity<ErrorResponse> handleGone(GoneException exception) {
+        return respondTo(HttpStatus.GONE, exception);
+    }
+
+    @ExceptionHandler(InvalidRequestException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidRequest(InvalidRequestException exception) {
+        return respondTo(HttpStatus.BAD_REQUEST, exception);
     }
 
     @ExceptionHandler(ForbiddenException.class)

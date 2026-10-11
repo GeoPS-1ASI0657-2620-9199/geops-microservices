@@ -5,15 +5,25 @@ import com.geopslabs.geops.reservation.domain.models.Reservation;
 import com.geopslabs.geops.reservation.domain.models.ReservationCode;
 import com.geopslabs.geops.reservation.domain.models.ReservationStatus;
 import com.geopslabs.geops.reservation.domain.models.commands.CreateReservationCommand;
+import com.geopslabs.geops.reservation.domain.models.commands.RedeemReservationCommand;
 import com.geopslabs.geops.reservation.domain.models.exceptions.ActiveReservationAlreadyExistsException;
 import com.geopslabs.geops.reservation.domain.models.exceptions.CatalogUnavailableException;
 import com.geopslabs.geops.reservation.domain.models.exceptions.OfferNotAvailableException;
 import com.geopslabs.geops.reservation.domain.models.exceptions.OfferNotFoundException;
+import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationAccessDeniedException;
+import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationAlreadyRedeemedException;
+import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationExpiredException;
+import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationNotFoundException;
+import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationReportedException;
 import com.geopslabs.geops.reservation.domain.ports.OfferCatalogPort;
 import com.geopslabs.geops.reservation.domain.ports.ReservationRepositoryPort;
+import com.geopslabs.geops.reservation.shared.domain.DomainException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -25,11 +35,13 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.Random;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -42,6 +54,8 @@ class ReservationCommandServiceTest {
     private static final Long CONSUMER_ID = 2001L;
     private static final Long OFFER_ID = 1052L;
     private static final Long BUSINESS_ID = 301L;
+    private static final Long OTHER_BUSINESS_ID = 302L;
+    private static final String CODE = "K7P3XM9Q";
     private static final Long RESERVATION_ID = 15L;
     private static final String TITLE = "Menú ejecutivo a mitad de precio";
     private static final LocalDate VALID_TO = LocalDate.parse("2026-10-14");
@@ -189,8 +203,86 @@ class ReservationCommandServiceTest {
         assertThat(result.reservation()).isSameAs(concurrent);
     }
 
+    @Test
+    void redeemsWhenTheConditionalUpdateChangesOneRow() {
+        var now = LocalDateTime.ofInstant(NOW, ZoneOffset.UTC);
+        var redeemed = storedReservation(ReservationStatus.REDEEMED, END_OF_VALID_TO_IN_LIMA, now);
+        when(reservationRepository.redeemIfActive(CODE, BUSINESS_ID, now)).thenReturn(1);
+        when(reservationRepository.findByCode(CODE)).thenReturn(Optional.of(redeemed));
+
+        var result = service.redeem(new RedeemReservationCommand(CODE, BUSINESS_ID));
+
+        assertThat(result.getStatus()).isEqualTo(ReservationStatus.REDEEMED);
+        assertThat(result.getRedeemedAt()).isEqualTo(now);
+    }
+
+    @Test
+    void normalizesTheCodeBeforeTheUpdate() {
+        when(reservationRepository.redeemIfActive(eq(CODE), eq(BUSINESS_ID), any())).thenReturn(0);
+        when(reservationRepository.findByCode(CODE)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.redeem(new RedeemReservationCommand(" k7p3 xm9q ", BUSINESS_ID)))
+                .isInstanceOf(ReservationNotFoundException.class);
+    }
+
+    @Test
+    void rejectsAnUnknownCode() {
+        when(reservationRepository.redeemIfActive(eq(CODE), eq(BUSINESS_ID), any())).thenReturn(0);
+        when(reservationRepository.findByCode(CODE)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.redeem(new RedeemReservationCommand(CODE, BUSINESS_ID)))
+                .isInstanceOf(ReservationNotFoundException.class);
+    }
+
+    @ParameterizedTest
+    @MethodSource("rejectedReservations")
+    void explainsWhyTheUpdateChangedNoRow(Long businessId, Reservation stored,
+                                                              Class<? extends DomainException> expected) {
+        when(reservationRepository.redeemIfActive(eq(CODE), eq(businessId), any())).thenReturn(0);
+        when(reservationRepository.findByCode(CODE)).thenReturn(Optional.of(stored));
+
+        assertThatThrownBy(() -> service.redeem(new RedeemReservationCommand(CODE, businessId)))
+                .isInstanceOf(expected);
+    }
+
+    @Test
+    void theSecondRedemptionCarriesTheDateOfTheFirst() {
+        var firstRedemption = LocalDateTime.parse("2026-10-08T12:00:00");
+        when(reservationRepository.redeemIfActive(eq(CODE), eq(BUSINESS_ID), any())).thenReturn(0);
+        when(reservationRepository.findByCode(CODE)).thenReturn(Optional.of(
+                storedReservation(ReservationStatus.REDEEMED, END_OF_VALID_TO_IN_LIMA, firstRedemption)));
+
+        assertThatThrownBy(() -> service.redeem(new RedeemReservationCommand(CODE, BUSINESS_ID)))
+                .isInstanceOfSatisfying(ReservationAlreadyRedeemedException.class,
+                        exception -> assertThat(exception.getRedeemedAt()).isEqualTo(firstRedemption));
+    }
+
+    @Test
+    void failsLoudlyWhenNoRuleExplainsAnUnchangedRow() {
+        when(reservationRepository.redeemIfActive(eq(CODE), eq(BUSINESS_ID), any())).thenReturn(0);
+        when(reservationRepository.findByCode(CODE)).thenReturn(Optional.of(
+                storedReservation(ReservationStatus.ACTIVE, END_OF_VALID_TO_IN_LIMA, null)));
+
+        assertThatThrownBy(() -> service.redeem(new RedeemReservationCommand(CODE, BUSINESS_ID)))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    static Stream<Arguments> rejectedReservations() {
+        var past = LocalDateTime.ofInstant(NOW, ZoneOffset.UTC).minusMinutes(1);
+        return Stream.of(
+                Arguments.of(OTHER_BUSINESS_ID, storedReservation(ReservationStatus.ACTIVE, END_OF_VALID_TO_IN_LIMA,
+                        null), ReservationAccessDeniedException.class),
+                Arguments.of(BUSINESS_ID, storedReservation(ReservationStatus.REDEEMED, END_OF_VALID_TO_IN_LIMA,
+                        past), ReservationAlreadyRedeemedException.class),
+                Arguments.of(BUSINESS_ID, storedReservation(ReservationStatus.REPORTED, END_OF_VALID_TO_IN_LIMA,
+                        null), ReservationReportedException.class),
+                Arguments.of(BUSINESS_ID, storedReservation(ReservationStatus.ACTIVE, past, null),
+                        ReservationExpiredException.class));
+    }
+
     private ReservationCommandService serviceAt(Instant instant) {
-        return new ReservationCommandService(reservationRepository, offerCatalog, Clock.fixed(instant, ZoneOffset.UTC),
+        return new ReservationCommandService(reservationRepository, offerCatalog,
+                Clock.fixed(instant, ZoneOffset.UTC),
                 new Random(SEED));
     }
 
@@ -206,7 +298,12 @@ class ReservationCommandServiceTest {
     }
 
     private static Reservation storedReservation() {
+        return storedReservation(ReservationStatus.ACTIVE, END_OF_VALID_TO_IN_LIMA, null);
+    }
+
+    private static Reservation storedReservation(ReservationStatus status, LocalDateTime expiresAt,
+                                                 LocalDateTime redeemedAt) {
         return new Reservation(RESERVATION_ID, EXISTING_CODE, CONSUMER_ID, OFFER_ID, BUSINESS_ID, TITLE,
-                LocalDateTime.ofInstant(NOW, ZoneOffset.UTC), END_OF_VALID_TO_IN_LIMA, null, ReservationStatus.ACTIVE);
+                LocalDateTime.ofInstant(NOW, ZoneOffset.UTC), expiresAt, redeemedAt, status);
     }
 }

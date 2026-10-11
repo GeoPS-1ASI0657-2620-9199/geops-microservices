@@ -23,6 +23,12 @@ public final class ReservationResponseAssembler {
                 toInstant(reservation.getExpiresAt()));
     }
 
+    public static RedeemedReservationResponse toRedeemedResponse(Reservation reservation) {
+        return new RedeemedReservationResponse(reservation.getId(), reservation.getCode().value(),
+                reservation.getOfferId(), reservation.getOfferTitle(), reservation.getStatus().name(),
+                toInstant(reservation.getRedeemedAt()));
+    }
+
     private static Instant toInstant(LocalDateTime dateTime) {
         return dateTime == null ? null : dateTime.toInstant(ZoneOffset.UTC);
     }

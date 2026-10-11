@@ -1,5 +1,6 @@
 package com.geopslabs.geops.reservation.domain.models;
 
+import java.util.Locale;
 import java.util.random.RandomGenerator;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -20,6 +21,13 @@ public record ReservationCode(String value) {
                 .mapToObj(position -> String.valueOf(ALPHABET.charAt(random.nextInt(ALPHABET.length()))))
                 .collect(Collectors.joining());
         return new ReservationCode(value);
+    }
+
+    /**
+     * Uppercase and without blanks, as the business may type it at the store.
+     */
+    public static String normalize(String raw) {
+        return raw == null ? null : raw.replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
     }
 
     public static boolean isWellFormed(String value) {
