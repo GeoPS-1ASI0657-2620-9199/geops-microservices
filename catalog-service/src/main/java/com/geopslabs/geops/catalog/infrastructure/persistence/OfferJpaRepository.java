@@ -58,6 +58,28 @@ public interface OfferJpaRepository extends JpaRepository<OfferJpaEntity, Long> 
                              false)
               AND ST_GeoHash(o.location::geometry, 6) IN (:cells)
             """;
+    /** Public source offers have no campaign, so this query does not join campaigns nor merchant_standings. */
+    String PUBLIC_NEARBY_QUERY = """
+            SELECT o.id                       AS "offerId",
+                   o.title                    AS "title",
+                   o.source_name              AS "sourceName",
+                   o.price                    AS "price",
+                   o.valid_to                 AS "validTo",
+                   o.category                 AS "category",
+                   o.address                  AS "address",
+                   o.image_url                AS "imageUrl",
+                   ST_Y(o.location::geometry) AS "latitude",
+                   ST_X(o.location::geometry) AS "longitude"
+            FROM offers o
+            WHERE o.source = :source
+              AND o.geocoding_status = :geocodingStatus
+              AND o.status = :offerStatus
+              AND o.valid_to >= :today
+              AND ST_DWithin(o.location,
+                             ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography,
+                             :radiusMeters,
+                             false)
+            """;
     String BUSINESS_LOCATIONS_QUERY = """
             SELECT DISTINCT ST_Y(o.location::geometry) AS "latitude",
                             ST_X(o.location::geometry) AS "longitude"
@@ -98,6 +120,16 @@ public interface OfferJpaRepository extends JpaRepository<OfferJpaEntity, Long> 
                                             @Param("offerStatus") String offerStatus,
                                             @Param("campaignStatus") String campaignStatus);
 
+    @SuppressWarnings("java:S107")
+    @Query(value = PUBLIC_NEARBY_QUERY, nativeQuery = true)
+    List<PublicOfferRow> findPublicSourceWithin(@Param("latitude") double latitude,
+                                                @Param("longitude") double longitude,
+                                                @Param("radiusMeters") int radiusMeters,
+                                                @Param("today") LocalDate today,
+                                                @Param("source") String source,
+                                                @Param("geocodingStatus") String geocodingStatus,
+                                                @Param("offerStatus") String offerStatus);
+
     @Query(value = BUSINESS_LOCATIONS_QUERY, nativeQuery = true)
     List<LocationRow> findLocationsOfBusiness(@Param("businessId") Long businessId,
                                               @Param("today") LocalDate today,
@@ -112,6 +144,24 @@ public interface OfferJpaRepository extends JpaRepository<OfferJpaEntity, Long> 
 
     interface CellOfferRow extends NearbyOfferRow {
         String getCell();
+    }
+
+    interface PublicOfferRow extends LocationRow {
+        Long getOfferId();
+
+        String getTitle();
+
+        String getSourceName();
+
+        java.math.BigDecimal getPrice();
+
+        LocalDate getValidTo();
+
+        String getCategory();
+
+        String getAddress();
+
+        String getImageUrl();
     }
 
     interface LocationRow {

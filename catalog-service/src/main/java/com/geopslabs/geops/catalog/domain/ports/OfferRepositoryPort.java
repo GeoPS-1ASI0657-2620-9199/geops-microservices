@@ -4,6 +4,7 @@ import com.geopslabs.geops.catalog.domain.models.GeoCell;
 import com.geopslabs.geops.catalog.domain.models.GeoPoint;
 import com.geopslabs.geops.catalog.domain.models.NearbyOfferCandidate;
 import com.geopslabs.geops.catalog.domain.models.Offer;
+import com.geopslabs.geops.catalog.domain.models.PublicSourceOffer;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -25,6 +26,9 @@ public interface OfferRepositoryPort {
      * the geohash of its cell. A cell without offers is absent from the map.
      */
     Map<String, List<NearbyOfferCandidate>> findPublishedInCells(Set<GeoCell> cells, LocalDate today);
+
+    /** Public source offers with coordinates, published and valid today, within the radius. */
+    List<PublicSourceOffer> findPublicSourceWithin(GeoPoint origin, int radiusMeters, LocalDate today);
 
     /** Locations of the published offers of a business that are still valid today. */
     List<GeoPoint> findPublishedLocationsOfBusiness(Long businessId, LocalDate today);

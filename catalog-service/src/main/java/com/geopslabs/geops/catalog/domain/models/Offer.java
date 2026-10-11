@@ -54,6 +54,17 @@ public class Offer {
                 OfferStatus.PUBLISHED, location);
     }
 
+    /**
+     * An offer loaded by the administrator from a public source (E2-09): no campaign, no business, and no coordinates
+     * until the geocoding run finds its address.
+     */
+    @SuppressWarnings("java:S107")
+    public static Offer fromPublicSource(String title, String conditions, Money price, LocalDate validTo,
+                                         String category, String address, String sourceName, String imageUrl) {
+        return new Offer(null, null, null, title, conditions, price, validTo, category, GeocodingStatus.PENDING,
+                address, imageUrl, OfferSource.PUBLIC_SOURCE, sourceName, OfferStatus.PUBLISHED, null);
+    }
+
     public Offer inCampaign(Long savedCampaignId) {
         return new Offer(id, savedCampaignId, businessId, title, conditions, price, validTo, category,
                 geocodingStatus, address, imageUrl, source, sourceName, status, location);

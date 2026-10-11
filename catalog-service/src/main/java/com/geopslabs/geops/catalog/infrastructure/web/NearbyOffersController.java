@@ -1,6 +1,7 @@
 package com.geopslabs.geops.catalog.infrastructure.web;
 
 import com.geopslabs.geops.catalog.application.usecases.SearchNearbyOffersUseCase;
+import com.geopslabs.geops.catalog.application.usecases.SearchPublicSourceOffersUseCase;
 import com.geopslabs.geops.catalog.domain.models.queries.SearchNearbyOffersQuery;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -25,9 +26,12 @@ public class NearbyOffersController {
     private static final String DEFAULT_PAGE_SIZE = "20";
 
     private final SearchNearbyOffersUseCase searchNearbyOffers;
+    private final SearchPublicSourceOffersUseCase searchPublicSources;
 
-    public NearbyOffersController(SearchNearbyOffersUseCase searchNearbyOffers) {
+    public NearbyOffersController(SearchNearbyOffersUseCase searchNearbyOffers,
+                                  SearchPublicSourceOffersUseCase searchPublicSources) {
         this.searchNearbyOffers = searchNearbyOffers;
+        this.searchPublicSources = searchPublicSources;
     }
 
     @Operation(summary = "List valid offers within a walking radius, ordered by proximity",
@@ -72,6 +76,39 @@ public class NearbyOffersController {
             @Parameter(description = "Page size, from 1 to 20", example = "20")
             @RequestParam(defaultValue = DEFAULT_PAGE_SIZE) int size) {
         return NearbyOffersResponseAssembler.toResponse(searchNearbyOffers.searchNearbyOffers(
+                new SearchNearbyOffersQuery(lat, lng, radiusMinutes, category, page, size)));
+    }
+
+    @Operation(summary = "List public source offers within a walking radius, apart from the affiliated ones",
+            description = "Public. Same parameters as /nearby. Offers loaded by the administrator from public "
+                    + "sources that already have coordinates, ordered by distance, with the source instead of a "
+                    + "business and never with the verified seal (E2-08, CA-39.2).")
+    @SecurityRequirements
+    @ApiResponse(responseCode = "200", description = "Page of public source offers inside the radius",
+            content = @Content(examples = @ExampleObject(value = """
+                    {"content": [{"offerId": 9001, "title": "Feria de libros usados",
+                      "sourceName": "Municipalidad de Lima", "distanceMeters": 420, "walkMinutes": 6,
+                      "category": "Librería y útiles", "address": "Jr. de la Unión 300, Cercado de Lima",
+                      "imageUrl": null, "latitude": -12.0464, "longitude": -77.0306, "price": 0.00,
+                      "validTo": "2026-10-30"}],
+                     "page": 0, "totalElements": 1, "totalPages": 1}""")))
+    @ApiResponse(responseCode = "400", description = "Same rejections as /nearby",
+            content = @Content(examples = @ExampleObject(value = """
+                    {"code": "RADIUS_OUT_OF_RANGE", "message": "El radio debe estar entre 5 y 20 minutos a pie"}""")))
+    @GetMapping("/nearby/public-sources")
+    public PublicSourceOffersResponse searchPublicSources(
+            @Parameter(description = "Latitude of the search origin", example = "-12.0464") @RequestParam double lat,
+            @Parameter(description = "Longitude of the search origin", example = "-77.0306") @RequestParam double lng,
+            @Parameter(description = "Walking radius in minutes, from 5 to 20", example = "10")
+            @RequestParam int radiusMinutes,
+            @Parameter(description = "Optional category from GET /api/v1/offers/categories",
+                    example = "Librería y útiles")
+            @RequestParam(required = false) String category,
+            @Parameter(description = "Zero-based page number", example = "0")
+            @RequestParam(defaultValue = DEFAULT_PAGE) int page,
+            @Parameter(description = "Page size, from 1 to 20", example = "20")
+            @RequestParam(defaultValue = DEFAULT_PAGE_SIZE) int size) {
+        return PublicSourceOffersResponse.from(searchPublicSources.searchPublicSources(
                 new SearchNearbyOffersQuery(lat, lng, radiusMinutes, category, page, size)));
     }
 }

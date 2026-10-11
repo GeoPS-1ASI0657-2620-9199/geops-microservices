@@ -4,9 +4,12 @@ import com.geopslabs.geops.catalog.domain.models.CampaignStatus;
 import com.geopslabs.geops.catalog.domain.models.CampaignZone;
 import com.geopslabs.geops.catalog.domain.models.GeoCell;
 import com.geopslabs.geops.catalog.domain.models.GeoPoint;
+import com.geopslabs.geops.catalog.domain.models.GeocodingStatus;
 import com.geopslabs.geops.catalog.domain.models.NearbyOfferCandidate;
 import com.geopslabs.geops.catalog.domain.models.Offer;
+import com.geopslabs.geops.catalog.domain.models.OfferSource;
 import com.geopslabs.geops.catalog.domain.models.OfferStatus;
+import com.geopslabs.geops.catalog.domain.models.PublicSourceOffer;
 import com.geopslabs.geops.catalog.domain.models.ZoneType;
 import com.geopslabs.geops.catalog.domain.ports.OfferRepositoryPort;
 import org.springframework.stereotype.Component;
@@ -63,6 +66,17 @@ public class OfferJpaAdapter implements OfferRepositoryPort {
                         CampaignStatus.ACTIVE.name()).stream()
                 .collect(Collectors.groupingBy(OfferJpaRepository.CellOfferRow::getCell,
                         Collectors.mapping(OfferJpaAdapter::toCandidate, Collectors.toList())));
+    }
+
+    @Override
+    public List<PublicSourceOffer> findPublicSourceWithin(GeoPoint origin, int radiusMeters, LocalDate today) {
+        return repository.findPublicSourceWithin(origin.latitude(), origin.longitude(), radiusMeters, today,
+                        OfferSource.PUBLIC_SOURCE.name(), GeocodingStatus.GEOCODED.name(), OfferStatus.PUBLISHED.name())
+                .stream()
+                .map(row -> new PublicSourceOffer(row.getOfferId(), row.getTitle(), row.getSourceName(),
+                        row.getPrice(), row.getValidTo(), row.getCategory(), row.getAddress(), row.getImageUrl(),
+                        toPoint(row)))
+                .toList();
     }
 
     @Override

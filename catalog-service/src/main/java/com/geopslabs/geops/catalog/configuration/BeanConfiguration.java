@@ -4,6 +4,10 @@ import com.geopslabs.geops.catalog.application.services.CampaignCommandService;
 import com.geopslabs.geops.catalog.application.services.CampaignQueryService;
 import com.geopslabs.geops.catalog.application.services.CellInvalidator;
 import com.geopslabs.geops.catalog.application.services.OfferQueryService;
+import com.geopslabs.geops.catalog.application.services.PublicOfferCommandService;
+import com.geopslabs.geops.catalog.application.services.PublicSourceOfferQueryService;
+import com.geopslabs.geops.catalog.application.usecases.LoadPublicOffersUseCase;
+import com.geopslabs.geops.catalog.application.usecases.SearchPublicSourceOffersUseCase;
 import com.geopslabs.geops.catalog.application.usecases.CreateCampaignUseCase;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.MerchantStandingRepositoryPort;
@@ -41,5 +45,16 @@ public class BeanConfiguration {
     public CampaignQueryService campaignQueryService(CampaignRepositoryPort campaignRepository,
                                                      OfferRepositoryPort offerRepository) {
         return new CampaignQueryService(campaignRepository, offerRepository);
+    }
+
+    @Bean
+    public LoadPublicOffersUseCase loadPublicOffersUseCase(OfferRepositoryPort offerRepository) {
+        return new PublicOfferCommandService(offerRepository);
+    }
+
+    @Bean
+    public SearchPublicSourceOffersUseCase searchPublicSourceOffersUseCase(OfferRepositoryPort offerRepository,
+                                                                           Clock clock) {
+        return new PublicSourceOfferQueryService(offerRepository, clock);
     }
 }

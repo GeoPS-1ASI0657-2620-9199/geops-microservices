@@ -177,6 +177,27 @@ class OfferJpaAdapterNearbyTest extends CucumberSpringConfiguration {
         assertThat(offers.findPublishedLocationsOfBusiness(BUSINESS_ID, TODAY)).hasSize(1);
     }
 
+    @Test
+    void listsOnlyThePublicSourceOffersThatHaveCoordinates() {
+        offers.save(publicOffer("Feria geocodificada", GeocodingStatus.GEOCODED, north(300)));
+        offers.save(publicOffer("Feria pendiente", GeocodingStatus.PENDING, null));
+        offer("Afiliada", activeCampaignId, VALID_TO, north(200));
+
+        var found = offers.findPublicSourceWithin(ORIGIN, RADIUS_METERS, TODAY);
+
+        assertThat(found).extracting(com.geopslabs.geops.catalog.domain.models.PublicSourceOffer::title)
+                .containsExactly("Feria geocodificada");
+        assertThat(found.get(0).sourceName()).isEqualTo("Municipalidad de Lima");
+        assertThat(offers.findPublishedWithin(ORIGIN, RADIUS_METERS, TODAY)).extracting(NearbyOfferCandidate::title)
+                .containsExactly("Afiliada");
+    }
+
+    private static Offer publicOffer(String title, GeocodingStatus status, GeoPoint location) {
+        return new Offer(null, null, null, title, "Entrada libre", Money.soles(BigDecimal.ZERO), VALID_TO,
+                "Librería y útiles", status, "Jr. de la Unión 300, Cercado de Lima", null, OfferSource.PUBLIC_SOURCE,
+                "Municipalidad de Lima", OfferStatus.PUBLISHED, location);
+    }
+
     private static GeoPoint around(int degrees, double meters) {
         var longitudeMeters = METERS_PER_DEGREE * Math.cos(Math.toRadians(ORIGIN.latitude()));
         return new GeoPoint(ORIGIN.latitude() + meters * Math.cos(Math.toRadians(degrees)) / METERS_PER_DEGREE,
