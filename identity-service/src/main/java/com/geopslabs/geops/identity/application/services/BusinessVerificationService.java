@@ -9,6 +9,7 @@ import com.geopslabs.geops.identity.domain.models.BusinessProfile;
 import com.geopslabs.geops.identity.domain.models.BusinessProfileAccessDeniedException;
 import com.geopslabs.geops.identity.domain.models.BusinessProfileNotFoundException;
 import com.geopslabs.geops.identity.domain.models.RucVerification;
+import com.geopslabs.geops.identity.domain.models.Taxpayer;
 import com.geopslabs.geops.identity.domain.models.TaxpayerRegistryEmptyException;
 import com.geopslabs.geops.identity.domain.models.VerificationStatus;
 import com.geopslabs.geops.identity.domain.ports.BusinessProfileRepositoryPort;
@@ -18,7 +19,7 @@ import com.geopslabs.geops.identity.domain.ports.RucVerificationRepositoryPort;
 import com.geopslabs.geops.identity.domain.ports.TaxpayerRegistryPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
@@ -28,11 +29,12 @@ import java.util.UUID;
 import java.util.function.Supplier;
 
 /**
- * Verifies the business RUC (US38, BRD-09 RF-01). Each attempt is stored; the profile, the attempt and, when the
- * seal is granted, confirmed or lost, the BusinessVerified event are written in the same transaction, so Catalog
- * never hears about a change that was not saved.
+ * Verifies the business RUC (US38, BRD-09 RF-01). The profile and the taxpayer are read and the address is geocoded
+ * outside any transaction, so a slow Nominatim (up to 2 s, plus the 1 s spacing between requests) never holds a
+ * database connection. Then a short transaction reads the profile again and writes the attempt, the profile and,
+ * when the seal is granted, confirmed or lost, the BusinessVerified event, so Catalog never hears about a change
+ * that was not saved.
  */
-@Transactional
 public class BusinessVerificationService implements VerifyBusinessRucUseCase, RetryPendingVerificationsUseCase {
     private static final Logger LOGGER = LoggerFactory.getLogger(BusinessVerificationService.class);
 
@@ -41,18 +43,21 @@ public class BusinessVerificationService implements VerifyBusinessRucUseCase, Re
     private final TaxpayerRegistryPort taxpayerRegistry;
     private final GeocodingPort geocoding;
     private final OutboxPort outbox;
+    private final TransactionOperations transactions;
     private final Clock clock;
     private final Supplier<UUID> eventIds;
 
     public BusinessVerificationService(BusinessProfileRepositoryPort businessProfiles,
                                        RucVerificationRepositoryPort verifications,
                                        TaxpayerRegistryPort taxpayerRegistry, GeocodingPort geocoding,
-                                       OutboxPort outbox, Clock clock, Supplier<UUID> eventIds) {
+                                       OutboxPort outbox, TransactionOperations transactions, Clock clock,
+                                       Supplier<UUID> eventIds) {
         this.businessProfiles = businessProfiles;
         this.verifications = verifications;
         this.taxpayerRegistry = taxpayerRegistry;
         this.geocoding = geocoding;
         this.outbox = outbox;
+        this.transactions = transactions;
         this.clock = clock;
         this.eventIds = eventIds;
     }
@@ -66,14 +71,12 @@ public class BusinessVerificationService implements VerifyBusinessRucUseCase, Re
         var profile = businessProfiles.findById(command.businessId())
                 .orElseThrow(BusinessProfileNotFoundException::new);
         ensureRegistryIsLoaded();
-        if (command.correctedAddress() != null) {
-            profile.correctAddress(command.correctedAddress());
-        }
-        return verifyAndRecord(profile);
+        var correctedAddress = command.correctedAddress() == null
+                ? null : BusinessProfile.normalizedAddress(command.correctedAddress());
+        return verifyAndRecord(profile, correctedAddress);
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<Long> pendingBusinessIds() {
         return businessProfiles.findIdsByVerificationStatus(VerificationStatus.PENDING);
     }
@@ -82,25 +85,31 @@ public class BusinessVerificationService implements VerifyBusinessRucUseCase, Re
     public VerificationOutcome retry(Long businessId) {
         var profile = businessProfiles.findById(businessId).orElseThrow(BusinessProfileNotFoundException::new);
         ensureRegistryIsLoaded();
-        return verifyAndRecord(profile);
+        return verifyAndRecord(profile, null);
     }
 
-    private VerificationOutcome verifyAndRecord(BusinessProfile profile) {
-        var address = profile.getAddress();
-        var attempt = RucVerification.evaluate(profile.getId(), profile.getRuc(),
-                profile.getRuc().isWellFormed() ? taxpayerRegistry.findByRuc(profile.getRuc()) : Optional.empty(),
-                () -> geocoding.geocode(address),
+    private VerificationOutcome verifyAndRecord(BusinessProfile profile, String correctedAddress) {
+        var address = correctedAddress != null ? correctedAddress : profile.getAddress();
+        var ruc = profile.getRuc();
+        Optional<Taxpayer> taxpayer = ruc.isWellFormed() ? taxpayerRegistry.findByRuc(ruc) : Optional.empty();
+        var attempt = RucVerification.evaluate(profile.getId(), ruc, taxpayer, () -> geocoding.geocode(address),
                 clock.instant().truncatedTo(ChronoUnit.MILLIS));
+        return transactions.execute(status -> record(profile.getId(), attempt, correctedAddress, address));
+    }
+
+    private VerificationOutcome record(Long businessId, RucVerification attempt, String correctedAddress,
+                                       String checkedAddress) {
+        var current = businessProfiles.findById(businessId).orElseThrow(BusinessProfileNotFoundException::new);
         var verification = verifications.save(attempt);
-        var sealChange = profile.applyVerification(verification);
-        businessProfiles.save(profile);
+        var sealChange = current.applyVerification(verification, correctedAddress);
+        businessProfiles.save(current);
         if (sealChange.mustBePublished()) {
-            outbox.append(BusinessVerified.of(profile, verification, eventIds.get()));
+            outbox.append(BusinessVerified.of(current, verification, eventIds.get()));
         }
         LOGGER.info("business.verification.recorded businessId={} result={} reason={} status={} seal={}",
-                profile.getId(), verification.result(), verification.reason(), profile.getVerificationStatus(),
+                businessId, verification.result(), verification.reason(), current.getVerificationStatus(),
                 sealChange);
-        return new VerificationOutcome(verification, profile.getVerificationStatus(), address);
+        return new VerificationOutcome(verification, current.getVerificationStatus(), checkedAddress);
     }
 
     private void ensureRegistryIsLoaded() {

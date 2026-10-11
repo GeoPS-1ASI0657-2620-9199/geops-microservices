@@ -22,6 +22,9 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+
 import java.time.Clock;
 import java.util.UUID;
 
@@ -61,9 +64,10 @@ public class BeanConfiguration {
                                                                    RucVerificationRepositoryPort verifications,
                                                                    TaxpayerRegistryPort taxpayerRegistry,
                                                                    GeocodingPort geocoding, OutboxPort outbox,
+                                                                   PlatformTransactionManager transactionManager,
                                                                    Clock clock) {
         return new BusinessVerificationService(businessProfiles, verifications, taxpayerRegistry, geocoding, outbox,
-                clock, UUID::randomUUID);
+                new TransactionTemplate(transactionManager), clock, UUID::randomUUID);
     }
 
     @Bean

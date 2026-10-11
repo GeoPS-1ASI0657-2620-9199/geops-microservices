@@ -54,6 +54,30 @@ public class BusinessProfile {
     }
 
     /**
+     * Applies a verification that checked {@code correctedAddress} instead of the declared one (null when the owner
+     * did not correct it). A business that is already verified only takes a new address that was geocoded: if the
+     * geocoder could not find it, or did not answer, the previous address and the seal stay and nothing changes.
+     * Otherwise the corrected address is kept even when the attempt is rejected, so the owner does not type it again.
+     */
+    public SealChange applyVerification(RucVerification verification, String correctedAddress) {
+        if (correctedAddress != null) {
+            var addressNotConfirmed = verification.reason() == VerificationReason.ADDRESS_NOT_GEOCODABLE
+                    || verification.reason() == VerificationReason.GEOCODER_UNAVAILABLE;
+            if (isVerified() && addressNotConfirmed) {
+                return SealChange.UNCHANGED;
+            }
+            correctAddress(correctedAddress);
+        }
+        return applyVerification(verification);
+    }
+
+    /** The address as it would be stored, or InvalidLocationException when it is blank. */
+    public static String normalizedAddress(String address) {
+        ensureAddressIsPresent(address);
+        return address.strip();
+    }
+
+    /**
      * Moves the profile to the status the verification leads to and says what happened to the seal. A verified
      * business keeps its seal while the geocoder does not answer: the seal is never granted without an answer, and
      * it is not taken away for one either.

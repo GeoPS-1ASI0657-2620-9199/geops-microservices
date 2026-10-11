@@ -29,6 +29,10 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.SimpleTransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -41,6 +45,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -67,12 +72,78 @@ class BusinessVerificationServiceTest {
     @Mock
     private OutboxPort outbox;
 
+    private final TrackingTransactions transactions = new TrackingTransactions();
     private BusinessVerificationService service;
+
+    /** Runs the callback at once and remembers whether a transaction is open, like a TransactionTemplate would. */
+    private static final class TrackingTransactions implements TransactionOperations {
+        private boolean open;
+        private int executions;
+
+        @Override
+        public <T> T execute(TransactionCallback<T> action) {
+            open = true;
+            executions++;
+            try {
+                return action.doInTransaction(new SimpleTransactionStatus());
+            } finally {
+                open = false;
+            }
+        }
+    }
+
+    @Test
+    void theGeocoderIsCalledOutsideTheTransactionAndTheWritesInsideIt() {
+        givenProfile(VerificationStatus.UNVERIFIED);
+        givenTaxpayer("ACTIVO", "HABIDO");
+        when(geocoding.geocode(ADDRESS)).thenAnswer(invocation -> {
+            assertThat(transactions.open).as("no transaction around Nominatim").isFalse();
+            return GeocodingResult.found(LARCO);
+        });
+        doAnswer(invocation -> {
+            assertThat(transactions.open).as("the attempt is written in the transaction").isTrue();
+            return invocation.<RucVerification>getArgument(0).withId(31L);
+        }).when(verifications).save(any());
+        doAnswer(invocation -> {
+            assertThat(transactions.open).as("the event is written in the same transaction").isTrue();
+            return null;
+        }).when(outbox).append(any());
+
+        service.verify(ownerRequest(null));
+
+        assertThat(transactions.executions).isEqualTo(1);
+        verify(outbox).append(any());
+    }
+
+    @Test
+    void theServiceDoesNotDeclareASurroundingTransaction() throws NoSuchMethodException {
+        assertThat(BusinessVerificationService.class.isAnnotationPresent(Transactional.class)).isFalse();
+        assertThat(BusinessVerificationService.class.getMethod("verify", VerifyBusinessRucCommand.class)
+                .isAnnotationPresent(Transactional.class)).isFalse();
+        assertThat(BusinessVerificationService.class.getMethod("retry", Long.class)
+                .isAnnotationPresent(Transactional.class)).isFalse();
+    }
+
+    @Test
+    void aVerifiedBusinessKeepsItsAddressAndSealWhenTheCorrectedOneCannotBeGeocoded() {
+        givenProfile(VerificationStatus.VERIFIED);
+        givenTaxpayer("ACTIVO", "HABIDO");
+        when(geocoding.geocode("Av. Larcco 999, Miraflores")).thenReturn(GeocodingResult.notFound());
+
+        var outcome = service.verify(ownerRequest("Av. Larcco 999, Miraflores"));
+
+        assertThat(outcome.verification().reason()).isEqualTo(VerificationReason.ADDRESS_NOT_GEOCODABLE);
+        assertThat(outcome.verificationStatus()).isEqualTo(VerificationStatus.VERIFIED);
+        var saved = ArgumentCaptor.forClass(BusinessProfile.class);
+        verify(businessProfiles).save(saved.capture());
+        assertThat(saved.getValue().getAddress()).isEqualTo(ADDRESS);
+        verify(outbox, never()).append(any());
+    }
 
     @BeforeEach
     void setUp() {
         service = new BusinessVerificationService(businessProfiles, verifications, taxpayerRegistry, geocoding,
-                outbox, Clock.fixed(NOW, ZoneOffset.UTC), () -> EVENT_ID);
+                outbox, transactions, Clock.fixed(NOW, ZoneOffset.UTC), () -> EVENT_ID);
         lenient().when(taxpayerRegistry.isLoaded()).thenReturn(true);
         lenient().when(verifications.save(any())).thenAnswer(invocation ->
                 invocation.<RucVerification>getArgument(0).withId(31L));
