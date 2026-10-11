@@ -49,6 +49,27 @@ geops:
     pause-after-failure: 5s
   expiration:
     delay: 5m
+  geocoding:
+    # Retries the offers left PENDING because Nominatim did not answer.
+    delay: 30m
+  nominatim:
+    base-url: ${NOMINATIM_BASE_URL:https://nominatim.openstreetmap.org}
+    # Política de uso de Nominatim (E2-15): User-Agent con correo de contacto y una petición por segundo.
+    contact-email: ${NOMINATIM_CONTACT_EMAIL:}
+    timeout: 2s
+    min-interval: 1s
+
+# S2-03: abre con cinco fallos en diez segundos y queda abierto 30 s; mientras tanto las ofertas siguen PENDING.
+resilience4j:
+  circuitbreaker:
+    instances:
+      nominatim:
+        sliding-window-type: TIME_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 100
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 1
 
 management:
   endpoints:

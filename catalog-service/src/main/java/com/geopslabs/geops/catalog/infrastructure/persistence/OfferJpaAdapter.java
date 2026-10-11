@@ -94,6 +94,32 @@ public class OfferJpaAdapter implements OfferRepositoryPort {
                 .toList();
     }
 
+    @Override
+    public List<Offer> findPendingGeocoding() {
+        return repository.findByGeocodingStatusOrderByIdAsc(GeocodingStatus.PENDING).stream()
+                .map(OfferPersistenceMapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public boolean markGeocoded(Long offerId, GeoPoint location) {
+        return repository.markGeocoded(offerId, location.latitude(), location.longitude(),
+                GeocodingStatus.GEOCODED.name(), GeocodingStatus.PENDING.name()) == 1;
+    }
+
+    @Override
+    public boolean markForManualReview(Long offerId) {
+        return repository.markForManualReview(offerId, GeocodingStatus.MANUAL_REVIEW.name(),
+                GeocodingStatus.PENDING.name()) == 1;
+    }
+
+    @Override
+    public Map<GeocodingStatus, Long> countPublicSourceByGeocodingStatus() {
+        return repository.countByGeocodingStatus(OfferSource.PUBLIC_SOURCE.name()).stream()
+                .collect(Collectors.toMap(row -> GeocodingStatus.valueOf(row.getStatus()),
+                        OfferJpaRepository.StatusCountRow::getTotal));
+    }
+
     private static GeoPoint toPoint(OfferJpaRepository.LocationRow row) {
         return new GeoPoint(row.getLatitude(), row.getLongitude());
     }

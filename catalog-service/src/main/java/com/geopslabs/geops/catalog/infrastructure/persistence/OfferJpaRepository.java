@@ -1,6 +1,7 @@
 package com.geopslabs.geops.catalog.infrastructure.persistence;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
@@ -141,6 +142,43 @@ public interface OfferJpaRepository extends JpaRepository<OfferJpaEntity, Long> 
     List<LocationRow> expirePublishedBefore(@Param("today") LocalDate today,
                                             @Param("offerStatus") String offerStatus,
                                             @Param("expiredStatus") String expiredStatus);
+
+    List<OfferJpaEntity> findByGeocodingStatusOrderByIdAsc(com.geopslabs.geops.catalog.domain.models.GeocodingStatus status);
+
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = """
+            UPDATE offers
+            SET geocoding_status = :geocoded,
+                location = ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography
+            WHERE id = :offerId AND geocoding_status = :pending
+            """, nativeQuery = true)
+    int markGeocoded(@Param("offerId") Long offerId, @Param("latitude") double latitude,
+                     @Param("longitude") double longitude, @Param("geocoded") String geocoded,
+                     @Param("pending") String pending);
+
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = """
+            UPDATE offers SET geocoding_status = :manualReview
+            WHERE id = :offerId AND geocoding_status = :pending
+            """, nativeQuery = true)
+    int markForManualReview(@Param("offerId") Long offerId, @Param("manualReview") String manualReview,
+                            @Param("pending") String pending);
+
+    @Query(value = """
+            SELECT geocoding_status AS "status", count(*) AS "total"
+            FROM offers
+            WHERE source = :source
+            GROUP BY geocoding_status
+            """, nativeQuery = true)
+    List<StatusCountRow> countByGeocodingStatus(@Param("source") String source);
+
+    interface StatusCountRow {
+        String getStatus();
+
+        Long getTotal();
+    }
 
     interface CellOfferRow extends NearbyOfferRow {
         String getCell();

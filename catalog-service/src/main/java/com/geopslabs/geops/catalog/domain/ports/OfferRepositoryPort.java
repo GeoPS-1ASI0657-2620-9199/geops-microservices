@@ -2,6 +2,7 @@ package com.geopslabs.geops.catalog.domain.ports;
 
 import com.geopslabs.geops.catalog.domain.models.GeoCell;
 import com.geopslabs.geops.catalog.domain.models.GeoPoint;
+import com.geopslabs.geops.catalog.domain.models.GeocodingStatus;
 import com.geopslabs.geops.catalog.domain.models.NearbyOfferCandidate;
 import com.geopslabs.geops.catalog.domain.models.Offer;
 import com.geopslabs.geops.catalog.domain.models.PublicSourceOffer;
@@ -38,4 +39,15 @@ public interface OfferRepositoryPort {
      * that had coordinates. Runs inside the caller's transaction.
      */
     List<GeoPoint> expirePublishedBefore(LocalDate today);
+
+    /** Offers waiting for coordinates, in id order. */
+    List<Offer> findPendingGeocoding();
+
+    /** Sets the location and GEOCODED only if the offer is still PENDING; true when it changed. */
+    boolean markGeocoded(Long offerId, GeoPoint location);
+
+    /** Sets MANUAL_REVIEW only if the offer is still PENDING; true when it changed. */
+    boolean markForManualReview(Long offerId);
+
+    Map<GeocodingStatus, Long> countPublicSourceByGeocodingStatus();
 }
