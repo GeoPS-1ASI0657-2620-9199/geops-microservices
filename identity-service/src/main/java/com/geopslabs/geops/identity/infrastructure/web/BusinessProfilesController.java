@@ -62,7 +62,7 @@ public class BusinessProfilesController {
                                      "checkedAt": "2026-10-21T15:04:00Z"}"""),
                             @ExampleObject(name = "rucNotFound", value = """
                                     {"verificationId": 32, "result": "REJECTED", "reason": "RUC_NOT_FOUND",
-                                     "message": "No encontramos el RUC 20999999999 en el padrón de SUNAT de Lima y Callao. Revisa que sea el RUC de tu negocio; si está mal registrado, escríbenos para corregirlo.",
+                                     "message": "No encontramos el RUC 20999999990 en el padrón de SUNAT de Lima y Callao. Revisa que sea el RUC de tu negocio; si está mal registrado, escríbenos para corregirlo.",
                                      "address": "Av. Larco 345, Miraflores", "taxpayerStatus": null,
                                      "taxpayerCondition": null, "verificationStatus": "REJECTED",
                                      "checkedAt": "2026-10-21T15:04:00Z"}"""),
@@ -128,7 +128,7 @@ public class BusinessProfilesController {
                     content = @Content(schema = @Schema(implementation = BusinessProfileResponse.class),
                             examples = @ExampleObject(name = "verified", value = """
                                     {"id": 84, "businessName": "Restaurante Don Pepe", "businessType": "Restaurante",
-                                     "ruc": "20123456789", "address": "Av. Larco 345, Miraflores",
+                                     "ruc": "20123456786", "address": "Av. Larco 345, Miraflores",
                                      "verificationStatus": "VERIFIED",
                                      "lastVerification": {"result": "APPROVED", "reason": null,
                                       "message": "Tu comercio quedó verificado. El sello aparecerá junto a tus ofertas.",

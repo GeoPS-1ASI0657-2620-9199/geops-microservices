@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -87,7 +88,8 @@ public class BusinessVerificationService implements VerifyBusinessRucUseCase, Re
     private VerificationOutcome verifyAndRecord(BusinessProfile profile) {
         var address = profile.getAddress();
         var attempt = RucVerification.evaluate(profile.getId(), profile.getRuc(),
-                taxpayerRegistry.findByRuc(profile.getRuc()), () -> geocoding.geocode(address),
+                profile.getRuc().isWellFormed() ? taxpayerRegistry.findByRuc(profile.getRuc()) : Optional.empty(),
+                () -> geocoding.geocode(address),
                 clock.instant().truncatedTo(ChronoUnit.MILLIS));
         var verification = verifications.save(attempt);
         var sealChange = profile.applyVerification(verification);

@@ -86,11 +86,11 @@ class SunatRegistryLoaderTest {
         assertThat(report.malformed()).isEqualTo(1);
         assertThat(rows()).isEqualTo(LIMA_AND_CALLAO_ROWS);
         assertThat(registry.isLoaded()).isTrue();
-        assertThat(registry.findByRuc(new Ruc("20333333333"))).isEmpty();
-        assertThat(registry.findByRuc(new Ruc("20111111111")))
-                .contains(new Taxpayer(new Ruc("20111111111"), "INVERSIONES EL OCASO E.I.R.L.", "BAJA DE OFICIO",
+        assertThat(registry.findByRuc(new Ruc("20333333334"))).isEmpty();
+        assertThat(registry.findByRuc(new Ruc("20111111112")))
+                .contains(new Taxpayer(new Ruc("20111111112"), "INVERSIONES EL OCASO E.I.R.L.", "BAJA DE OFICIO",
                         "HABIDO"));
-        assertThat(registry.findByRuc(new Ruc("20601234572")).map(Taxpayer::businessName))
+        assertThat(registry.findByRuc(new Ruc("20601234573")).map(Taxpayer::businessName))
                 .contains("PANADERÍA LA ESPAÑOLA S.R.L.");
         assertThat(loader.lastLoadedAt()).isPresent();
     }
@@ -114,7 +114,7 @@ class SunatRegistryLoaderTest {
     void aFileWithoutLimaOrCallaoKeepsThePreviousRegistry() {
         loader.loadFromResource(new DefaultResourceLoader().getResource(SAMPLE));
         var onlyArequipa = new ByteArrayResource(
-                "20333333333|PICANTERIA|ACTIVO|HABIDO|040101|\n".getBytes(StandardCharsets.ISO_8859_1));
+                "20333333334|PICANTERIA|ACTIVO|HABIDO|040101|\n".getBytes(StandardCharsets.ISO_8859_1));
 
         assertThatThrownBy(() -> loader.loadFromResource(onlyArequipa))
                 .isInstanceOf(SunatRegistryLoadException.class);
@@ -147,13 +147,13 @@ class SunatRegistryLoaderTest {
     void aSecondLoadReplacesTheRegistryInsteadOfAddingToIt() {
         loader.loadFromResource(new DefaultResourceLoader().getResource(SAMPLE));
         var newRegistry = new ByteArrayResource(
-                "20123456789|RESTAURANTE DON PEPE S.A.C.|BAJA DE OFICIO|HABIDO|150122|\n"
+                "20123456786|RESTAURANTE DON PEPE S.A.C.|BAJA DE OFICIO|HABIDO|150122|\n"
                         .getBytes(StandardCharsets.ISO_8859_1));
 
         loader.loadFromResource(newRegistry);
 
         assertThat(rows()).isEqualTo(1);
-        assertThat(registry.findByRuc(new Ruc("20123456789")).map(Taxpayer::status)).contains("BAJA DE OFICIO");
+        assertThat(registry.findByRuc(new Ruc("20123456786")).map(Taxpayer::status)).contains("BAJA DE OFICIO");
     }
 
     private long rows() {

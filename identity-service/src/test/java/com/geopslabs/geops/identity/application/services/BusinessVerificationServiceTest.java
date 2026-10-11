@@ -50,7 +50,7 @@ import static org.mockito.Mockito.when;
 class BusinessVerificationServiceTest {
     private static final Long BUSINESS_ID = 84L;
     private static final Long OTHER_BUSINESS_ID = 99L;
-    private static final Ruc RUC = new Ruc("20123456789");
+    private static final Ruc RUC = new Ruc("20123456786");
     private static final String ADDRESS = "Av. Larco 345, Miraflores";
     private static final Instant NOW = Instant.parse("2026-10-21T15:04:00Z");
     private static final UUID EVENT_ID = UUID.fromString("0c7a4c55-31e2-4f0f-9f0f-7a9a7f3b2d10");

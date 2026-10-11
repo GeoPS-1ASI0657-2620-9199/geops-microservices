@@ -5,7 +5,7 @@ Feature: Verify the business RUC against SUNAT
 
   Background:
     Given the SUNAT registry sample is loaded
-    And business owner with business 84 registered RUC "20123456789" at "Av. Larco 345, Miraflores"
+    And business owner with business 84 registered RUC "20123456786" at "Av. Larco 345, Miraflores"
 
   Scenario: An active and habido RUC with a geocodable address is verified with its date
     Given Nominatim finds "Av. Larco 345, Miraflores" at latitude -12.1211 and longitude -77.0297
@@ -24,9 +24,9 @@ Feature: Verify the business RUC against SUNAT
 
     Examples:
       | ruc         | reason              |
-      | 20999999999 | RUC_NOT_FOUND       |
-      | 20111111111 | TAXPAYER_NOT_ACTIVE |
-      | 20222222222 | TAXPAYER_NOT_HABIDO |
+      | 20999999990 | RUC_NOT_FOUND       |
+      | 20111111112 | TAXPAYER_NOT_ACTIVE |
+      | 20222222223 | TAXPAYER_NOT_HABIDO |
 
   Scenario: An address that cannot be geocoded asks for a correction before the seal
     Given Nominatim finds nothing for "Av. Larco 345, Miraflores"
@@ -59,7 +59,7 @@ Feature: Verify the business RUC against SUNAT
 
   Scenario: A verified business loses the seal when its RUC is no longer active
     Given business 84 is VERIFIED
-    And the SUNAT registry now lists RUC "20123456789" as "BAJA DE OFICIO"
+    And the SUNAT registry now lists RUC "20123456786" as "BAJA DE OFICIO"
     When the owner of business 84 requests the verification
     Then the field "result" is "REJECTED"
     And one BusinessVerified event with verified false is stored in the outbox

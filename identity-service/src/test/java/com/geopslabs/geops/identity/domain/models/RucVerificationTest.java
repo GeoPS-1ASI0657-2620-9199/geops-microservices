@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class RucVerificationTest {
     private static final Long PROFILE_ID = 84L;
-    private static final Ruc RUC = new Ruc("20123456789");
+    private static final Ruc RUC = new Ruc("20123456786");
     private static final Instant NOW = Instant.parse("2026-10-21T15:04:00Z");
     private static final Taxpayer ACTIVE_HABIDO = new Taxpayer(RUC, "RESTAURANTE DON PEPE S.A.C.", "ACTIVO", "HABIDO");
     private static final GeoPoint LARCO = new GeoPoint(-12.1211, -77.0297);
@@ -38,6 +38,17 @@ class RucVerificationTest {
         assertThat(verification.reason()).isEqualTo(VerificationReason.RUC_NOT_FOUND);
         assertThat(verification.taxpayerStatus()).isNull();
         assertThat(geocoder.calls()).isZero();
+    }
+
+    @Test
+    void rejectsARucWithAnInvalidCheckDigitEvenIfTheRegistryHadIt() {
+        var badRuc = new Ruc("20123456789");
+        var taxpayer = new Taxpayer(badRuc, "X", "ACTIVO", "HABIDO");
+
+        var verification = RucVerification.evaluate(PROFILE_ID, badRuc, Optional.of(taxpayer),
+                () -> GeocodingResult.found(LARCO), NOW);
+
+        assertThat(verification.reason()).isEqualTo(VerificationReason.RUC_NOT_FOUND);
     }
 
     @Test

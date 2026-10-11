@@ -72,7 +72,7 @@ public class AuthenticationController {
                                     {"code": "INVALID_LOCATION",
                                      "message": "La latitud debe estar entre -90 y 90. Corrige la ubicación del local."}"""),
                             @ExampleObject(name = "invalidRuc", value = """
-                                    {"code": "INVALID_RUC", "message": "El RUC debe tener 11 dígitos."}"""),
+                                    {"code": "INVALID_RUC", "message": "El RUC no es válido. Revisa sus 11 dígitos."}"""),
                             @ExampleObject(name = "businessProfileRequired", value = """
                                     {"code": "BUSINESS_PROFILE_REQUIRED",
                                      "message": "Completa los datos del negocio para crear la cuenta."}"""),

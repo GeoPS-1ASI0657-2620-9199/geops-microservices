@@ -32,7 +32,7 @@ Los errores responden `{"code": "...", "message": "..."}`. Los ejemplos de cada 
 | `BUSINESS_PROFILE_REQUIRED` | 400 | Una cuenta `BUSINESS_OWNER` llega sin `businessProfile` |
 | `BUSINESS_PROFILE_NOT_ALLOWED` | 400 | Una cuenta `CONSUMER` llega con `businessProfile` |
 | `INVALID_LOCATION` | 400 | Falta la dirección o las coordenadas, o están fuera de rango |
-| `INVALID_RUC` | 400 | El RUC no tiene 11 dígitos |
+| `INVALID_RUC` | 400 | El RUC no tiene 11 dígitos, su prefijo no es 10, 15, 16, 17 o 20, o su dígito verificador no cuadra |
 | `EMAIL_ALREADY_REGISTERED`, `PHONE_ALREADY_REGISTERED`, `RUC_ALREADY_REGISTERED` | 409 | El dato ya pertenece a otra cuenta |
 | `INVALID_CREDENTIALS` | 401 | Correo desconocido, contraseña errada o cuenta bloqueada |
 | `UNAUTHORIZED` | 401 | Ruta de perfiles sin token o con un token inválido |
@@ -64,8 +64,8 @@ del archivo de SUNAT todavía no se confirmó con su cabecera; si cambia, se aju
 | `GEOPS_SUNAT_FILE` | `classpath:sunat/padron-muestra.txt` | Padrón de muestra (12 líneas: 10 de Lima y Callao, una de Arequipa y una mal formada) |
 | `GEOPS_SUNAT_SCHEDULE_ENABLED` | `true` | `false` apaga la carga diaria y la del arranque |
 
-RUC de la muestra para la demo: `20123456789` activo y habido, `20111111111` de baja,
-`20222222222` no habido, `20333333333` de Arequipa (no se carga) y `20999999999` no existe.
+RUC de la muestra para la demo: `20123456786` activo y habido, `20111111112` de baja,
+`20222222223` no habido, `20333333334` de Arequipa (no se carga) y `20999999990` no existe.
 
 ## Nominatim
 

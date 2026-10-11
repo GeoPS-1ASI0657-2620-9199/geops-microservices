@@ -26,7 +26,7 @@ class SunatPadronParserTest {
             assertThat(result.read()).isEqualTo(11);
             assertThat(result.malformed()).isEqualTo(1);
         }
-        assertThat(lines.get(0)).isEqualTo(new SunatTaxpayerLine("20123456789", "RESTAURANTE DON PEPE S.A.C.",
+        assertThat(lines.get(0)).isEqualTo(new SunatTaxpayerLine("20123456786", "RESTAURANTE DON PEPE S.A.C.",
                 "ACTIVO", "HABIDO", "150122"));
     }
 
@@ -43,22 +43,22 @@ class SunatPadronParserTest {
 
     @Test
     void takesEachFieldFromTheConfiguredColumn() throws IOException {
-        var text = "150101;ACTIVO;HABIDO;20123456789;BODEGA REORDENADA\n";
+        var text = "150101;ACTIVO;HABIDO;20123456786;BODEGA REORDENADA\n";
         var lines = new ArrayList<SunatTaxpayerLine>();
 
         parser(new SunatProperties.Columns(3, 4, 1, 2, 0), ";").parse(latin1(text), lines::add);
 
-        assertThat(lines).containsExactly(new SunatTaxpayerLine("20123456789", "BODEGA REORDENADA", "ACTIVO",
+        assertThat(lines).containsExactly(new SunatTaxpayerLine("20123456786", "BODEGA REORDENADA", "ACTIVO",
                 "HABIDO", "150101"));
     }
 
     @Test
     void discardsShortLinesBadRucsAndEmptyFields() throws IOException {
         var text = String.join("\n",
-                "20123456789|SOLO DOS",
+                "20123456786|SOLO DOS",
                 "2012345678X|RUC CON LETRA|ACTIVO|HABIDO|150101|",
-                "20123456789||ACTIVO|HABIDO|150101|",
-                "20123456789|BIEN FORMADA|ACTIVO|HABIDO|150101|") + "\n";
+                "20123456786||ACTIVO|HABIDO|150101|",
+                "20123456786|BIEN FORMADA|ACTIVO|HABIDO|150101|") + "\n";
         var lines = new ArrayList<SunatTaxpayerLine>();
 
         var result = parser(new SunatProperties.Columns(0, 1, 2, 3, 4), "|").parse(latin1(text), lines::add);
@@ -69,9 +69,9 @@ class SunatPadronParserTest {
 
     @Test
     void keepsOnlyTheConfiguredUbigeoPrefixes() {
-        var lima = new SunatTaxpayerLine("20123456789", "A", "ACTIVO", "HABIDO", "150122");
-        var callao = new SunatTaxpayerLine("20123456789", "A", "ACTIVO", "HABIDO", "070101");
-        var arequipa = new SunatTaxpayerLine("20123456789", "A", "ACTIVO", "HABIDO", "040101");
+        var lima = new SunatTaxpayerLine("20123456786", "A", "ACTIVO", "HABIDO", "150122");
+        var callao = new SunatTaxpayerLine("20123456786", "A", "ACTIVO", "HABIDO", "070101");
+        var arequipa = new SunatTaxpayerLine("20123456786", "A", "ACTIVO", "HABIDO", "040101");
 
         assertThat(lima.isInAnyOf(List.of("1501", "0701"))).isTrue();
         assertThat(callao.isInAnyOf(List.of("1501", "0701"))).isTrue();
