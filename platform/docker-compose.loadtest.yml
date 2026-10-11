@@ -1,0 +1,10 @@
+# Prueba de carga QAS02, solo en local (C2-02). Sube el límite de la ruta de ofertas a 400 r/s.
+#   docker compose -f docker-compose.yml -f docker-compose.loadtest.yml \
+#     --profile app --profile messaging up -d gateway
+# Al terminar, el gateway normal vuelve con:
+#   docker compose --profile app --profile messaging up -d --force-recreate gateway
+services:
+  gateway:
+    volumes: !override
+      - ./gateway/nginx.loadtest.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./gateway/routes.conf:/etc/nginx/geops/routes.conf:ro
