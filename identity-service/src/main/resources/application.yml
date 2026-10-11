@@ -16,6 +16,11 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+  task:
+    scheduling:
+      # La carga del padrón puede tardar minutos; con tres hilos no frena el relay ni los reintentos.
+      pool:
+        size: 3
 
 geops:
   security:
@@ -24,6 +29,22 @@ geops:
       public-key-path: ${JWT_PUBLIC_KEY_PATH}
       issuer: geops-identity
       audience: geops-api
+  sunat:
+    # file: lee geops.sunat.file (pruebas y demo). url: descarga el padrón reducido de SUNAT.
+    source: ${GEOPS_SUNAT_SOURCE:file}
+    url: ${GEOPS_SUNAT_URL:http://www2.sunat.gob.pe/padron_reducido_ruc.zip}
+    file: ${GEOPS_SUNAT_FILE:classpath:sunat/padron-muestra.txt}
+    schedule-enabled: ${GEOPS_SUNAT_SCHEDULE_ENABLED:true}
+    ubigeo-prefixes: 1501,0701
+    charset: ISO-8859-1
+    separator: "|"
+    # Posición (desde 0) de cada campo en una línea del padrón. Si SUNAT cambia el orden, solo cambia esto.
+    columns:
+      ruc: 0
+      business-name: 1
+      status: 2
+      condition: 3
+      ubigeo: 4
 
 management:
   endpoints:

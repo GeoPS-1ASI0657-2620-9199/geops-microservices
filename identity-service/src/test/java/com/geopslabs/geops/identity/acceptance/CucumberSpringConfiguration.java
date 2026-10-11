@@ -9,7 +9,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @CucumberContextConfiguration
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "geops.sunat.schedule-enabled=false")
 public class CucumberSpringConfiguration {
     private static final DockerImageName POSTGIS_IMAGE =
             DockerImageName.parse("imresamu/postgis:16-3.4").asCompatibleSubstituteFor("postgres");
