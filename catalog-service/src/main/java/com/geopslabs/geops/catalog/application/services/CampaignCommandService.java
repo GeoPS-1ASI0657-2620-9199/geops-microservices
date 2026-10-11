@@ -10,6 +10,7 @@ import com.geopslabs.geops.catalog.domain.models.DateRange;
 import com.geopslabs.geops.catalog.domain.models.MerchantStanding;
 import com.geopslabs.geops.catalog.domain.models.Money;
 import com.geopslabs.geops.catalog.domain.models.Offer;
+import com.geopslabs.geops.catalog.domain.models.OfferCategory;
 import com.geopslabs.geops.catalog.domain.models.ZoneType;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.MerchantStandingRepositoryPort;
@@ -68,7 +69,7 @@ public class CampaignCommandService implements CreateCampaignUseCase {
 
     private static Offer offerOf(Campaign campaign, CreateOfferCommand offer, CreateCampaignCommand command) {
         return Offer.publishFor(campaign, offer.title(), offer.conditions(), Money.soles(offer.price()),
-                offer.validTo(), offer.category(), offer.imageUrl(), command.storeAddress(), command.storeLocation());
+                offer.validTo(), OfferCategory.of(offer.category()).label(), offer.imageUrl(), command.storeAddress(), command.storeLocation());
     }
 
     private static CampaignZone zoneOf(CreateCampaignCommand command) {

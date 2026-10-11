@@ -3,6 +3,7 @@ package com.geopslabs.geops.catalog.infrastructure.web;
 import com.geopslabs.geops.catalog.domain.models.exceptions.CampaignAlreadyEndedException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidCampaignPeriodException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidCampaignZoneException;
+import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidCategoryException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidGeoPointException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.OfferValidityOutsideCampaignException;
 import com.geopslabs.geops.catalog.shared.domain.DomainException;
@@ -23,7 +24,7 @@ public class CampaignsExceptionHandler {
 
     @ExceptionHandler({CampaignAlreadyEndedException.class, InvalidCampaignPeriodException.class,
             InvalidCampaignZoneException.class, OfferValidityOutsideCampaignException.class,
-            InvalidGeoPointException.class})
+            InvalidGeoPointException.class, InvalidCategoryException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleRejectedCampaign(DomainException exception) {
         LOGGER.info("campaign.rejected code={}", exception.getCode());

@@ -7,6 +7,7 @@ import com.geopslabs.geops.catalog.domain.models.GeoPoint;
 import com.geopslabs.geops.catalog.domain.models.MerchantStanding;
 import com.geopslabs.geops.catalog.domain.models.Offer;
 import com.geopslabs.geops.catalog.domain.models.ZoneType;
+import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidCategoryException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.CampaignAlreadyEndedException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidCampaignZoneException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.OfferValidityOutsideCampaignException;
@@ -108,6 +109,29 @@ class CampaignCommandServiceTest {
             assertThat(offer.getAddress()).isEqualTo(ADDRESS);
             assertThat(offer.getLocation()).isEqualTo(STORE);
         });
+    }
+
+    @Test
+    void nothingIsSavedWhenAnOfferHasACategoryOutsideTheList() {
+        var toys = new CreateCampaignCommand(BUSINESS_ID, BUSINESS_NAME, "Juguetes", "Juguetes", START, END, BUDGET,
+                ADDRESS, STORE, ZoneType.RADIUS, STORE, RADIUS_METERS, null,
+                List.of(new CreateOfferCommand("Carritos 2x1", "Hasta agotar stock", new BigDecimal("15.00"),
+                        OFFER_VALID_TO, "Juguetería", null)));
+
+        assertThatThrownBy(() -> service.publish(toys)).isInstanceOf(InvalidCategoryException.class);
+        verifyNoInteractions(merchantStandingRepository, campaignRepository, offerRepository);
+    }
+
+    @Test
+    void theCategoryIsSavedWithItsCanonicalLabel() {
+        stubSaves();
+        var lowerCase = new CreateCampaignCommand(BUSINESS_ID, BUSINESS_NAME, "Menú", "Menú", START, END, BUDGET,
+                ADDRESS, STORE, ZoneType.RADIUS, STORE, RADIUS_METERS, null,
+                List.of(new CreateOfferCommand("Menú", "Lunes a viernes", new BigDecimal("15.00"), OFFER_VALID_TO,
+                        "gastronomia", null)));
+
+        assertThat(service.publish(lowerCase).offers()).singleElement()
+                .extracting(offer -> offer.getCategory()).isEqualTo("Gastronomía");
     }
 
     @Test
