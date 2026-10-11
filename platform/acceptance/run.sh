@@ -151,13 +151,27 @@ us17() {
     -d "{\"role\":\"CONSUMER\",\"fullName\":\"Prueba US17\",\"email\":\"${email}\",\"phone\":\"${phone}\",\"password\":\"${password}\"}"
   "${COMPOSE[@]}" restart catalog-service > /dev/null 2>&1 &
   local restart_pid=$!
-  sleep 2
+  # El login debe ocurrir con Catalog caído de verdad: se espera a que ninguna réplica esté healthy.
+  local down=0
+  for _ in $(seq 1 60); do
+    if ! docker inspect -f '{{.State.Health.Status}}' $(catalog_ids) 2>/dev/null | grep -qx healthy; then
+      down=1
+      break
+    fi
+    sleep 0.5
+  done
   step "The login answers 200 while catalog-service restarts"
   login_code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "${GATEWAY_URL}/api/v1/auth/login" \
     -H 'Content-Type: application/json' -d "{\"email\":\"${email}\",\"password\":\"${password}\"}")
   local catalog_state
   catalog_state=$(docker inspect -f '{{.State.Health.Status}}' $(catalog_ids) | sort | uniq -c | paste -sd, - | tr -s ' ')
-  [ "$login_code" = "200" ] && ok "catalog:${catalog_state}" || ko "HTTP $login_code, catalog:${catalog_state}"
+  if [ "$down" -ne 1 ]; then
+    ko "catalog-service never left healthy; login not measured during the restart"
+  elif [ "$login_code" = "200" ]; then
+    ok "catalog:${catalog_state}"
+  else
+    ko "HTTP $login_code, catalog:${catalog_state}"
+  fi
   wait "$restart_pid"
 
   "${COMPOSE[@]}" up -d --no-deps --scale catalog-service=1 catalog-service > /dev/null 2>&1
