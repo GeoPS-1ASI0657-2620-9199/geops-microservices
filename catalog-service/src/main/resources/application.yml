@@ -88,6 +88,9 @@ resilience4j:
         permitted-number-of-calls-in-half-open-state: 1
 
 management:
+  # F2: actuator on its own port, not published by compose nor routed by the gateway.
+  server:
+    port: ${MANAGEMENT_PORT:9082}
   endpoints:
     web:
       exposure:

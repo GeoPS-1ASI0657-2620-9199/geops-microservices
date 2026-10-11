@@ -72,6 +72,14 @@ informe (`processed`, `geocoded`, `manualReview`, `stillPending`, `stoppedByProv
 recibió la llamada; los conteos por estado salen de la base y valen para cualquier réplica. Una
 tarea cada 30 minutos lanza la corrida si quedan ofertas `PENDING`.
 
+## Métricas
+
+Actuator escucha en un puerto de gestión aparte (`MANAGEMENT_PORT`, 9082 por defecto), que el
+compose no publica y el gateway no enruta; en el puerto del servicio no hay `/actuator`. Desde la
+red del compose:
+`docker compose exec catalog-service curl -s localhost:9082/actuator/metrics/catalog.cell.cache.hits`.
+El healthcheck del compose usa `localhost:9082/actuator/health`.
+
 ## Base de datos
 
 `catalog_db` con PostGIS. El esquema solo cambia con migraciones de Flyway en
