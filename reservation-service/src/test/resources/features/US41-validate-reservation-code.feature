@@ -12,6 +12,11 @@ Feature: Validate the reservation code at the store
     Then the response has status 200
     And the response shows offer 1052, its title and expiresAt "2026-10-21T04:59:59Z"
 
+  Scenario: A code typed in lowercase and with blanks finds the same reservation
+    When business owner of business 84 looks up code "7kq2 m9xa"
+    Then the response has status 200
+    And the response shows offer 1052, its title and expiresAt "2026-10-21T04:59:59Z"
+
   Scenario: A valid code within its deadline is redeemed once
     When business owner of business 84 redeems code "7KQ2M9XA"
     Then the response has status 200
