@@ -66,9 +66,12 @@ function pick(list) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
-// Hasta 300 m alrededor del centro: varias celdas por distrito, como consumidores reales que no están en el mismo punto.
+// Hasta JITTER_METERS (1,5 km) alrededor del centro, la misma dispersión del dataset: muchas celdas por distrito,
+// como consumidores reales que no están en el mismo punto.
+const JITTER_METERS = Number(__ENV.JITTER_METERS || 1500);
+
 function jitter([lat, lng]) {
-  const meters = 300;
+  const meters = JITTER_METERS;
   return [lat + ((Math.random() * 2 - 1) * meters) / 111320, lng + ((Math.random() * 2 - 1) * meters) / 108900];
 }
 
