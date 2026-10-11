@@ -60,6 +60,22 @@ public class BusinessProfile {
      * Otherwise the corrected address is kept even when the attempt is rejected, so the owner does not type it again.
      */
     public SealChange applyVerification(RucVerification verification, String correctedAddress) {
+        return applyVerification(verification, correctedAddress, correctedAddress != null ? correctedAddress : address);
+    }
+
+    /**
+     * Same as {@link #applyVerification(RucVerification, String)}, for an attempt that checked
+     * {@code checkedAddress}. An attempt built on data that changed meanwhile is stale and changes nothing: the RUC is
+     * no longer the one checked, or the attempt did not correct the address and the profile now has another one
+     * (for example the retry geocoded the old address while the owner corrected it and got approved).
+     */
+    public SealChange applyVerification(RucVerification verification, String correctedAddress,
+                                        String checkedAddress) {
+        var rucChanged = !ruc.equals(verification.ruc());
+        var addressChanged = correctedAddress == null && !address.equals(checkedAddress);
+        if (rucChanged || addressChanged) {
+            return SealChange.UNCHANGED;
+        }
         if (correctedAddress != null) {
             var addressNotConfirmed = verification.reason() == VerificationReason.ADDRESS_NOT_GEOCODABLE
                     || verification.reason() == VerificationReason.GEOCODER_UNAVAILABLE;

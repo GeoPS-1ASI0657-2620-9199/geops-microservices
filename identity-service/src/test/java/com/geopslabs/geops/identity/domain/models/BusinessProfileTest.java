@@ -150,6 +150,36 @@ class BusinessProfileTest {
     }
 
     @Test
+    void anAttemptThatCheckedAnAddressTheProfileNoLongerHasChangesNothing() {
+        var profile = withStatus(VerificationStatus.VERIFIED);
+
+        var change = profile.applyVerification(verification(VerificationResult.REJECTED,
+                VerificationReason.ADDRESS_NOT_GEOCODABLE), null, "Jr. Huánuco 1, La Victoria");
+
+        assertThat(change).isEqualTo(SealChange.UNCHANGED);
+        assertThat(profile.getVerificationStatus()).isEqualTo(VerificationStatus.VERIFIED);
+        assertThat(profile.getAddress()).isEqualTo(ADDRESS);
+    }
+
+    @Test
+    void anAttemptForAnotherRucChangesNothing() {
+        var profile = register(RUC, ADDRESS);
+        var otherRuc = new RucVerification(1L, 84L, new Ruc("20123456786"), VerificationResult.APPROVED, null,
+                "ACTIVO", "HABIDO", java.time.Instant.parse("2026-10-21T15:04:00Z"));
+
+        assertThat(profile.applyVerification(otherRuc, null, ADDRESS)).isEqualTo(SealChange.UNCHANGED);
+        assertThat(profile.getVerificationStatus()).isEqualTo(VerificationStatus.UNVERIFIED);
+    }
+
+    @Test
+    void anAttemptThatCheckedTheCurrentAddressIsApplied() {
+        var profile = register(RUC, ADDRESS);
+
+        assertThat(profile.applyVerification(verification(VerificationResult.APPROVED, null), null, ADDRESS))
+                .isEqualTo(SealChange.GRANTED);
+    }
+
+    @Test
     void rejectsABlankCorrectedAddress() {
         var profile = register(RUC, ADDRESS);
 

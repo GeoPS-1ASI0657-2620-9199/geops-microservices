@@ -105,7 +105,8 @@ public class BusinessVerificationService implements VerifyBusinessRucUseCase, Re
         var current = businessProfiles.findByIdForUpdate(businessId)
                 .orElseThrow(BusinessProfileNotFoundException::new);
         var verification = verifications.save(attempt);
-        var sealChange = current.applyVerification(verification, correctedAddress);
+        // The attempt is always stored; a stale one (old address or RUC) leaves the status as it is.
+        var sealChange = current.applyVerification(verification, correctedAddress, checkedAddress);
         businessProfiles.save(current);
         if (sealChange.mustBePublished()) {
             outbox.append(BusinessVerified.of(current, verification, eventIds.get()));

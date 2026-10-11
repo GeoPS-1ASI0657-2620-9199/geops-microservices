@@ -62,6 +62,7 @@ class BusinessVerificationConcurrencyTest {
             DockerImageName.parse("imresamu/postgis:16-3.4").asCompatibleSubstituteFor("postgres");
     private static final String FOUND_ADDRESS = "Av. José Larco 345, Miraflores";
     private static final String MISSING_ADDRESS = "Av. Larcco 999, Miraflores";
+    private static final String OLD_ADDRESS = "Av. Larco 345, Miraflores";
     private static final long WAIT_SECONDS = 20;
 
     @ServiceConnection
@@ -144,6 +145,45 @@ class BusinessVerificationConcurrencyTest {
         // after it is a corrected address that a verified business does not take.
         assertThat(finalStatus).isEqualTo(VerificationStatus.VERIFIED);
         assertThat(published).containsExactly(true);
+    }
+
+    @Test
+    void aRetryThatGeocodedTheOldAddressDoesNotUndoTheApprovalOfTheCorrectedOne() throws Exception {
+        var businessId = registerBusiness();
+        jdbc.update("UPDATE business_profiles SET verification_status = 'PENDING' WHERE id = ?", businessId);
+        var retryIsGeocoding = new CountDownLatch(1);
+        var ownerIsDone = new CountDownLatch(1);
+        GeocodingPort geocoder = address -> {
+            if (OLD_ADDRESS.equals(address)) {
+                retryIsGeocoding.countDown();
+                await(ownerIsDone);
+                return GeocodingResult.notFound();
+            }
+            return GeocodingResult.found(new GeoPoint(-12.1211, -77.0297));
+        };
+        var service = service(geocoder);
+        var executor = Executors.newSingleThreadExecutor();
+        try {
+            var retry = executor.submit(() -> service.retry(businessId));
+            assertThat(retryIsGeocoding.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+            var owner = service.verify(request(businessId, FOUND_ADDRESS));
+            assertThat(owner.verificationStatus()).isEqualTo(VerificationStatus.VERIFIED);
+            ownerIsDone.countDown();
+
+            var stale = retry.get(WAIT_SECONDS, TimeUnit.SECONDS);
+
+            assertThat(stale.verification().reason()).isEqualTo(
+                    com.geopslabs.geops.identity.domain.models.VerificationReason.ADDRESS_NOT_GEOCODABLE);
+            assertThat(stale.verificationStatus()).isEqualTo(VerificationStatus.VERIFIED);
+        } finally {
+            executor.shutdownNow();
+        }
+        var profile = businessProfiles.findById(businessId).orElseThrow();
+        assertThat(profile.getVerificationStatus()).isEqualTo(VerificationStatus.VERIFIED);
+        assertThat(profile.getAddress()).isEqualTo(FOUND_ADDRESS);
+        assertThat(publishedVerifiedFlags(businessId)).containsExactly(true);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM ruc_verifications WHERE business_profile_id = ?",
+                Integer.class, businessId)).as("the stale attempt is still stored").isEqualTo(2);
     }
 
     @Test
@@ -249,7 +289,7 @@ class BusinessVerificationConcurrencyTest {
         var owner = users.save(User.register("Dueño " + number, new Email("dueno.carrera" + number + "@ejemplo.pe"),
                 "96%07d".formatted(number), "hash", Role.BUSINESS_OWNER));
         var profile = BusinessProfile.register("Restaurante Don Pepe", "Restaurante", new Ruc("20123456786"),
-                "Av. Larco 345, Miraflores", new GeoPoint(-12.1211, -77.0297), null);
+                OLD_ADDRESS, new GeoPoint(-12.1211, -77.0297), null);
         return businessProfiles.save(profile.ownedBy(owner.getId())).getId();
     }
 
