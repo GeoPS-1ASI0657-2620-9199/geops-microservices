@@ -31,8 +31,15 @@ Feature: Show which businesses are verified in the results
   Scenario: An event Catalog cannot read does not stop the consumer
     When Identity publishes an event Catalog cannot read and then BusinessVerified for business 84
     Then business 84 has the verified seal
+    And Catalog tried to apply it 1 times
 
   Scenario: An event that fails because the database is down is applied when it comes back
     When Identity publishes BusinessVerified for business 84 while the database is down for 8 seconds
     Then business 84 has the verified seal
+    And business 84 has one seal change recorded
+
+  Scenario: A bug while applying an event retries it instead of discarding it
+    When Identity publishes BusinessVerified for business 84 while applying it fails 2 times with a bug
+    Then Catalog tried to apply it 3 times
+    And business 84 has the verified seal
     And business 84 has one seal change recorded

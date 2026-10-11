@@ -1,6 +1,8 @@
 package com.geopslabs.geops.catalog.acceptance;
 
 import com.geopslabs.geops.catalog.application.services.OfferQueryService;
+import com.geopslabs.geops.catalog.application.usecases.ApplyBusinessVerifiedUseCase;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -17,6 +19,14 @@ public class AcceptanceTestConfiguration {
     @Primary
     public MutableClock acceptanceClock() {
         return new MutableClock(ACCEPTANCE_NOW, OfferQueryService.OFFER_ZONE);
+    }
+
+    /** The listener gets the real use case through this wrapper, which a scenario can make fail like a bug. */
+    @Bean
+    @Primary
+    public FlakyBusinessVerified flakyBusinessVerified(
+            @Qualifier("applyBusinessVerifiedUseCase") ApplyBusinessVerifiedUseCase real) {
+        return new FlakyBusinessVerified(real);
     }
 
     /** In the compose the topic comes from kafka-init (E2-02); here KafkaAdmin creates it at startup. */

@@ -12,6 +12,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -35,9 +36,8 @@ public class IdentityEventsListener {
 
     @KafkaListener(id = "catalog-identity-events", topics = "${geops.events.identity-topic:identity.events}",
             groupId = "catalog-service", autoStartup = "${geops.messaging.enabled:true}")
-    public void onIdentityEvent(ConsumerRecord<String, String> record, Acknowledgment acknowledgment)
-            throws JsonProcessingException {
-        var envelope = objectMapper.readTree(record.value());
+    public void onIdentityEvent(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
+        var envelope = read(record.value());
         var eventType = envelope.path("eventType").asText();
         if (!BusinessVerifiedEvent.EVENT_TYPE.equals(eventType)) {
             LOGGER.debug("identity.event.ignored eventType={} eventId={}", eventType, envelope.path("eventId").asText());
@@ -48,14 +48,31 @@ public class IdentityEventsListener {
         acknowledgment.acknowledge();
     }
 
+    private JsonNode read(String value) {
+        try {
+            var envelope = objectMapper.readTree(value);
+            if (envelope == null || !envelope.isObject()) {
+                throw new UnreadableEventException("The record is not a JSON object");
+            }
+            return envelope;
+        } catch (JsonProcessingException exception) {
+            throw new UnreadableEventException("The record is not valid JSON", exception);
+        }
+    }
+
+    /** Only reading the envelope is wrapped: an error while applying the event is not the event's fault. */
     static BusinessVerifiedEvent toEvent(JsonNode envelope) {
         var payload = envelope.path(PAYLOAD);
         var businessId = payload.path("businessId");
         if (!businessId.canConvertToLong() || !payload.path("verified").isBoolean()) {
-            throw new IllegalArgumentException("BusinessVerified without businessId or verified");
+            throw new UnreadableEventException("BusinessVerified without businessId or verified");
         }
-        return new BusinessVerifiedEvent(UUID.fromString(envelope.path("eventId").asText()),
-                Instant.parse(envelope.path("occurredAt").asText()), businessId.asLong(),
-                payload.path("businessName").asText(null), payload.path("verified").asBoolean());
+        try {
+            return new BusinessVerifiedEvent(UUID.fromString(envelope.path("eventId").asText()),
+                    Instant.parse(envelope.path("occurredAt").asText()), businessId.asLong(),
+                    payload.path("businessName").asText(null), payload.path("verified").asBoolean());
+        } catch (IllegalArgumentException | DateTimeException | NullPointerException exception) {
+            throw new UnreadableEventException("BusinessVerified with an invalid eventId or occurredAt", exception);
+        }
     }
 }

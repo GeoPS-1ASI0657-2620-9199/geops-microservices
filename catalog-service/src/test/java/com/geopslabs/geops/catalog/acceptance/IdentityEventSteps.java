@@ -42,16 +42,36 @@ public class IdentityEventSteps {
     private final JdbcTemplate jdbc;
     private final NearbySearchSteps search;
     private final MutableClock clock;
+    private final FlakyBusinessVerified flaky;
     private int eventsSent;
 
     public IdentityEventSteps(KafkaTemplate<String, String> kafka, KafkaAdmin kafkaAdmin, ObjectMapper objectMapper,
-                              JdbcTemplate jdbc, NearbySearchSteps search, MutableClock clock) {
+                              JdbcTemplate jdbc, NearbySearchSteps search, MutableClock clock,
+                              FlakyBusinessVerified flaky) {
         this.kafka = kafka;
         this.kafkaAdmin = kafkaAdmin;
         this.objectMapper = objectMapper;
         this.jdbc = jdbc;
         this.search = search;
         this.clock = clock;
+        this.flaky = flaky;
+    }
+
+    @io.cucumber.java.After
+    public void stopFailing() {
+        flaky.reset();
+    }
+
+    @When("Identity publishes BusinessVerified for business {long} while applying it fails {int} times with a bug")
+    public void identityPublishesWhileCatalogFails(Long businessId, int failures) throws Exception {
+        flaky.failNext(failures);
+        send(businessVerified(UUID.randomUUID(), businessId, true));
+        awaitConsumed();
+    }
+
+    @Then("Catalog tried to apply it {int} times")
+    public void catalogTriedTimes(int times) {
+        assertThat(flaky.calls()).isEqualTo(times);
     }
 
     @Given("Identity published BusinessVerified for business {long} with verified {word}")

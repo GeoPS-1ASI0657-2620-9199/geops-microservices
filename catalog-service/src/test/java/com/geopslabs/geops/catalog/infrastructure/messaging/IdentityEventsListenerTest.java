@@ -67,7 +67,30 @@ class IdentityEventsListenerTest {
         assertThatThrownBy(() -> listener.onIdentityEvent(record("""
                 {"eventId": "1b0c8a2e-0000-4000-8000-000000000002", "eventType": "BusinessVerified",
                  "occurredAt": "2026-10-06T15:00:00Z", "payload": {"verified": true}}"""), acknowledgment))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(UnreadableEventException.class);
+        verify(acknowledgment, never()).acknowledge();
+    }
+
+    @Test
+    void brokenJsonAndAnInvalidEventIdAreUnreadable() {
+        assertThatThrownBy(() -> listener.onIdentityEvent(record("{not json"), acknowledgment))
+                .isInstanceOf(UnreadableEventException.class);
+        assertThatThrownBy(() -> listener.onIdentityEvent(record(BUSINESS_VERIFIED
+                .replace("7d1f8f5e-2b8c-4a7e-9a40-2f1d2a6c9b11", "not-a-uuid")), acknowledgment))
+                .isInstanceOf(UnreadableEventException.class);
+        assertThatThrownBy(() -> listener.onIdentityEvent(record(BUSINESS_VERIFIED
+                .replace("\"occurredAt\": \"2026-10-06T15:00:00Z\"", "\"occurredAt\": \"ayer\"")), acknowledgment))
+                .isInstanceOf(UnreadableEventException.class);
+        verifyNoInteractions(useCase);
+    }
+
+    @Test
+    void aFailureWhileApplyingTheEventIsNotTheEventsFault() {
+        org.mockito.Mockito.when(useCase.apply(org.mockito.ArgumentMatchers.any()))
+                .thenThrow(new NullPointerException("bug"));
+
+        assertThatThrownBy(() -> listener.onIdentityEvent(record(BUSINESS_VERIFIED), acknowledgment))
+                .isExactlyInstanceOf(NullPointerException.class);
         verify(acknowledgment, never()).acknowledge();
     }
 
