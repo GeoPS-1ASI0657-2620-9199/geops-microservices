@@ -1,6 +1,8 @@
 package com.geopslabs.geops.identity.infrastructure.web;
 
 import com.geopslabs.geops.identity.domain.models.RucVerification;
+import com.geopslabs.geops.identity.domain.models.VerificationReason;
+import com.geopslabs.geops.identity.domain.models.VerificationStatus;
 
 /**
  * QAS13: every answer of the verification tells the owner what happened and what to do next, in the words of the
@@ -16,15 +18,22 @@ final class VerificationMessages {
             + "en SUNAT y vuelve a solicitar la verificación.";
     private static final String ADDRESS_NOT_GEOCODABLE = "No ubicamos \"%s\" en el mapa de Lima y Callao. Corrige "
             + "la dirección (vía, número y distrito) y vuelve a intentarlo; lo demás ya está validado.";
+    private static final String NEW_ADDRESS_NOT_GEOCODABLE = "No ubicamos la nueva dirección en el mapa de Lima y "
+            + "Callao. Conservamos tu dirección anterior y tu sello; corrige la nueva (vía, número y distrito) y "
+            + "vuelve a intentarlo.";
     private static final String GEOCODER_UNAVAILABLE = "El servicio de mapas no respondió. Tu verificación quedó "
             + "pendiente y la reintentaremos en unos minutos; no tienes que hacer nada.";
 
     private VerificationMessages() {
     }
 
-    static String of(RucVerification verification, String checkedAddress) {
+    static String of(RucVerification verification, String checkedAddress, VerificationStatus status) {
         if (verification.reason() == null) {
             return APPROVED;
+        }
+        if (status == VerificationStatus.VERIFIED
+                && verification.reason() == VerificationReason.ADDRESS_NOT_GEOCODABLE) {
+            return NEW_ADDRESS_NOT_GEOCODABLE;
         }
         return switch (verification.reason()) {
             case RUC_NOT_FOUND -> RUC_NOT_FOUND.formatted(verification.ruc().number());

@@ -116,6 +116,40 @@ class BusinessProfileTest {
     }
 
     @Test
+    void aVerifiedBusinessIgnoresACorrectedAddressThatWasNotGeocoded() {
+        var profile = withStatus(VerificationStatus.VERIFIED);
+
+        var change = profile.applyVerification(verification(VerificationResult.REJECTED,
+                VerificationReason.ADDRESS_NOT_GEOCODABLE), "Av. Larcco 999, Miraflores");
+
+        assertThat(change).isEqualTo(SealChange.UNCHANGED);
+        assertThat(profile.getAddress()).isEqualTo(ADDRESS);
+        assertThat(profile.getVerificationStatus()).isEqualTo(VerificationStatus.VERIFIED);
+    }
+
+    @Test
+    void aBusinessWithoutSealKeepsTheCorrectedAddressEvenIfItIsRejected() {
+        var profile = register(RUC, ADDRESS);
+
+        profile.applyVerification(verification(VerificationResult.REJECTED,
+                VerificationReason.ADDRESS_NOT_GEOCODABLE), "Av. Larcco 999, Miraflores");
+
+        assertThat(profile.getAddress()).isEqualTo("Av. Larcco 999, Miraflores");
+        assertThat(profile.getVerificationStatus()).isEqualTo(VerificationStatus.REJECTED);
+    }
+
+    @Test
+    void aVerifiedBusinessTakesACorrectedAddressThatWasGeocoded() {
+        var profile = withStatus(VerificationStatus.VERIFIED);
+
+        var change = profile.applyVerification(verification(VerificationResult.APPROVED, null),
+                "Av. José Larco 345, Miraflores");
+
+        assertThat(change).isEqualTo(SealChange.CONFIRMED);
+        assertThat(profile.getAddress()).isEqualTo("Av. José Larco 345, Miraflores");
+    }
+
+    @Test
     void rejectsABlankCorrectedAddress() {
         var profile = register(RUC, ADDRESS);
 

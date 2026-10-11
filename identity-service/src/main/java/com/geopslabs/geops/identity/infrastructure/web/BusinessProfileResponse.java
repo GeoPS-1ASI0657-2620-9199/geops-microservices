@@ -18,7 +18,8 @@ public record BusinessProfileResponse(Long id, String businessName, String busin
         var profile = view.profile();
         var last = view.latestVerification()
                 .map(verification -> new LastVerification(verification.result(), verification.reason(),
-                        VerificationMessages.of(verification, profile.getAddress()), verification.checkedAt()))
+                        VerificationMessages.of(verification, profile.getAddress(),
+                                profile.getVerificationStatus()), verification.checkedAt()))
                 .orElse(null);
         return new BusinessProfileResponse(profile.getId(), profile.getBusinessName(), profile.getBusinessType(),
                 profile.getRuc().number(), profile.getAddress(), profile.getVerificationStatus(), last);

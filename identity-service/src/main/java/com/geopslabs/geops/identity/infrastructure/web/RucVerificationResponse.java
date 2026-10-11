@@ -18,7 +18,7 @@ public record RucVerificationResponse(Long verificationId, VerificationResult re
     static RucVerificationResponse from(VerificationOutcome outcome) {
         var verification = outcome.verification();
         return new RucVerificationResponse(verification.id(), verification.result(), verification.reason(),
-                VerificationMessages.of(verification, outcome.checkedAddress()), outcome.checkedAddress(),
+                VerificationMessages.of(verification, outcome.checkedAddress(), outcome.verificationStatus()), outcome.checkedAddress(),
                 verification.taxpayerStatus(), verification.taxpayerCondition(), outcome.verificationStatus(),
                 verification.checkedAt());
     }

@@ -57,6 +57,17 @@ Feature: Verify the business RUC against SUNAT
     And the field "verificationStatus" is "PENDING"
     And no BusinessVerified event is stored
 
+  Scenario: A verified business keeps its address and seal when the corrected address cannot be geocoded
+    Given business 84 is VERIFIED
+    And Nominatim finds nothing for "Av. Larcco 999, Miraflores"
+    When the owner of business 84 requests the verification with address "Av. Larcco 999, Miraflores"
+    Then the field "result" is "REJECTED"
+    And the field "reason" is "ADDRESS_NOT_GEOCODABLE"
+    And the field "verificationStatus" is "VERIFIED"
+    And the field "message" is "No ubicamos la nueva dirección en el mapa de Lima y Callao. Conservamos tu dirección anterior y tu sello; corrige la nueva (vía, número y distrito) y vuelve a intentarlo."
+    And business 84 keeps the address "Av. Larco 345, Miraflores"
+    And no BusinessVerified event is stored
+
   Scenario: A verified business loses the seal when its RUC is no longer active
     Given business 84 is VERIFIED
     And the SUNAT registry now lists RUC "20123456786" as "BAJA DE OFICIO"
