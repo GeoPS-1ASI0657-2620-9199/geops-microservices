@@ -79,8 +79,9 @@ public class HttpScenario {
         return lastBody;
     }
 
+    /** A top-level field, or a nested one written with dots ("lastVerification.result"). */
     public String field(String name) throws JsonProcessingException {
-        return lastJson().path(name).asText();
+        return lastJson().at("/" + name.replace('.', '/')).asText();
     }
 
     public JsonNode lastJson() throws JsonProcessingException {
