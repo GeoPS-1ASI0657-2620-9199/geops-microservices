@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class IdentityServiceApplicationTests {
     private static final DockerImageName POSTGIS_IMAGE =
             DockerImageName.parse("imresamu/postgis:16-3.4").asCompatibleSubstituteFor("postgres");
-    private static final String BASELINE_VERSION = "1";
+    private static final String LATEST_VERSION = "3";
 
     @ServiceConnection
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(POSTGIS_IMAGE);
@@ -41,8 +41,8 @@ class IdentityServiceApplicationTests {
     }
 
     @Test
-    void appliesBaselineMigration() {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo(BASELINE_VERSION);
+    void appliesEveryMigration() {
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo(LATEST_VERSION);
     }
 
     @Test

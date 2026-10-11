@@ -44,6 +44,44 @@ public class BusinessProfile {
         return new BusinessProfile(id, ownerId, this, accountStatus, verificationStatus);
     }
 
+    /**
+     * Replaces the declared address with the one the owner corrected. The point marked on the map when the business
+     * registered (US22) stays as it was: geocoding only checks that the address exists.
+     */
+    public void correctAddress(String newAddress) {
+        ensureAddressIsPresent(newAddress);
+        this.address = newAddress.strip();
+    }
+
+    /**
+     * Moves the profile to the status the verification leads to and says what happened to the seal. A verified
+     * business keeps its seal while the geocoder does not answer: the seal is never granted without an answer, and
+     * it is not taken away for one either.
+     */
+    public SealChange applyVerification(RucVerification verification) {
+        var wasVerified = verificationStatus == VerificationStatus.VERIFIED;
+        return switch (verification.result()) {
+            case APPROVED -> {
+                verificationStatus = VerificationStatus.VERIFIED;
+                yield wasVerified ? SealChange.CONFIRMED : SealChange.GRANTED;
+            }
+            case REJECTED -> {
+                verificationStatus = VerificationStatus.REJECTED;
+                yield wasVerified ? SealChange.REVOKED : SealChange.UNCHANGED;
+            }
+            case PENDING -> {
+                if (!wasVerified) {
+                    verificationStatus = VerificationStatus.PENDING;
+                }
+                yield SealChange.UNCHANGED;
+            }
+        };
+    }
+
+    public boolean isVerified() {
+        return verificationStatus == VerificationStatus.VERIFIED;
+    }
+
     private static void ensureRucIsWellFormed(Ruc ruc) {
         if (!ruc.isWellFormed()) {
             throw new InvalidRucException();
