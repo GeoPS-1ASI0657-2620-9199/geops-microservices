@@ -54,13 +54,14 @@ flujo (ISO-8859-1, separador `|`), con `COPY` a una tabla temporal y el reemplaz
 transacción: si la descarga o la lectura fallan, queda el padrón anterior, se registra
 `sunat.registry.load.failed` y se reintenta en una hora.
 
-La posición de cada columna está solo en `geops.sunat.columns` de `application.yml`. El orden real
-del archivo de SUNAT todavía no se confirmó con su cabecera; si cambia, se ajusta ahí.
+La posición de cada columna está solo en `geops.sunat.columns` de `application.yml`. El orden se
+confirmó con la cabecera del archivo real (RUC, razón social, estado, condición, ubigeo); si SUNAT
+lo cambia, se ajusta ahí.
 
 | Variable | Valor por defecto | Uso |
 |---|---|---|
 | `GEOPS_SUNAT_SOURCE` | `file` | `url` descarga el padrón real; `file` lee `GEOPS_SUNAT_FILE` |
-| `GEOPS_SUNAT_URL` | `http://www2.sunat.gob.pe/padron_reducido_ruc.zip` | Origen de la descarga |
+| `GEOPS_SUNAT_URL` | `https://www2.sunat.gob.pe/padron_reducido_ruc.zip` | Origen de la descarga; solo se acepta https |
 | `GEOPS_SUNAT_FILE` | `classpath:sunat/padron-muestra.txt` | Padrón de muestra (12 líneas: 10 de Lima y Callao, una de Arequipa y una mal formada) |
 | `GEOPS_SUNAT_SCHEDULE_ENABLED` | `true` | `false` apaga la carga diaria y la del arranque |
 

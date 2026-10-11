@@ -48,13 +48,14 @@ geops:
   sunat:
     # file: lee geops.sunat.file (pruebas y demo). url: descarga el padrón reducido de SUNAT.
     source: ${GEOPS_SUNAT_SOURCE:file}
-    url: ${GEOPS_SUNAT_URL:http://www2.sunat.gob.pe/padron_reducido_ruc.zip}
+    url: ${GEOPS_SUNAT_URL:https://www2.sunat.gob.pe/padron_reducido_ruc.zip}
     file: ${GEOPS_SUNAT_FILE:classpath:sunat/padron-muestra.txt}
     schedule-enabled: ${GEOPS_SUNAT_SCHEDULE_ENABLED:true}
     ubigeo-prefixes: 1501,0701
     charset: ISO-8859-1
     separator: "|"
-    # Posición (desde 0) de cada campo en una línea del padrón. Si SUNAT cambia el orden, solo cambia esto.
+    # Posición (desde 0) de cada campo en una línea del padrón, confirmada con la cabecera del archivo de SUNAT
+    # el 10/10/2026. Si SUNAT cambia el orden, solo cambia esto.
     columns:
       ruc: 0
       business-name: 1

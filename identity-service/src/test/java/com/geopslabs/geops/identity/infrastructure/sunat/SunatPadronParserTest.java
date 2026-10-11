@@ -78,8 +78,18 @@ class SunatPadronParserTest {
         assertThat(arequipa.isInAnyOf(List.of("1501", "0701"))).isFalse();
     }
 
+    @Test
+    void refusesARegistryUrlThatIsNotHttps() {
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> new SunatProperties(SunatProperties.Source.URL,
+                        URI.create("http://www2.sunat.gob.pe/padron_reducido_ruc.zip"), "classpath:x", List.of("1501"),
+                        StandardCharsets.ISO_8859_1, "|", new SunatProperties.Columns(0, 1, 2, 3, 4),
+                        Duration.ofHours(24), Duration.ofHours(1), Duration.ofSeconds(1), Duration.ofSeconds(1)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("https");
+    }
+
     private static SunatPadronParser parser(SunatProperties.Columns columns, String separator) {
-        return new SunatPadronParser(new SunatProperties(SunatProperties.Source.FILE, URI.create("http://localhost"),
+        return new SunatPadronParser(new SunatProperties(SunatProperties.Source.FILE, URI.create("https://localhost"),
                 "classpath:x", List.of("1501", "0701"), StandardCharsets.ISO_8859_1, separator, columns,
                 Duration.ofHours(24), Duration.ofHours(1), Duration.ofSeconds(1), Duration.ofSeconds(1)));
     }

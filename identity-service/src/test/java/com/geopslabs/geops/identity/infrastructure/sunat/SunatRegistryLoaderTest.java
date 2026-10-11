@@ -161,7 +161,7 @@ class SunatRegistryLoaderTest {
     }
 
     private static SunatRegistryLoader loader() {
-        var properties = new SunatProperties(SunatProperties.Source.FILE, URI.create("http://localhost"), SAMPLE,
+        var properties = new SunatProperties(SunatProperties.Source.FILE, URI.create("https://localhost"), SAMPLE,
                 List.of("1501", "0701"), StandardCharsets.ISO_8859_1, "|",
                 new SunatProperties.Columns(0, 1, 2, 3, 4), Duration.ofHours(24), Duration.ofHours(1),
                 Duration.ofSeconds(2), Duration.ofSeconds(10));
