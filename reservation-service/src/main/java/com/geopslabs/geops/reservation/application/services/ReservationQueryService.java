@@ -31,7 +31,7 @@ public class ReservationQueryService
                 .orElseThrow(() -> ReservationNotFoundException.withId(query.reservationId()));
         if (!reservation.isOwnedByConsumer(query.consumerId())) {
             LOGGER.info("reservation.access-denied reservationId={} reason=other-consumer", reservation.getId());
-            throw new ReservationAccessDeniedException(reservation.getId());
+            throw ReservationAccessDeniedException.otherConsumer(reservation.getId());
         }
         return reservation;
     }
@@ -42,7 +42,7 @@ public class ReservationQueryService
                 .orElseThrow(() -> ReservationNotFoundException.withCode(query.code()));
         if (!reservation.isOfBusiness(query.businessId())) {
             LOGGER.info("reservation.access-denied reservationId={} reason=other-business", reservation.getId());
-            throw new ReservationAccessDeniedException(reservation.getId());
+            throw ReservationAccessDeniedException.otherBusiness();
         }
         return reservation;
     }

@@ -41,6 +41,7 @@ Feature: Validate the reservation code at the store
   Scenario: A code of another business is rejected
     When business owner of business 99 redeems code "7KQ2M9XA"
     Then the response has status 403
+    And the field "message" is "This code belongs to another business"
     And the reservation is still ACTIVE
 
   Scenario: An unknown code is rejected

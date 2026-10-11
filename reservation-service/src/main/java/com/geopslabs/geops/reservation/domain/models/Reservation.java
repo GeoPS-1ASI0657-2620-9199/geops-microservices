@@ -86,7 +86,7 @@ public class Reservation {
 
     public DomainException rejectionException(RedeemRejection rejection) {
         return switch (rejection) {
-            case OTHER_BUSINESS -> new ReservationAccessDeniedException(id);
+            case OTHER_BUSINESS -> ReservationAccessDeniedException.otherBusiness();
             case ALREADY_REDEEMED -> new ReservationAlreadyRedeemedException(id, redeemedAt);
             case REPORTED -> new ReservationReportedException(id);
             case EXPIRED -> new ReservationExpiredException(id);

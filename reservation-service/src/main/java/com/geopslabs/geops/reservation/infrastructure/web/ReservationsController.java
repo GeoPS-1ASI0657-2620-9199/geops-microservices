@@ -86,7 +86,7 @@ public class ReservationsController {
             content = @Content(examples = @ExampleObject(value = UNAUTHORIZED_EXAMPLE)))
     @ApiResponse(responseCode = "403", description = "Token without ROLE_BUSINESS_OWNER or code of another business",
             content = @Content(examples = @ExampleObject(value = """
-                    {"code": "FORBIDDEN", "message": "Reservation 5012 belongs to another account"}""")))
+                    {"code": "FORBIDDEN", "message": "This code belongs to another business"}""")))
     @ApiResponse(responseCode = "404", description = "No reservation has this code",
             content = @Content(examples = @ExampleObject(value = """
                     {"code": "RESERVATION_NOT_FOUND", "message": "Reservation with code ZZZZ9999 was not found"}""")))
@@ -178,7 +178,7 @@ public class ReservationsController {
             content = @Content(examples = @ExampleObject(value = UNAUTHORIZED_EXAMPLE)))
     @ApiResponse(responseCode = "403", description = "Token without ROLE_BUSINESS_OWNER or code of another business",
             content = @Content(examples = @ExampleObject(value = """
-                    {"code": "FORBIDDEN", "message": "Reservation 15 belongs to another account"}""")))
+                    {"code": "FORBIDDEN", "message": "This code belongs to another business"}""")))
     @ApiResponse(responseCode = "404", description = "No reservation has this code",
             content = @Content(examples = @ExampleObject(value = """
                     {"code": "RESERVATION_NOT_FOUND", "message": "Reservation with code ZZZZ2222 was not found"}""")))

@@ -38,7 +38,8 @@ class ReservationTest {
 
         assertThat(reservation.rejectionFor(OTHER_BUSINESS_ID, NOW)).contains(RedeemRejection.OTHER_BUSINESS);
         assertThatThrownBy(() -> reservation.redeem(OTHER_BUSINESS_ID, NOW))
-                .isInstanceOf(ReservationAccessDeniedException.class);
+                .isInstanceOf(ReservationAccessDeniedException.class)
+                .hasMessage("This code belongs to another business");
     }
 
     @Test
