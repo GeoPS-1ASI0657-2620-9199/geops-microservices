@@ -57,12 +57,28 @@ public class PostgresJobLockAdapter implements JobLockPort {
         }
     }
 
-    private static void release(Connection connection, String jobName) {
+    /**
+     * If the unlock fails, closing is not enough: the pool would keep the physical connection and PostgreSQL would
+     * keep the session lock, so no replica could run the job again. Aborting makes the pool drop the connection and
+     * PostgreSQL releases the lock when the session ends.
+     */
+    static void release(Connection connection, String jobName) {
         try {
-            call(connection, UNLOCK, jobName);
+            if (!call(connection, UNLOCK, jobName)) {
+                throw new SQLException("The lock " + jobName + " was not held by this session");
+            }
         } catch (SQLException exception) {
-            // Closing the connection releases it anyway.
-            LOGGER.warn("job.lock.release-failed job={} reason={}", jobName, exception.getClass().getSimpleName());
+            LOGGER.warn("job.lock.release-failed job={} reason={} action=abort-connection", jobName,
+                    exception.getClass().getSimpleName());
+            abort(connection, jobName);
+        }
+    }
+
+    private static void abort(Connection connection, String jobName) {
+        try {
+            connection.abort(Runnable::run);
+        } catch (SQLException exception) {
+            LOGGER.error("job.lock.abort-failed job={} reason={}", jobName, exception.getClass().getSimpleName());
         }
     }
 
