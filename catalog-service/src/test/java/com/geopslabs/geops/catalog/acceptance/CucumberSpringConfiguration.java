@@ -9,6 +9,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
@@ -29,12 +30,16 @@ public class CucumberSpringConfiguration {
     static final GenericContainer<?> REDIS = new GenericContainer<>(DockerImageName.parse("redis:7"))
             .withExposedPorts(REDIS_PORT);
 
+    @ServiceConnection
+    static final KafkaContainer KAFKA = new KafkaContainer(DockerImageName.parse("apache/kafka:3.7.0"));
+
     /** Nominatim: no scenario reaches the real service (E2-15). */
     static final WireMockServer NOMINATIM = new WireMockServer(wireMockConfig().dynamicPort());
 
     static {
         POSTGRES.start();
         REDIS.start();
+        KAFKA.start();
         NOMINATIM.start();
     }
 

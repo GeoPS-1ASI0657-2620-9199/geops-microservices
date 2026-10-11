@@ -32,6 +32,18 @@ spring:
       # QAS02: a Redis that does not answer in 200 ms counts as a cache miss and the search goes to PostgreSQL.
       timeout: 200ms
       connect-timeout: 200ms
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    consumer:
+      group-id: catalog-service
+      # A new group reads identity.events from the start: no BusinessVerified written before is lost.
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      # The event is acknowledged only after the standing is committed and its cells deleted.
+      ack-mode: manual_immediate
   security:
     oauth2:
       resourceserver:
@@ -41,6 +53,10 @@ spring:
           audiences: geops-api
 
 geops:
+  messaging:
+    enabled: ${GEOPS_MESSAGING_ENABLED:true}
+  events:
+    identity-topic: identity.events
   cache:
     # false: the search goes straight to PostgreSQL with the radius query of Sprint 1.
     enabled: ${GEOPS_CACHE_ENABLED:true}

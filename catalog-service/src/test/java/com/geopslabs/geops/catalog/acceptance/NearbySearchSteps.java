@@ -138,6 +138,11 @@ public class NearbySearchSteps {
         assertThat(titles()).doesNotContain(title);
     }
 
+    @Then("the main result does not have {string}")
+    public void mainResultDoesNotHave(String title) throws JsonProcessingException {
+        resultDoesNotHave(title);
+    }
+
     @Then("the first page has {string}")
     public void firstPageHas(String title) throws JsonProcessingException {
         assertThat(http.json(http.last()).path("page").asInt()).isZero();

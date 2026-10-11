@@ -92,7 +92,7 @@ class CampaignCommandServiceTest {
     void existingStandingIsKept() {
         stubSaves();
         when(merchantStandingRepository.findByBusinessId(BUSINESS_ID))
-                .thenReturn(Optional.of(MerchantStanding.provisional(BUSINESS_ID, BUSINESS_NAME, null)));
+                .thenReturn(Optional.of(MerchantStanding.provisional(BUSINESS_ID, BUSINESS_NAME)));
 
         service.publish(command(START, END, BUDGET, ZoneType.RADIUS, OFFER_VALID_TO));
 

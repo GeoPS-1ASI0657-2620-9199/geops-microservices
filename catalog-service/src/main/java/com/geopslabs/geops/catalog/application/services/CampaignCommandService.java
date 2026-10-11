@@ -64,7 +64,7 @@ public class CampaignCommandService implements CreateCampaignUseCase {
 
     private void ensureMerchantStanding(Long businessId, String businessName) {
         if (merchantStandingRepository.findByBusinessId(businessId).isEmpty()) {
-            merchantStandingRepository.save(MerchantStanding.provisional(businessId, businessName, clock.instant()));
+            merchantStandingRepository.save(MerchantStanding.provisional(businessId, businessName));
         }
     }
 

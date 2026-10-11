@@ -4,6 +4,8 @@ import com.geopslabs.geops.catalog.application.services.OfferQueryService;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.kafka.config.TopicBuilder;
+import org.apache.kafka.clients.admin.NewTopic;
 
 import java.time.Instant;
 
@@ -15,5 +17,11 @@ public class AcceptanceTestConfiguration {
     @Primary
     public MutableClock acceptanceClock() {
         return new MutableClock(ACCEPTANCE_NOW, OfferQueryService.OFFER_ZONE);
+    }
+
+    /** In the compose the topic comes from kafka-init (E2-02); here KafkaAdmin creates it at startup. */
+    @Bean
+    public NewTopic identityEvents() {
+        return TopicBuilder.name(IdentityEventSteps.TOPIC).partitions(3).replicas(1).build();
     }
 }
