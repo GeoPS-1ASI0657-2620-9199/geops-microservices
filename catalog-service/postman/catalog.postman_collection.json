@@ -1885,7 +1885,7 @@
           ]
         },
         {
-          "name": "Run the geocoding",
+          "name": "Start the geocoding run",
           "request": {
             "method": "POST",
             "header": [],
@@ -1918,11 +1918,14 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"status is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
+                  "pm.test(\"status is 202\", function () {",
+                  "    pm.response.to.have.status(202);",
                   "});",
-                  "pm.test(\"report has the counts\", function () {",
-                  "    pm.expect(pm.response.json()).to.include.keys('processed', 'geocoded', 'manualReview', 'stillPending', 'stoppedByProvider');",
+                  "pm.test(\"the run has an id and is running\", function () {",
+                  "    const run = pm.response.json();",
+                  "    pm.expect(run.runId).to.be.a('string');",
+                  "    pm.expect(run.status).to.eql('RUNNING');",
+                  "    pm.collectionVariables.set('geocodingRunId', run.runId);",
                   "});"
                 ]
               }
@@ -1965,6 +1968,10 @@
                 "exec": [
                   "pm.test(\"status is 200\", function () {",
                   "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"counts and last run\", function () {",
+                  "    const summary = pm.response.json();",
+                  "    pm.expect(summary).to.include.keys('geocoded', 'manualReview', 'pending', 'lastRun');",
                   "});"
                 ]
               }
@@ -2041,6 +2048,10 @@
     },
     {
       "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "geocodingRunId",
       "value": ""
     }
   ]

@@ -43,6 +43,9 @@ public class GeocodingSteps {
     private static final long BUSINESS_ID = 84L;
     private static final int CREATED = 201;
     private static final int OK = 200;
+    private static final int ACCEPTED = 202;
+    private static final java.time.Duration RUN_WAIT = java.time.Duration.ofSeconds(30);
+    private static final long POLL_MILLIS = 100;
     private static final int SERVICE_UNAVAILABLE = 503;
     private static final int HIGHEST_PRIORITY = 1;
     private static final int DEFAULT_PRIORITY = 5;
@@ -124,10 +127,21 @@ public class GeocodingSteps {
     @When("the administrator runs the geocoding")
     @When("the administrator runs the geocoding again")
     @Given("the administrator ran the geocoding")
-    public void administratorRunsTheGeocoding() throws JsonProcessingException {
-        var run = http.post(RUNS, TestIdentity.adminToken(ADMIN_ID), "{}");
-        assertThat(run.status()).as(run.body()).isEqualTo(OK);
-        lastRun = http.json(run);
+    public void administratorRunsTheGeocoding() throws Exception {
+        var started = http.post(RUNS, TestIdentity.adminToken(ADMIN_ID), "{}");
+        assertThat(started.status()).as(started.body()).isEqualTo(ACCEPTED);
+        var runId = http.json(started).path("runId").asText();
+        var deadline = System.nanoTime() + RUN_WAIT.toNanos();
+        while (System.nanoTime() < deadline) {
+            var last = http.json(http.get(SUMMARY, TestIdentity.adminToken(ADMIN_ID))).path("lastRun");
+            if (runId.equals(last.path("runId").asText()) && !"RUNNING".equals(last.path("status").asText())) {
+                assertThat(last.path("status").asText()).isEqualTo("FINISHED");
+                lastRun = last.path("report");
+                return;
+            }
+            Thread.sleep(POLL_MILLIS);
+        }
+        throw new AssertionError("The geocoding run " + runId + " did not finish in " + RUN_WAIT);
     }
 
     @When("a business owner runs the geocoding")

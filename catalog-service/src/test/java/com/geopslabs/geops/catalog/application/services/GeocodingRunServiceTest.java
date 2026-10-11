@@ -1,5 +1,7 @@
 package com.geopslabs.geops.catalog.application.services;
 
+import com.geopslabs.geops.catalog.application.usecases.GeocodingRun;
+import com.geopslabs.geops.catalog.application.usecases.GeocodingRunReport;
 import com.geopslabs.geops.catalog.domain.models.GeoCell;
 import com.geopslabs.geops.catalog.domain.models.GeoPoint;
 import com.geopslabs.geops.catalog.domain.models.GeocodingResult;
@@ -19,6 +21,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -54,7 +57,7 @@ class GeocodingRunServiceTest {
         lock = new FreeLock();
         cache = mock(CellCachePort.class);
         runs = new GeocodingRunService(offers, geocoding, lock, new CellInvalidator(cache, offers, CLOCK),
-                TransactionOperations.withoutTransaction(), CLOCK);
+                TransactionOperations.withoutTransaction(), CLOCK, Runnable::run);
         when(offers.markGeocoded(anyLong(), any())).thenReturn(true);
         when(offers.markForManualReview(anyLong())).thenReturn(true);
         when(offers.countPublicSourceByGeocodingStatus()).thenReturn(Map.of());
@@ -66,7 +69,7 @@ class GeocodingRunServiceTest {
         when(geocoding.geocode(FOUND_ADDRESS)).thenReturn(GeocodingResult.found(CERCADO));
         when(geocoding.geocode(UNKNOWN_ADDRESS)).thenReturn(GeocodingResult.notFound());
 
-        var report = runs.run();
+        var report = runAndReport();
 
         assertThat(report.processed()).isEqualTo(2);
         assertThat(report.geocoded()).isEqualTo(1);
@@ -83,7 +86,7 @@ class GeocodingRunServiceTest {
         when(geocoding.geocode(FOUND_ADDRESS)).thenReturn(GeocodingResult.unavailable());
         when(offers.countPublicSourceByGeocodingStatus()).thenReturn(Map.of(GeocodingStatus.PENDING, 2L));
 
-        var report = runs.run();
+        var report = runAndReport();
 
         assertThat(report.stoppedByProvider()).isTrue();
         assertThat(report.processed()).isZero();
@@ -99,17 +102,59 @@ class GeocodingRunServiceTest {
         when(geocoding.geocode(FOUND_ADDRESS)).thenReturn(GeocodingResult.found(CERCADO));
         when(offers.markGeocoded(eq(1L), any())).thenReturn(false);
 
-        assertThat(runs.run().processed()).isZero();
+        assertThat(runAndReport().processed()).isZero();
         verify(cache, never()).evict(any());
     }
 
     @Test
-    void aSecondRunWhileTheFirstGoesOnIsRejected() {
-        var busy = new GeocodingRunService(offers, geocoding, new BusyLock(), mock(CellInvalidator.class),
-                TransactionOperations.withoutTransaction(), CLOCK);
+    void theCallOnlyStartsTheRunAndTheSummaryFollowsIt() {
+        var background = new ArrayList<Runnable>();
+        var async = new GeocodingRunService(offers, geocoding, lock, mock(CellInvalidator.class),
+                TransactionOperations.withoutTransaction(), CLOCK, background::add);
+        when(offers.findPendingGeocoding()).thenReturn(List.of());
 
-        assertThatThrownBy(busy::run).isInstanceOf(GeocodingRunInProgressException.class)
+        var started = async.start();
+
+        assertThat(started.status()).isEqualTo(GeocodingRun.Status.RUNNING);
+        assertThat(async.summary().lastRun().runId()).isEqualTo(started.runId());
+        verify(offers, never()).findPendingGeocoding();
+        background.forEach(Runnable::run);
+        assertThat(async.summary().lastRun().status()).isEqualTo(GeocodingRun.Status.FINISHED);
+        assertThat(async.summary().lastRun().report()).isNotNull();
+    }
+
+    @Test
+    void aSecondRunWhileTheFirstGoesOnIsRejected() {
+        var background = new ArrayList<Runnable>();
+        var async = new GeocodingRunService(offers, geocoding, lock, mock(CellInvalidator.class),
+                TransactionOperations.withoutTransaction(), CLOCK, background::add);
+        async.start();
+
+        assertThatThrownBy(async::start).isInstanceOf(GeocodingRunInProgressException.class)
                 .extracting("code").isEqualTo("GEOCODING_RUN_IN_PROGRESS");
+        background.forEach(Runnable::run);
+        assertThat(async.start().status()).isEqualTo(GeocodingRun.Status.RUNNING);
+    }
+
+    @Test
+    void aRunWhileAnotherReplicaHoldsTheLockEndsSkipped() {
+        var busy = new GeocodingRunService(offers, geocoding, new BusyLock(), mock(CellInvalidator.class),
+                TransactionOperations.withoutTransaction(), CLOCK, Runnable::run);
+
+        busy.start();
+
+        assertThat(busy.summary().lastRun().status()).isEqualTo(GeocodingRun.Status.SKIPPED);
+        assertThat(busy.runNow()).isEmpty();
+    }
+
+    @Test
+    void aRunThatFailsIsReportedAndFreesTheNextOne() {
+        when(offers.findPendingGeocoding()).thenThrow(new IllegalStateException("database down"));
+
+        runs.start();
+
+        assertThat(runs.summary().lastRun().status()).isEqualTo(GeocodingRun.Status.FAILED);
+        assertThat(runs.start()).isNotNull();
     }
 
     @Test
@@ -135,6 +180,11 @@ class GeocodingRunServiceTest {
         assertThat(summary.geocoded()).isEqualTo(140);
         assertThat(summary.manualReview()).isEqualTo(6);
         assertThat(summary.pending()).isZero();
+    }
+
+    private GeocodingRunReport runAndReport() {
+        runs.start();
+        return runs.summary().lastRun().report();
     }
 
     private static Offer pending(Long id, String address) {

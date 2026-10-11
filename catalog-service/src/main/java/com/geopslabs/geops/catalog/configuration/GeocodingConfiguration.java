@@ -13,6 +13,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
@@ -36,7 +37,9 @@ public class GeocodingConfiguration {
     public GeocodingRunService geocodingRunService(OfferRepositoryPort offerRepository, GeocodingPort geocoding,
                                                    JobLockPort jobLock, CellInvalidator cellInvalidator,
                                                    TransactionOperations transactions, Clock clock) {
-        return new GeocodingRunService(offerRepository, geocoding, jobLock, cellInvalidator, transactions, clock);
+        // A thread per run, named for the logs; the service allows one run at a time.
+        return new GeocodingRunService(offerRepository, geocoding, jobLock, cellInvalidator, transactions, clock,
+                new SimpleAsyncTaskExecutor("geocoding-run-"));
     }
 
     @Bean

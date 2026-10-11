@@ -20,10 +20,8 @@ public class GeocodingRunScheduler {
         if (!runs.hasPending()) {
             return;
         }
-        try {
-            runs.run();
-        } catch (GeocodingRunInProgressException exception) {
-            LOGGER.debug("offers.geocoding.skipped reason=run-in-progress");
+        if (runs.runNow().isEmpty()) {
+            LOGGER.debug("offers.geocoding.skipped reason=run-in-progress-or-locked");
         }
     }
 }

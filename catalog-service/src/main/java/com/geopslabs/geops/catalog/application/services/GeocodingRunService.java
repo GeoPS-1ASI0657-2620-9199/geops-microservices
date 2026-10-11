@@ -1,5 +1,6 @@
 package com.geopslabs.geops.catalog.application.services;
 
+import com.geopslabs.geops.catalog.application.usecases.GeocodingRun;
 import com.geopslabs.geops.catalog.application.usecases.GeocodingRunReport;
 import com.geopslabs.geops.catalog.application.usecases.GeocodingSummary;
 import com.geopslabs.geops.catalog.application.usecases.RunGeocodingUseCase;
@@ -15,13 +16,22 @@ import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Conversión a coordenadas (US07). Walks the offers PENDING in id order, asks Nominatim for each address and saves
  * each answer in its own short transaction, never holding a transaction while Nominatim answers. FOUND sets the
  * location and GEOCODED; NOT_FOUND sets MANUAL_REVIEW; the first UNAVAILABLE stops the run and leaves the rest PENDING
- * for the next one. Only PENDING offers are touched, so a second run does not change what was converted. One run at
- * a time across replicas (advisory lock); a second call gets 409 GEOCODING_RUN_IN_PROGRESS.
+ * for the next one. Only PENDING offers are touched, so a second run does not change what was converted.
+ *
+ * <p>The administrator's call only starts the run: it answers 202 with the run id and the run goes on in the
+ * background (one request per second to Nominatim makes it last minutes). Its progress and its report are read in
+ * the summary (lastRun). One run at a time: a second call to this replica gets 409 GEOCODING_RUN_IN_PROGRESS, and a
+ * run started while another replica holds the advisory lock ends SKIPPED.</p>
  */
 public class GeocodingRunService implements RunGeocodingUseCase {
     static final String LOCK = "catalog.geocoding-run";
@@ -33,21 +43,49 @@ public class GeocodingRunService implements RunGeocodingUseCase {
     private final CellInvalidator cellInvalidator;
     private final TransactionOperations transactions;
     private final Clock clock;
+    private final Executor executor;
+    private final AtomicBoolean running = new AtomicBoolean();
+    private final AtomicReference<GeocodingRun> lastRun = new AtomicReference<>();
 
+    @SuppressWarnings("java:S107")
     public GeocodingRunService(OfferRepositoryPort offers, GeocodingPort geocoding, JobLockPort jobLock,
-                               CellInvalidator cellInvalidator, TransactionOperations transactions, Clock clock) {
+                               CellInvalidator cellInvalidator, TransactionOperations transactions, Clock clock,
+                               Executor executor) {
         this.offers = offers;
         this.geocoding = geocoding;
         this.jobLock = jobLock;
         this.cellInvalidator = cellInvalidator;
         this.transactions = transactions;
         this.clock = clock;
+        this.executor = executor;
     }
 
     @Override
-    public GeocodingRunReport run() {
-        return jobLock.runExclusively(LOCK, this::convertPending)
-                .orElseThrow(GeocodingRunInProgressException::new);
+    public GeocodingRun start() {
+        if (!running.compareAndSet(false, true)) {
+            throw new GeocodingRunInProgressException();
+        }
+        var run = GeocodingRun.running(UUID.randomUUID(), clock.instant());
+        lastRun.set(run);
+        try {
+            executor.execute(() -> runInBackground(run));
+        } catch (RuntimeException exception) {
+            running.set(false);
+            lastRun.set(run.failed(clock.instant()));
+            throw exception;
+        }
+        LOGGER.info("offers.geocoding.started runId={}", run.runId());
+        return run;
+    }
+
+    /** The scheduler's run, in its own thread; empty when a run is already going on or another replica has it. */
+    public Optional<GeocodingRunReport> runNow() {
+        if (!running.compareAndSet(false, true)) {
+            return Optional.empty();
+        }
+        var run = GeocodingRun.running(UUID.randomUUID(), clock.instant());
+        lastRun.set(run);
+        return Optional.ofNullable(runInBackground(run));
     }
 
     @Override
@@ -55,7 +93,27 @@ public class GeocodingRunService implements RunGeocodingUseCase {
         var counts = offers.countPublicSourceByGeocodingStatus();
         return new GeocodingSummary(counts.getOrDefault(GeocodingStatus.GEOCODED, 0L),
                 counts.getOrDefault(GeocodingStatus.MANUAL_REVIEW, 0L),
-                counts.getOrDefault(GeocodingStatus.PENDING, 0L));
+                counts.getOrDefault(GeocodingStatus.PENDING, 0L), lastRun.get());
+    }
+
+    private GeocodingRunReport runInBackground(GeocodingRun run) {
+        try {
+            var report = jobLock.runExclusively(LOCK, this::convertPending);
+            if (report.isEmpty()) {
+                LOGGER.info("offers.geocoding.skipped runId={} reason=another-replica-holds-the-lock", run.runId());
+                lastRun.set(run.skipped(clock.instant()));
+                return null;
+            }
+            lastRun.set(run.finished(report.get()));
+            return report.get();
+        } catch (RuntimeException exception) {
+            LOGGER.error("offers.geocoding.failed runId={} reason={}", run.runId(),
+                    exception.getClass().getSimpleName());
+            lastRun.set(run.failed(clock.instant()));
+            return null;
+        } finally {
+            running.set(false);
+        }
     }
 
     public boolean hasPending() {
