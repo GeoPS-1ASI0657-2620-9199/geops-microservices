@@ -2,6 +2,7 @@ package com.geopslabs.geops.identity.configuration;
 
 import com.geopslabs.geops.identity.application.services.BusinessProfileQueryService;
 import com.geopslabs.geops.identity.application.services.BusinessVerificationService;
+import com.geopslabs.geops.identity.application.services.ConsumerProfileService;
 import com.geopslabs.geops.identity.application.services.PublicKeyQueryService;
 import com.geopslabs.geops.identity.application.services.UserCommandService;
 import com.geopslabs.geops.identity.application.services.UserAuthenticationService;
@@ -63,6 +64,12 @@ public class BeanConfiguration {
                                                                    Clock clock) {
         return new BusinessVerificationService(businessProfiles, verifications, taxpayerRegistry, geocoding, outbox,
                 clock, UUID::randomUUID);
+    }
+
+    @Bean
+    public ConsumerProfileService consumerProfileService(ConsumerProfileRepositoryPort consumerProfiles,
+                                                         OutboxPort outbox, Clock clock) {
+        return new ConsumerProfileService(consumerProfiles, outbox, clock, UUID::randomUUID);
     }
 
     @Bean
