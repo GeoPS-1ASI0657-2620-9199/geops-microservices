@@ -65,8 +65,8 @@ public class NominatimGeocodingAdapter implements GeocodingPort {
             LOGGER.warn("nominatim.geocode.unavailable reason=interrupted");
             return GeocodingResult.unavailable();
         } catch (Exception exception) {
-            LOGGER.warn("nominatim.geocode.unavailable reason={}: {}", exception.getClass().getSimpleName(),
-                    exception.getMessage());
+            // Only the class: the message of a client error carries the URL, and with it the address.
+            LOGGER.warn("nominatim.geocode.unavailable reason={}", exception.getClass().getSimpleName());
             return GeocodingResult.unavailable();
         }
     }
