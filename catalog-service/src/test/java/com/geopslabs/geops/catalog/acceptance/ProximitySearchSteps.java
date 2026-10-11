@@ -78,6 +78,7 @@ public class ProximitySearchSteps {
     private static final String OPEN_REPORTS = "open reports";
     private static final long FIRST_NEARBY_BUSINESS_ID = 100L;
     private static final String NO_REPORTS = "0";
+    private static final String CATEGORY_COLUMN = "category";
 
     private final OfferRepositoryPort offers;
     private final CampaignRepositoryPort campaigns;
@@ -86,6 +87,7 @@ public class ProximitySearchSteps {
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
     private final Clock clock;
+    private final ScenarioState state;
     private GeoPoint origin;
     private Long savedOfferId;
     private Offer readOffer;
@@ -97,7 +99,7 @@ public class ProximitySearchSteps {
     @SuppressWarnings("java:S107")
     public ProximitySearchSteps(OfferRepositoryPort offers, CampaignRepositoryPort campaigns,
                                 MerchantStandingRepositoryPort standings, HttpScenario http, JdbcTemplate jdbc,
-                                DataSource dataSource, Clock clock) {
+                                DataSource dataSource, Clock clock, ScenarioState state) {
         this.offers = offers;
         this.campaigns = campaigns;
         this.standings = standings;
@@ -105,6 +107,7 @@ public class ProximitySearchSteps {
         this.jdbc = jdbc;
         this.dataSource = dataSource;
         this.clock = clock;
+        this.state = state;
     }
 
     @After
@@ -168,6 +171,7 @@ public class ProximitySearchSteps {
     @Given("the search origin is latitude {double} and longitude {double}")
     public void searchOriginIs(double latitude, double longitude) {
         origin = new GeoPoint(latitude, longitude);
+        state.rememberOrigin(origin);
     }
 
     @Given("these offers exist around the origin:")
@@ -251,8 +255,8 @@ public class ProximitySearchSteps {
                     new CampaignZone(ZoneType.RADIUS, null, CAMPAIGN_RADIUS_METERS, null), CampaignStatus.ACTIVE,
                     Money.soles(PRICE))).getId();
             offers.save(new Offer(null, campaignId, businessId, row.get(TITLE), CONDITIONS, Money.soles(PRICE),
-                    today.plusDays(DAYS_LEFT), CATEGORY, GeocodingStatus.GEOCODED, ADDRESS, null,
-                    OfferSource.AFFILIATED, null, OfferStatus.PUBLISHED, north(row.get(METERS_NORTH))));
+                    today.plusDays(DAYS_LEFT), row.getOrDefault(CATEGORY_COLUMN, CATEGORY), GeocodingStatus.GEOCODED,
+                    ADDRESS, null, OfferSource.AFFILIATED, null, OfferStatus.PUBLISHED, north(row.get(METERS_NORTH))));
             businessId++;
         }
     }

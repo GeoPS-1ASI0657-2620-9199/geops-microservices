@@ -5,6 +5,7 @@ import com.geopslabs.geops.catalog.domain.models.GeoPoint;
 import com.geopslabs.geops.catalog.domain.models.NearbyOfferCandidate;
 import com.geopslabs.geops.catalog.domain.models.ProximitySearchService;
 import com.geopslabs.geops.catalog.domain.models.RankedOffer;
+import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidCategoryException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidGeoPointException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidSearchRadiusException;
 import com.geopslabs.geops.catalog.domain.models.queries.SearchNearbyOffersQuery;
@@ -40,7 +41,7 @@ class NearbyOfferQueryServiceTest {
     void pagesFortyFiveOffersInThreePagesOfTwenty() {
         when(proximitySearch.search(ORIGIN, 800, null)).thenReturn(ranked(45));
 
-        var last = service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, 2, 20));
+        var last = service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, null, 2, 20));
 
         assertThat(last.totalPages()).isEqualTo(3);
         assertThat(last.totalElements()).isEqualTo(45);
@@ -53,7 +54,7 @@ class NearbyOfferQueryServiceTest {
     void answersAnEmptyPageWhenTheZoneHasNoOffers() {
         when(proximitySearch.search(any(), anyInt(), any())).thenReturn(List.of());
 
-        var empty = service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, 0, 20));
+        var empty = service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, null, 0, 20));
 
         assertThat(empty.content()).isEmpty();
         assertThat(empty.totalElements()).isZero();
@@ -64,7 +65,7 @@ class NearbyOfferQueryServiceTest {
     void answersAnEmptyPageAfterTheLastOne() {
         when(proximitySearch.search(any(), anyInt(), any())).thenReturn(ranked(5));
 
-        var beyond = service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, 3, 20));
+        var beyond = service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, null, 3, 20));
 
         assertThat(beyond.content()).isEmpty();
         assertThat(beyond.totalPages()).isEqualTo(1);
@@ -72,26 +73,51 @@ class NearbyOfferQueryServiceTest {
 
     @Test
     void rejectsARadiusOfFourMinutesBeforeSearching() {
-        assertThatThrownBy(() -> service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 4, 0, 20)))
+        assertThatThrownBy(() -> service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 4, null, 0, 20)))
                 .isInstanceOf(InvalidSearchRadiusException.class);
         verifyNoInteractions(proximitySearch);
     }
 
     @Test
     void rejectsInvalidCoordinatesBeforeSearching() {
-        assertThatThrownBy(() -> service.searchNearbyOffers(new SearchNearbyOffersQuery(95, -77.0297, 10, 0, 20)))
+        assertThatThrownBy(() -> service.searchNearbyOffers(new SearchNearbyOffersQuery(95, -77.0297, 10, null, 0, 20)))
                 .isInstanceOf(InvalidGeoPointException.class);
         verifyNoInteractions(proximitySearch);
     }
 
     @Test
     void rejectsANegativePageOrASizeOutsideOneToTwenty() {
-        assertThatThrownBy(() -> service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, -1, 20)))
+        assertThatThrownBy(() -> service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, null, -1, 20)))
                 .isInstanceOf(InvalidPageRequestException.class);
-        assertThatThrownBy(() -> service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, 0, 21)))
+        assertThatThrownBy(() -> service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, null, 0, 21)))
                 .isInstanceOf(InvalidPageRequestException.class);
-        assertThatThrownBy(() -> service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, 0, 0)))
+        assertThatThrownBy(() -> service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, null, 0, 0)))
                 .isInstanceOf(InvalidPageRequestException.class);
+    }
+
+    @Test
+    void passesTheCanonicalCategoryToTheSearch() {
+        when(proximitySearch.search(ORIGIN, 800, "Gastronomía")).thenReturn(ranked(2));
+
+        var page = service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, "gastronomia", 0, 20));
+
+        assertThat(page.totalElements()).isEqualTo(2);
+    }
+
+    @Test
+    void searchesEveryCategoryWhenNoneIsGiven() {
+        when(proximitySearch.search(ORIGIN, 800, null)).thenReturn(ranked(3));
+
+        assertThat(service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, null, 0, 20))
+                .totalElements()).isEqualTo(3);
+    }
+
+    @Test
+    void rejectsAnUnknownCategoryBeforeSearching() {
+        assertThatThrownBy(() -> service.searchNearbyOffers(
+                new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, "Juguetería", 0, 20)))
+                .isInstanceOf(InvalidCategoryException.class);
+        verifyNoInteractions(proximitySearch);
     }
 
     private static List<RankedOffer> ranked(int count) {

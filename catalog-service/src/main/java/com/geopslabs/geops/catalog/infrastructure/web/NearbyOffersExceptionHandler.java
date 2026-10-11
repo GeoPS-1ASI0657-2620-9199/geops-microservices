@@ -1,6 +1,7 @@
 package com.geopslabs.geops.catalog.infrastructure.web;
 
 import com.geopslabs.geops.catalog.application.services.InvalidPageRequestException;
+import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidCategoryException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidGeoPointException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidSearchRadiusException;
 import com.geopslabs.geops.catalog.shared.domain.DomainException;
@@ -26,7 +27,7 @@ public class NearbyOffersExceptionHandler {
     private static final String INVALID_PARAMETER_MESSAGE = "El parámetro %s no tiene un valor válido";
 
     @ExceptionHandler({InvalidSearchRadiusException.class, InvalidGeoPointException.class,
-            InvalidPageRequestException.class})
+            InvalidPageRequestException.class, InvalidCategoryException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleRejectedSearch(DomainException exception) {
         return reject(exception.getCode(), exception.getMessage());
