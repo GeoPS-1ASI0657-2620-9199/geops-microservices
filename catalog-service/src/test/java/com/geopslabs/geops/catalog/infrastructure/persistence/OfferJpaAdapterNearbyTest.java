@@ -22,8 +22,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -66,7 +66,7 @@ class OfferJpaAdapterNearbyTest extends CucumberSpringConfiguration {
         campaignRows.deleteAll();
         standingRows.deleteAll();
         standings.save(new MerchantStanding(BUSINESS_ID, BUSINESS_NAME, true, 0, FULL_COMPLIANCE, true,
-                LocalDateTime.now()));
+                Instant.now()));
         activeCampaignId = campaign("Almuerzos de octubre", CampaignStatus.ACTIVE);
         pausedCampaignId = campaign("Campaña en pausa", CampaignStatus.PAUSED);
     }

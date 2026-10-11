@@ -2,8 +2,6 @@ package com.geopslabs.geops.catalog.infrastructure.persistence;
 
 import com.geopslabs.geops.catalog.domain.models.MerchantStanding;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 
 final class MerchantStandingPersistenceMapper {
 
@@ -13,7 +11,7 @@ final class MerchantStandingPersistenceMapper {
     static MerchantStanding toDomain(MerchantStandingJpaEntity entity) {
         return new MerchantStanding(entity.getBusinessId(), entity.getBusinessName(), entity.isRucVerified(),
                 entity.getOpenReports(), entity.getComplianceIndex(), entity.isVerifiedSeal(),
-                LocalDateTime.ofInstant(entity.getUpdatedAt(), ZoneOffset.UTC));
+                entity.getUpdatedAt());
     }
 
     static MerchantStandingJpaEntity toEntity(MerchantStanding standing) {
@@ -24,7 +22,7 @@ final class MerchantStandingPersistenceMapper {
         entity.setOpenReports(standing.getOpenReports());
         entity.setComplianceIndex(standing.getComplianceIndex());
         entity.setVerifiedSeal(standing.hasVerifiedSeal());
-        entity.setUpdatedAt(standing.getUpdatedAt().toInstant(ZoneOffset.UTC));
+        entity.setUpdatedAt(standing.getUpdatedAt());
         return entity;
     }
 }

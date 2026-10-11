@@ -21,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
@@ -59,8 +58,7 @@ public class CampaignCommandService implements CreateCampaignUseCase {
 
     private void ensureMerchantStanding(Long businessId, String businessName) {
         if (merchantStandingRepository.findByBusinessId(businessId).isEmpty()) {
-            merchantStandingRepository.save(MerchantStanding.provisional(businessId, businessName,
-                    LocalDateTime.now(clock.withZone(LIMA))));
+            merchantStandingRepository.save(MerchantStanding.provisional(businessId, businessName, clock.instant()));
         }
     }
 

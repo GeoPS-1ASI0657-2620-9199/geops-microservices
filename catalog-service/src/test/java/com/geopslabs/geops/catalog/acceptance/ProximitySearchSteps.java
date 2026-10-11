@@ -32,7 +32,6 @@ import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -175,7 +174,7 @@ public class ProximitySearchSteps {
     public void theseOffersExist(DataTable table) {
         var today = LocalDate.now(clock);
         standings.save(new MerchantStanding(BUSINESS_ID, BUSINESS_NAME, true, 0, FULL_COMPLIANCE, true,
-                LocalDateTime.now(clock)));
+                clock.instant()));
         var period = new DateRange(today.minusDays(1), today.plusDays(DAYS_LEFT));
         var activeCampaign = campaign(period, CampaignStatus.ACTIVE);
         var pausedCampaign = campaign(period, CampaignStatus.PAUSED);
@@ -247,7 +246,7 @@ public class ProximitySearchSteps {
         for (Map<String, String> row : table.asMaps()) {
             var openReports = Integer.parseInt(row.getOrDefault(OPEN_REPORTS, NO_REPORTS));
             standings.save(new MerchantStanding(businessId, row.get(TITLE), false, openReports, FULL_COMPLIANCE, false,
-                    LocalDateTime.now(clock)));
+                    clock.instant()));
             var campaignId = campaigns.save(new Campaign(null, businessId, row.get(TITLE), row.get(TITLE), period,
                     new CampaignZone(ZoneType.RADIUS, null, CAMPAIGN_RADIUS_METERS, null), CampaignStatus.ACTIVE,
                     Money.soles(PRICE))).getId();

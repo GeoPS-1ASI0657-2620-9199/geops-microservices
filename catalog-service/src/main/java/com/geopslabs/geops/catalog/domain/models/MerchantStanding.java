@@ -1,7 +1,7 @@
 package com.geopslabs.geops.catalog.domain.models;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public class MerchantStanding {
     public static final BigDecimal INITIAL_COMPLIANCE_INDEX = new BigDecimal("100.00");
@@ -13,10 +13,10 @@ public class MerchantStanding {
     private final int openReports;
     private final BigDecimal complianceIndex;
     private final boolean verifiedSeal;
-    private final LocalDateTime updatedAt;
+    private final Instant updatedAt;
 
     public MerchantStanding(Long businessId, String businessName, boolean rucVerified, int openReports,
-                            BigDecimal complianceIndex, boolean verifiedSeal, LocalDateTime updatedAt) {
+                            BigDecimal complianceIndex, boolean verifiedSeal, Instant updatedAt) {
         this.businessId = businessId;
         this.businessName = businessName;
         this.rucVerified = rucVerified;
@@ -26,7 +26,7 @@ public class MerchantStanding {
         this.updatedAt = updatedAt;
     }
 
-    public static MerchantStanding provisional(Long businessId, String businessName, LocalDateTime createdAt) {
+    public static MerchantStanding provisional(Long businessId, String businessName, Instant createdAt) {
         return new MerchantStanding(businessId, businessName, false, NO_OPEN_REPORTS, INITIAL_COMPLIANCE_INDEX,
                 false, createdAt);
     }
@@ -55,7 +55,7 @@ public class MerchantStanding {
         return verifiedSeal;
     }
 
-    public LocalDateTime getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 }
