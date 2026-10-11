@@ -2,6 +2,8 @@ package com.geopslabs.geops.reservation.infrastructure.messaging;
 
 import com.geopslabs.geops.reservation.infrastructure.persistence.OutboxEventJpaEntity;
 import com.geopslabs.geops.reservation.infrastructure.persistence.OutboxEventJpaRepository;
+import com.geopslabs.geops.reservation.infrastructure.persistence.OutboxEventStatus;
+import org.apache.kafka.common.errors.RecordTooLargeException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,8 +30,9 @@ import static org.mockito.Mockito.when;
 class OutboxRelayTest {
     private static final Instant NOW = Instant.parse("2026-10-20T17:42:11Z");
     private static final String TOPIC = "reservation.events";
-    private static final int BATCH_SIZE = 100;
+    private static final int BATCH_SIZE = 50;
     private static final long SEND_TIMEOUT_MS = 50;
+    private static final int MAX_ATTEMPTS = 3;
 
     @Mock
     private OutboxEventJpaRepository repository;
@@ -41,57 +44,95 @@ class OutboxRelayTest {
     @BeforeEach
     void setUp() {
         relay = new OutboxRelay(repository, kafkaTemplate, TransactionOperations.withoutTransaction(),
-                Clock.fixed(NOW, ZoneOffset.UTC), TOPIC, BATCH_SIZE, SEND_TIMEOUT_MS);
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                new OutboxRelayProperties(TOPIC, BATCH_SIZE, SEND_TIMEOUT_MS, MAX_ATTEMPTS));
     }
 
     @Test
     void sendsEachRowWithItsAggregateAsKeyAndMarksItAfterTheConfirmation() {
-        var first = row(5012L, "{\"eventId\":\"a\"}");
-        var second = row(5013L, "{\"eventId\":\"b\"}");
-        when(repository.lockUnpublished(BATCH_SIZE)).thenReturn(List.of(first, second));
+        var first = row(5012L);
+        var second = row(5013L);
+        when(repository.lockPending(BATCH_SIZE)).thenReturn(List.of(first, second));
         when(kafkaTemplate.send(TOPIC, "5012", first.getPayload())).thenReturn(confirmed());
         when(kafkaTemplate.send(TOPIC, "5013", second.getPayload())).thenReturn(confirmed());
 
         relay.relayPending();
 
         assertThat(first.getPublishedAt()).isEqualTo(NOW);
+        assertThat(first.getStatus()).isEqualTo(OutboxEventStatus.PUBLISHED);
         assertThat(second.getPublishedAt()).isEqualTo(NOW);
     }
 
     @Test
-    void leavesTheRowUnmarkedWhenKafkaFailsAndStopsTheRound() {
-        var first = row(5012L, "{\"eventId\":\"a\"}");
-        var second = row(5013L, "{\"eventId\":\"b\"}");
-        when(repository.lockUnpublished(BATCH_SIZE)).thenReturn(List.of(first, second));
-        when(kafkaTemplate.send(TOPIC, "5012", first.getPayload()))
-                .thenReturn(CompletableFuture.failedFuture(new IllegalStateException("broker down")));
+    void countsARejectionAndStopsTheRoundToKeepTheOrder() {
+        var first = row(5012L);
+        var second = row(5013L);
+        when(repository.lockPending(BATCH_SIZE)).thenReturn(List.of(first, second));
+        when(kafkaTemplate.send(TOPIC, "5012", first.getPayload())).thenReturn(rejected());
 
         relay.relayPending();
 
         assertThat(first.getPublishedAt()).isNull();
-        assertThat(second.getPublishedAt()).isNull();
+        assertThat(first.getAttempts()).isEqualTo(1);
+        assertThat(first.getStatus()).isEqualTo(OutboxEventStatus.PENDING);
+        assertThat(first.getLastError()).startsWith("ExecutionException: ").contains("too large");
         verify(kafkaTemplate, never()).send(TOPIC, "5013", second.getPayload());
     }
 
     @Test
-    void leavesTheRowUnmarkedWhenKafkaDoesNotConfirmInTime() {
-        var first = row(5012L, "{\"eventId\":\"a\"}");
-        when(repository.lockUnpublished(BATCH_SIZE)).thenReturn(List.of(first));
+    void marksTheRowFailedAtTheMaximumAttemptsAndPublishesTheNextOne() {
+        var poison = row(5012L);
+        poison.setAttempts(MAX_ATTEMPTS - 1);
+        var next = row(5013L);
+        when(repository.lockPending(BATCH_SIZE)).thenReturn(List.of(poison, next));
+        when(kafkaTemplate.send(TOPIC, "5012", poison.getPayload())).thenReturn(rejected());
+        when(kafkaTemplate.send(TOPIC, "5013", next.getPayload())).thenReturn(confirmed());
+
+        relay.relayPending();
+
+        assertThat(poison.getStatus()).isEqualTo(OutboxEventStatus.FAILED);
+        assertThat(poison.getAttempts()).isEqualTo(MAX_ATTEMPTS);
+        assertThat(poison.getPublishedAt()).isNull();
+        assertThat(next.getStatus()).isEqualTo(OutboxEventStatus.PUBLISHED);
+    }
+
+    @Test
+    void neverGivesUpOnARowWhileKafkaDoesNotAnswer() {
+        var first = row(5012L);
+        first.setAttempts(MAX_ATTEMPTS + 5);
+        var second = row(5013L);
+        when(repository.lockPending(BATCH_SIZE)).thenReturn(List.of(first, second));
         when(kafkaTemplate.send(TOPIC, "5012", first.getPayload())).thenReturn(new CompletableFuture<>());
 
         relay.relayPending();
 
-        assertThat(first.getPublishedAt()).isNull();
+        assertThat(first.getStatus()).isEqualTo(OutboxEventStatus.PENDING);
+        assertThat(first.getAttempts()).isEqualTo(MAX_ATTEMPTS + 6);
+        assertThat(first.getLastError()).startsWith("TimeoutException");
+        verify(kafkaTemplate, never()).send(TOPIC, "5013", second.getPayload());
+    }
+
+    @Test
+    void treatsARetriableKafkaErrorAsKafkaUnavailable() {
+        var first = row(5012L);
+        first.setAttempts(MAX_ATTEMPTS);
+        when(repository.lockPending(BATCH_SIZE)).thenReturn(List.of(first));
+        when(kafkaTemplate.send(TOPIC, "5012", first.getPayload())).thenThrow(new org.springframework.kafka
+                .KafkaException("send failed", new org.apache.kafka.common.errors.TimeoutException("no metadata")));
+
+        relay.relayPending();
+
+        assertThat(first.getStatus()).isEqualTo(OutboxEventStatus.PENDING);
+        assertThat(first.getLastError()).contains("no metadata");
     }
 
     @Test
     void keepsWhatWasConfirmedBeforeAFailure() {
-        var first = row(5012L, "{\"eventId\":\"a\"}");
-        var second = row(5013L, "{\"eventId\":\"b\"}");
-        when(repository.lockUnpublished(BATCH_SIZE)).thenReturn(List.of(first, second));
+        var first = row(5012L);
+        var second = row(5013L);
+        when(repository.lockPending(BATCH_SIZE)).thenReturn(List.of(first, second));
         when(kafkaTemplate.send(TOPIC, "5012", first.getPayload())).thenReturn(confirmed());
-        when(kafkaTemplate.send(TOPIC, "5013", second.getPayload()))
-                .thenThrow(new IllegalStateException("metadata not available"));
+        when(kafkaTemplate.send(TOPIC, "5013", second.getPayload())).thenReturn(rejected());
 
         relay.relayPending();
 
@@ -101,7 +142,7 @@ class OutboxRelayTest {
 
     @Test
     void doesNothingWithAnEmptyOutbox() {
-        when(repository.lockUnpublished(BATCH_SIZE)).thenReturn(List.of());
+        when(repository.lockPending(BATCH_SIZE)).thenReturn(List.of());
 
         relay.relayPending();
 
@@ -112,12 +153,16 @@ class OutboxRelayTest {
         return CompletableFuture.completedFuture(null);
     }
 
-    private static OutboxEventJpaEntity row(Long aggregateId, String payload) {
+    private static CompletableFuture<SendResult<String, String>> rejected() {
+        return CompletableFuture.failedFuture(new RecordTooLargeException("record too large"));
+    }
+
+    private static OutboxEventJpaEntity row(Long aggregateId) {
         var row = new OutboxEventJpaEntity();
         row.setId(UUID.randomUUID());
         row.setAggregateId(aggregateId);
         row.setEventType("ReservationRedeemed");
-        row.setPayload(payload);
+        row.setPayload("{\"aggregateId\":" + aggregateId + "}");
         row.setCreatedAt(NOW.minusSeconds(1));
         return row;
     }

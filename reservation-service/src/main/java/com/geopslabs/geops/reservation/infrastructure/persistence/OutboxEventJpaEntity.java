@@ -2,6 +2,8 @@ package com.geopslabs.geops.reservation.infrastructure.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
@@ -18,6 +20,8 @@ import java.util.UUID;
 @Setter
 public class OutboxEventJpaEntity {
     private static final int EVENT_TYPE_LENGTH = 80;
+    private static final int STATUS_LENGTH = 20;
+    private static final int LAST_ERROR_LENGTH = 500;
 
     @Id
     @Column(name = "id", nullable = false)
@@ -39,4 +43,30 @@ public class OutboxEventJpaEntity {
 
     @Column(name = "published_at")
     private Instant publishedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = STATUS_LENGTH)
+    private OutboxEventStatus status = OutboxEventStatus.PENDING;
+
+    @Column(name = "attempts", nullable = false)
+    private int attempts;
+
+    @Column(name = "last_error", length = LAST_ERROR_LENGTH)
+    private String lastError;
+
+    public void markPublished(Instant at) {
+        publishedAt = at;
+        status = OutboxEventStatus.PUBLISHED;
+    }
+
+    /** Counts a failed send and keeps its reason, cut to the size of the column. */
+    public void recordFailure(String reason) {
+        attempts++;
+        lastError = reason == null || reason.length() <= LAST_ERROR_LENGTH
+                ? reason : reason.substring(0, LAST_ERROR_LENGTH);
+    }
+
+    public void markFailed() {
+        status = OutboxEventStatus.FAILED;
+    }
 }

@@ -10,16 +10,16 @@ import java.util.UUID;
 public interface OutboxEventJpaRepository extends JpaRepository<OutboxEventJpaEntity, UUID> {
 
     /**
-     * Oldest unpublished rows, locked for this transaction. SKIP LOCKED lets a second replica take other rows
-     * instead of waiting or publishing the same ones.
+     * Oldest PENDING rows, locked for this transaction. FAILED rows are left out, so they no longer hold back
+     * the ones behind them.
      */
     @Query(value = """
             SELECT * FROM outbox_events
-             WHERE published_at IS NULL
+             WHERE status = 'PENDING'
              ORDER BY created_at
              LIMIT :limit
                FOR UPDATE SKIP LOCKED""", nativeQuery = true)
-    List<OutboxEventJpaEntity> lockUnpublished(@Param("limit") int limit);
+    List<OutboxEventJpaEntity> lockPending(@Param("limit") int limit);
 
     List<OutboxEventJpaEntity> findByAggregateIdAndEventType(Long aggregateId, String eventType);
 }

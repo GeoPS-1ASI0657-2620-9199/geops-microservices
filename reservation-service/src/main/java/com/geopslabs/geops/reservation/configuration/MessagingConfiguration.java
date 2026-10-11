@@ -1,6 +1,8 @@
 package com.geopslabs.geops.reservation.configuration;
 
+import com.geopslabs.geops.reservation.infrastructure.messaging.OutboxRelayProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -14,6 +16,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 @Configuration
 @EnableScheduling
+@EnableConfigurationProperties(OutboxRelayProperties.class)
 @ConditionalOnProperty(name = "geops.outbox.relay-enabled", havingValue = "true")
 public class MessagingConfiguration {
 

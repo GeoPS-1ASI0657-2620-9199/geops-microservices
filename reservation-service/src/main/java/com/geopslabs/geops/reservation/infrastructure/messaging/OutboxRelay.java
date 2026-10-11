@@ -2,9 +2,9 @@ package com.geopslabs.geops.reservation.infrastructure.messaging;
 
 import com.geopslabs.geops.reservation.infrastructure.persistence.OutboxEventJpaEntity;
 import com.geopslabs.geops.reservation.infrastructure.persistence.OutboxEventJpaRepository;
+import org.apache.kafka.common.errors.RetriableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -12,79 +12,97 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
-import java.util.concurrent.ExecutionException;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * Publishes the outbox to Kafka, at least once. A row is marked only after Kafka confirms it; the first failure
- * ends the round and the remaining rows wait for the next one. The redemption never waits for this process.
+ * Publishes the outbox to Kafka, at least once. A row is marked only after Kafka confirms it. A failure is
+ * counted on the row. When Kafka itself does not answer (timeout or retriable error) the round stops and every
+ * row waits, however long the outage lasts. When Kafka rejects one row, the round also stops so the order is
+ * kept, until the row reaches the maximum attempts: then it is marked FAILED and the round goes on with the rest.
+ * The redemption never waits for this process.
  */
 @Component
 @ConditionalOnProperty(name = "geops.outbox.relay-enabled", havingValue = "true")
 public class OutboxRelay {
     private static final Logger LOGGER = LoggerFactory.getLogger(OutboxRelay.class);
+    private static final String REASON = "%s: %s";
 
     private final OutboxEventJpaRepository repository;
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final TransactionOperations transactions;
     private final Clock clock;
-    private final String topic;
-    private final int batchSize;
-    private final long sendTimeoutMs;
+    private final OutboxRelayProperties properties;
 
-    @SuppressWarnings("java:S107")
     public OutboxRelay(OutboxEventJpaRepository repository, KafkaTemplate<String, String> kafkaTemplate,
-                       TransactionOperations transactions, Clock clock,
-                       @Value("${geops.outbox.topic}") String topic,
-                       @Value("${geops.outbox.batch-size}") int batchSize,
-                       @Value("${geops.outbox.send-timeout-ms}") long sendTimeoutMs) {
+                       TransactionOperations transactions, Clock clock, OutboxRelayProperties properties) {
         this.repository = repository;
         this.kafkaTemplate = kafkaTemplate;
         this.transactions = transactions;
         this.clock = clock;
-        this.topic = topic;
-        this.batchSize = batchSize;
-        this.sendTimeoutMs = sendTimeoutMs;
+        this.properties = properties;
     }
 
     @Scheduled(fixedDelayString = "${geops.outbox.relay-delay-ms:1000}")
     public void relayPending() {
         var published = transactions.execute(status -> publishLockedRows());
         if (published != null && published > 0) {
-            LOGGER.info("outbox.relay.published count={} topic={}", published, topic);
+            LOGGER.info("outbox.relay.published count={} topic={}", published, properties.topic());
         }
     }
 
     private int publishLockedRows() {
         var published = 0;
-        for (var row : repository.lockUnpublished(batchSize)) {
-            if (!send(row)) {
+        for (var row : repository.lockPending(properties.batchSize())) {
+            var failure = send(row);
+            if (failure.isEmpty()) {
+                row.markPublished(clock.instant());
+                published++;
+                continue;
+            }
+            row.recordFailure(REASON.formatted(failure.get().getClass().getSimpleName(), rootMessage(failure.get())));
+            if (isKafkaUnavailable(failure.get()) || row.getAttempts() < properties.maxAttempts()) {
+                LOGGER.warn("outbox.relay.failed eventId={} eventType={} attempts={} reason={}", row.getId(),
+                        row.getEventType(), row.getAttempts(), row.getLastError());
                 break;
             }
-            row.setPublishedAt(clock.instant());
-            published++;
+            row.markFailed();
+            LOGGER.error("outbox.relay.gave-up eventId={} eventType={} aggregateId={} attempts={} reason={}",
+                    row.getId(), row.getEventType(), row.getAggregateId(), row.getAttempts(), row.getLastError());
         }
         return published;
     }
 
-    private boolean send(OutboxEventJpaEntity row) {
+    private Optional<Exception> send(OutboxEventJpaEntity row) {
         try {
-            kafkaTemplate.send(topic, String.valueOf(row.getAggregateId()), row.getPayload())
-                    .get(sendTimeoutMs, TimeUnit.MILLISECONDS);
-            return true;
+            kafkaTemplate.send(properties.topic(), String.valueOf(row.getAggregateId()), row.getPayload())
+                    .get(properties.sendTimeoutMs(), TimeUnit.MILLISECONDS);
+            return Optional.empty();
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
-            logFailure(row, exception);
-            return false;
-        } catch (ExecutionException | TimeoutException | RuntimeException exception) {
-            logFailure(row, exception);
-            return false;
+            return Optional.of(exception);
+        } catch (Exception exception) {
+            return Optional.of(exception);
         }
     }
 
-    private void logFailure(OutboxEventJpaEntity row, Exception exception) {
-        LOGGER.warn("outbox.relay.failed eventId={} eventType={} topic={} reason={}", row.getId(),
-                row.getEventType(), topic, exception.getClass().getSimpleName());
+    /** No confirmation in time, an interrupted wait or a Kafka error flagged as retriable. */
+    static boolean isKafkaUnavailable(Throwable failure) {
+        for (var cause = failure; cause != null; cause = cause.getCause()) {
+            if (cause instanceof TimeoutException || cause instanceof InterruptedException
+                    || cause instanceof RetriableException) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String rootMessage(Throwable failure) {
+        var root = failure;
+        while (root.getCause() != null) {
+            root = root.getCause();
+        }
+        return root.getMessage();
     }
 }
