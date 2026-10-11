@@ -20,11 +20,18 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -41,6 +48,8 @@ class OutboxRelayIntegrationTest {
     private static final long SEND_TIMEOUT_MS = 2_000;
     private static final Long POISON_AGGREGATE = 1L;
     private static final Long NEXT_AGGREGATE = 2L;
+    private static final int ONE_ROW_PER_ROUND = 1;
+    private static final long WAIT_SECONDS = 10;
 
     @ServiceConnection
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(POSTGIS_IMAGE);
@@ -89,6 +98,44 @@ class OutboxRelayIntegrationTest {
 
         relay.relayPending();
         assertThat(reload(poison).getAttempts()).as("a FAILED row is not read again").isEqualTo(MAX_ATTEMPTS);
+    }
+
+    @Test
+    void withTwoRelaysAtOnceOnlyTheOneHoldingTheLockWorks() throws Exception {
+        var first = store(POISON_AGGREGATE, Instant.parse("2026-10-20T17:00:00Z"));
+        var second = store(NEXT_AGGREGATE, Instant.parse("2026-10-20T17:00:00Z"));
+        var sending = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        when(kafkaTemplate.send(eq(TOPIC), eq("1"), anyString())).thenAnswer(invocation -> {
+            sending.countDown();
+            release.await(WAIT_SECONDS, TimeUnit.SECONDS);
+            return confirmed();
+        });
+        when(kafkaTemplate.send(eq(TOPIC), eq("2"), anyString())).thenReturn(confirmed());
+        var replicaA = relay(ONE_ROW_PER_ROUND);
+        var replicaB = relay(ONE_ROW_PER_ROUND);
+        var executor = Executors.newSingleThreadExecutor();
+        try {
+            var roundOfA = executor.submit(replicaA::relayPending);
+            assertThat(sending.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
+
+            replicaB.relayPending();
+
+            verify(kafkaTemplate, never()).send(eq(TOPIC), eq("2"), anyString());
+            assertThat(reload(second).getPublishedAt()).as("B did not jump ahead of A").isNull();
+            release.countDown();
+            roundOfA.get(WAIT_SECONDS, TimeUnit.SECONDS);
+        } finally {
+            executor.shutdownNow();
+        }
+        assertThat(reload(first).getStatus()).isEqualTo(OutboxEventStatus.PUBLISHED);
+
+        replicaB.relayPending();
+
+        verify(kafkaTemplate, timeout(WAIT_SECONDS * 1000).times(1)).send(eq(TOPIC), eq("2"), anyString());
+        verify(kafkaTemplate, times(1)).send(eq(TOPIC), eq("1"), anyString());
+        assertThat(reload(second).getStatus()).isEqualTo(OutboxEventStatus.PUBLISHED);
+        assertThat(reload(first).getSeq()).isLessThan(reload(second).getSeq());
     }
 
     private OutboxRelay relay(int batchSize) {

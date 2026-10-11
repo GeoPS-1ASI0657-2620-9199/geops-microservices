@@ -21,7 +21,9 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -46,6 +48,17 @@ class OutboxRelayTest {
         relay = new OutboxRelay(repository, kafkaTemplate, TransactionOperations.withoutTransaction(),
                 Clock.fixed(NOW, ZoneOffset.UTC),
                 new OutboxRelayProperties(TOPIC, BATCH_SIZE, SEND_TIMEOUT_MS, MAX_ATTEMPTS));
+        lenient().when(repository.tryAdvisoryLock(OutboxRelay.RELAY_LOCK)).thenReturn(true);
+    }
+
+    @Test
+    void doesNothingWhenAnotherReplicaHoldsTheLock() {
+        when(repository.tryAdvisoryLock(OutboxRelay.RELAY_LOCK)).thenReturn(false);
+
+        relay.relayPending();
+
+        verify(repository, never()).lockPending(anyInt());
+        verify(kafkaTemplate, never()).send(anyString(), anyString(), anyString());
     }
 
     @Test

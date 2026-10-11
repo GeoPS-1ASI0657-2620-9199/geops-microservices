@@ -27,6 +27,10 @@ public class OutboxEventJpaEntity {
     @Column(name = "id", nullable = false)
     private UUID id;
 
+    /** Assigned by the database on insert; the relay publishes in this order. */
+    @Column(name = "seq", insertable = false, updatable = false)
+    private Long seq;
+
     @Column(name = "aggregate_id", nullable = false)
     private Long aggregateId;
 

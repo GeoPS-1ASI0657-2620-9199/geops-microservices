@@ -21,13 +21,15 @@ import java.util.concurrent.TimeoutException;
  * counted on the row. When Kafka itself does not answer (timeout or retriable error) the round stops and every
  * row waits, however long the outage lasts. When Kafka rejects one row, the round also stops so the order is
  * kept, until the row reaches the maximum attempts: then it is marked FAILED and the round goes on with the rest.
- * The redemption never waits for this process.
+ * Each round first takes a PostgreSQL advisory lock, so with two replicas only one publishes at a time and the
+ * rows leave in seq order. The redemption never waits for this process.
  */
 @Component
 @ConditionalOnProperty(name = "geops.outbox.relay-enabled", havingValue = "true")
 public class OutboxRelay {
     private static final Logger LOGGER = LoggerFactory.getLogger(OutboxRelay.class);
     private static final String REASON = "%s: %s";
+    static final String RELAY_LOCK = "reservation.outbox-relay";
 
     private final OutboxEventJpaRepository repository;
     private final KafkaTemplate<String, String> kafkaTemplate;
@@ -53,6 +55,10 @@ public class OutboxRelay {
     }
 
     private int publishLockedRows() {
+        if (!repository.tryAdvisoryLock(RELAY_LOCK)) {
+            LOGGER.debug("outbox.relay.skipped reason=another-replica-holds-the-lock");
+            return 0;
+        }
         var published = 0;
         for (var row : repository.lockPending(properties.batchSize())) {
             var failure = send(row);
