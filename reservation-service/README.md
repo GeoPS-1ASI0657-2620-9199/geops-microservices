@@ -54,16 +54,23 @@ como `reservation.redeem.rejected reason=<motivo> businessId=<id> codeSuffix=<3 
 
 En la misma transacción del canje se escribe `ReservationRedeemed` en `outbox_events`, con el
 sobre `{eventId, eventType, version, occurredAt, aggregateId, payload}`. Un proceso del servicio
-lee cada segundo hasta 100 filas sin `published_at` (`FOR UPDATE SKIP LOCKED`), las envía al
-tópico `reservation.events` con la clave `aggregateId` y marca `published_at` cuando Kafka
-confirma. La entrega es al menos una vez: el consumidor descarta un `eventId` repetido. Si Kafka
-no responde, el canje contesta igual y la fila espera a la siguiente vuelta.
+toma cada segundo un candado de PostgreSQL (`pg_try_advisory_xact_lock`), así con dos réplicas
+publica una sola a la vez; lee hasta 50 filas `PENDING` en el orden de `seq`, las envía al tópico
+`reservation.events` con la clave `aggregateId` y las marca `PUBLISHED` cuando Kafka confirma. La
+entrega es al menos una vez: el consumidor descarta un `eventId` repetido.
+
+Si Kafka no responde, el canje contesta igual y la fila espera a la siguiente vuelta sin importar
+cuánto dure la caída. Si Kafka rechaza una fila, cada intento suma `attempts` y guarda
+`last_error`; al llegar a `OUTBOX_MAX_ATTEMPTS` la fila queda `FAILED`, se registra como
+`outbox.relay.gave-up` y el relay sigue con las demás.
 
 | Variable | Valor por defecto | Uso |
 |---|---|---|
 | `KAFKA_BOOTSTRAP_SERVERS` | `localhost:29092` | Kafka; en el compose, `kafka:9092` |
 | `OUTBOX_RELAY_ENABLED` | `true` | Con `false` no se publica y los eventos esperan en la bandeja |
 | `OUTBOX_RELAY_DELAY_MS` | `1000` | Pausa entre vueltas del relay |
+| `OUTBOX_BATCH_SIZE` | `50` | Filas por vuelta |
+| `OUTBOX_MAX_ATTEMPTS` | `10` | Rechazos de Kafka antes de marcar la fila `FAILED` |
 
 ## Consulta a Catalog
 
