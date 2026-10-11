@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.cucumber.spring.ScenarioScope;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 @ScenarioScope
 public class HttpScenario {
     private static final String LOCAL_URL = "http://localhost:";
+    private static final String BEARER = "Bearer ";
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -32,15 +34,41 @@ public class HttpScenario {
     }
 
     public void post(String path, Object body) {
-        restClient.post().uri(path).contentType(MediaType.APPLICATION_JSON).body(body)
-                .exchange((request, response) -> remember(response.getStatusCode().value(),
-                        StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8)));
+        post(path, body, null);
+    }
+
+    public void post(String path, Object body, String token) {
+        var request = restClient.post().uri(path).contentType(MediaType.APPLICATION_JSON);
+        if (token != null) {
+            request = request.header(HttpHeaders.AUTHORIZATION, BEARER + token);
+        }
+        if (body != null) {
+            request = request.body(body);
+        }
+        request.exchange((sent, response) -> remember(response.getStatusCode().value(),
+                StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8)));
+    }
+
+    public void put(String path, Object body, String token) {
+        var request = restClient.put().uri(path).contentType(MediaType.APPLICATION_JSON).body(body);
+        if (token != null) {
+            request = request.header(HttpHeaders.AUTHORIZATION, BEARER + token);
+        }
+        request.exchange((sent, response) -> remember(response.getStatusCode().value(),
+                StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8)));
     }
 
     public void get(String path) {
-        restClient.get().uri(path)
-                .exchange((request, response) -> remember(response.getStatusCode().value(),
-                        StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8)));
+        get(path, null);
+    }
+
+    public void get(String path, String token) {
+        var request = restClient.get().uri(path);
+        if (token != null) {
+            request = request.header(HttpHeaders.AUTHORIZATION, BEARER + token);
+        }
+        request.exchange((sent, response) -> remember(response.getStatusCode().value(),
+                StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8)));
     }
 
     public int lastStatus() {
