@@ -12,6 +12,12 @@ public interface BusinessProfileRepositoryPort {
 
     Optional<BusinessProfile> findById(Long id);
 
+    /**
+     * Reads the profile and locks it until the caller's transaction ends, so two writers of the same profile apply
+     * their changes one after the other. Must be called inside a transaction.
+     */
+    Optional<BusinessProfile> findByIdForUpdate(Long id);
+
     Optional<BusinessProfile> findByUserId(Long userId);
 
     List<Long> findIdsByVerificationStatus(VerificationStatus status);

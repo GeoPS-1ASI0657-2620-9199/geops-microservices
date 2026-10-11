@@ -293,8 +293,12 @@ class BusinessVerificationServiceTest {
     private void givenProfile(VerificationStatus status) {
         var data = BusinessProfile.register("Restaurante Don Pepe", "Restaurante", RUC, ADDRESS,
                 new GeoPoint(-12.12, -77.03), null);
-        when(businessProfiles.findById(BUSINESS_ID))
-                .thenReturn(Optional.of(new BusinessProfile(BUSINESS_ID, 42L, data, AccountStatus.ACTIVE, status)));
+        var profile = new BusinessProfile(BUSINESS_ID, 42L, data, AccountStatus.ACTIVE, status);
+        when(businessProfiles.findById(BUSINESS_ID)).thenReturn(Optional.of(profile));
+        lenient().when(businessProfiles.findByIdForUpdate(BUSINESS_ID)).thenAnswer(invocation -> {
+            assertThat(transactions.open).as("the profile is locked inside the transaction").isTrue();
+            return Optional.of(profile);
+        });
     }
 
     private void givenTaxpayer(String status, String condition) {

@@ -99,7 +99,11 @@ public class BusinessVerificationService implements VerifyBusinessRucUseCase, Re
 
     private VerificationOutcome record(Long businessId, RucVerification attempt, String correctedAddress,
                                        String checkedAddress) {
-        var current = businessProfiles.findById(businessId).orElseThrow(BusinessProfileNotFoundException::new);
+        // Locked until commit: a simultaneous verification of the same business (double click, two devices or the
+        // pending retry) waits here and applies its result on the state this one saved, so the status and the
+        // last BusinessVerified always agree.
+        var current = businessProfiles.findByIdForUpdate(businessId)
+                .orElseThrow(BusinessProfileNotFoundException::new);
         var verification = verifications.save(attempt);
         var sealChange = current.applyVerification(verification, correctedAddress);
         businessProfiles.save(current);

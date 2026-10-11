@@ -29,6 +29,11 @@ public class BusinessProfileJpaAdapter implements BusinessProfileRepositoryPort 
     }
 
     @Override
+    public Optional<BusinessProfile> findByIdForUpdate(Long id) {
+        return repository.findWithLockById(id).map(BusinessProfilePersistenceMapper::toDomain);
+    }
+
+    @Override
     public List<Long> findIdsByVerificationStatus(VerificationStatus status) {
         return repository.findIdsByVerificationStatus(status);
     }
