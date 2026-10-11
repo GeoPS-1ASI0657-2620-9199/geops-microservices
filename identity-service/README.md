@@ -50,9 +50,13 @@ conserva el sello mientras Nominatim no responde; las verificaciones `PENDING` s
 
 `sunat_taxpayers` guarda solo Lima y Callao (ubigeo `1501*` y `0701*`) con todos los estados. Se
 carga a las 04:00 de Lima y al arrancar si la última carga tiene más de 24 horas. La lectura es en
-flujo (ISO-8859-1, separador `|`), con `COPY` a una tabla temporal y el reemplazo en una sola
-transacción: si la descarga o la lectura fallan, queda el padrón anterior, se registra
-`sunat.registry.load.failed` y se reintenta en una hora.
+flujo (ISO-8859-1, separador `|`). Las filas van con `COPY` a una tabla temporal y de ahí a
+`sunat_taxpayers_new` sin índices; luego se crea la clave primaria, se corre `ANALYZE` y, en una
+transacción corta, la tabla nueva se renombra sobre `sunat_taxpayers` y la vieja se borra. Cada
+carga deja una fila en `sunat_registry_loads` con la fecha y el número de filas. Si la descarga o la
+lectura fallan, o el archivo trae menos del 90 % de las filas de la carga anterior (archivo
+parcial), queda el padrón anterior, se registra `sunat.registry.load.failed` y se reintenta en una
+hora.
 
 La posición de cada columna está solo en `geops.sunat.columns` de `application.yml`. El orden se
 confirmó con la cabecera del archivo real (RUC, razón social, estado, condición, ubigeo); si SUNAT

@@ -72,6 +72,7 @@ class SunatRegistryLoaderTest {
     void emptyRegistry() {
         jdbc = new JdbcTemplate(dataSource);
         jdbc.update("DELETE FROM sunat_taxpayers");
+        jdbc.update("DELETE FROM sunat_registry_loads");
         SUNAT.resetAll();
         loader = loader();
         registry = new SunatTaxpayerRegistryAdapter(jdbc);
@@ -144,16 +145,71 @@ class SunatRegistryLoaderTest {
     }
 
     @Test
-    void aSecondLoadReplacesTheRegistryInsteadOfAddingToIt() {
+    void aSecondLoadRenamesTheNewTableOverTheOldOne() {
         loader.loadFromResource(new DefaultResourceLoader().getResource(SAMPLE));
-        var newRegistry = new ByteArrayResource(
-                "20123456786|RESTAURANTE DON PEPE S.A.C.|BAJA DE OFICIO|HABIDO|150122|\n"
-                        .getBytes(StandardCharsets.ISO_8859_1));
+        var oldTable = tableOid();
 
-        loader.loadFromResource(newRegistry);
+        loader.loadFromResource(registryOf(lines(9) + "20123456786|RESTAURANTE DON PEPE S.A.C.|BAJA DE OFICIO|HABIDO|150122|\n"));
 
-        assertThat(rows()).isEqualTo(1);
+        assertThat(rows()).isEqualTo(10);
+        assertThat(tableOid()).as("a new table took the name").isNotEqualTo(oldTable);
         assertThat(registry.findByRuc(new Ruc("20123456786")).map(Taxpayer::status)).contains("BAJA DE OFICIO");
+        assertThat(jdbc.queryForList("SELECT relname FROM pg_class WHERE relname IN "
+                + "('sunat_taxpayers_new', 'sunat_taxpayers_old', 'pk_sunat_taxpayers_new')", String.class)).isEmpty();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM pg_constraint WHERE conname = 'pk_sunat_taxpayers'",
+                Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForList("SELECT row_count FROM sunat_registry_loads ORDER BY id", Long.class))
+                .containsExactly(10L, 10L);
+    }
+
+    @Test
+    void aFileWithLessThanNinetyPercentOfThePreviousRowsIsRefusedAsPartial() {
+        loader.loadFromResource(new DefaultResourceLoader().getResource(SAMPLE));
+
+        assertThatThrownBy(() -> loader.loadFromResource(registryOf(lines(8))))
+                .isInstanceOf(SunatRegistryLoadException.class)
+                .hasMessageContaining("Partial registry");
+
+        assertThat(rows()).isEqualTo(LIMA_AND_CALLAO_ROWS);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM pg_class WHERE relname = 'sunat_taxpayers_new'",
+                Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM sunat_registry_loads", Integer.class)).isEqualTo(1);
+    }
+
+    @Test
+    void aFileWithNinetyPercentOfThePreviousRowsIsAccepted() {
+        loader.loadFromResource(new DefaultResourceLoader().getResource(SAMPLE));
+
+        var report = loader.loadFromResource(registryOf(lines(9)));
+
+        assertThat(report.rows()).isEqualTo(9);
+        assertThat(rows()).isEqualTo(9);
+    }
+
+    @Test
+    void theLastLoadIsReadFromTheLoadsTable() {
+        assertThat(loader.lastLoadedAt()).isEmpty();
+
+        loader.loadFromResource(new DefaultResourceLoader().getResource(SAMPLE));
+
+        assertThat(loader.lastLoadedAt()).isPresent();
+    }
+
+    private Long tableOid() {
+        return jdbc.queryForObject("SELECT 'sunat_taxpayers'::regclass::oid", Long.class);
+    }
+
+    /** n valid taxpayers of Lima with RUCs that are not in the sample. */
+    private static String lines(int count) {
+        var text = new StringBuilder();
+        for (int index = 0; index < count; index++) {
+            text.append("2070000000").append(index).append("|NEGOCIO ").append(index).append("|ACTIVO|HABIDO|150101|\n");
+        }
+        return text.toString();
+    }
+
+    private static ByteArrayResource registryOf(String text) {
+        return new ByteArrayResource(text.getBytes(StandardCharsets.ISO_8859_1));
     }
 
     private long rows() {

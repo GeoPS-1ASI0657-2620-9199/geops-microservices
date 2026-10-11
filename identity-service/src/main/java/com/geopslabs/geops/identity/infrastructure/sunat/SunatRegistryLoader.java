@@ -31,10 +31,16 @@ import java.util.Optional;
 import java.util.zip.ZipInputStream;
 
 /**
- * Replaces sunat_taxpayers with a new copy of the reduced registry, keeping only Lima and Callao (E2-12). The file is
- * read as a stream and copied with COPY into a temporary table; the swap happens in one transaction, so readers see
- * the old registry until the new one is complete. When the download or the reading fails, or the file has no row for
- * Lima and Callao, the transaction rolls back and the previous registry stays as it was (S2-04).
+ * Replaces sunat_taxpayers with a new copy of the reduced registry, keeping only Lima and Callao (E2-12).
+ * <ol>
+ *   <li>Build, without touching the live table: the file is read as a stream and copied with COPY into a temporary
+ *   table, then into sunat_taxpayers_new without indexes (DISTINCT ON the RUC); the primary key is created once the
+ *   rows are in, and the table is analyzed.</li>
+ *   <li>Guard: a file with fewer than 90 % of the rows of the previous load is taken as partial and refused.</li>
+ *   <li>Swap, in a short transaction: sunat_taxpayers_new is renamed over sunat_taxpayers, the old table is dropped
+ *   and the load is recorded once in sunat_registry_loads.</li>
+ * </ol>
+ * When the download, the reading or the guard fail, nothing is swapped and the previous registry stays (S2-04).
  */
 public class SunatRegistryLoader {
     private static final Logger LOGGER = LoggerFactory.getLogger(SunatRegistryLoader.class);
@@ -53,12 +59,29 @@ public class SunatRegistryLoader {
             ) ON COMMIT DROP""";
     private static final String COPY_LOAD_TABLE =
             "COPY sunat_taxpayers_load (ruc, business_name, taxpayer_status, taxpayer_condition) FROM STDIN";
-    private static final String DELETE_REGISTRY = "DELETE FROM sunat_taxpayers";
-    private static final String INSERT_REGISTRY = """
-            INSERT INTO sunat_taxpayers (ruc, business_name, taxpayer_status, taxpayer_condition, loaded_at)
+    private static final String DROP_NEW_TABLE = "DROP TABLE IF EXISTS sunat_taxpayers_new";
+    private static final String CREATE_NEW_TABLE = "CREATE TABLE sunat_taxpayers_new (LIKE sunat_taxpayers)";
+    private static final String FILL_NEW_TABLE = """
+            INSERT INTO sunat_taxpayers_new (ruc, business_name, taxpayer_status, taxpayer_condition, loaded_at)
             SELECT DISTINCT ON (ruc) ruc, business_name, taxpayer_status, taxpayer_condition, ?
               FROM sunat_taxpayers_load
              ORDER BY ruc""";
+    private static final String INDEX_NEW_TABLE =
+            "ALTER TABLE sunat_taxpayers_new ADD CONSTRAINT pk_sunat_taxpayers_new PRIMARY KEY (ruc)";
+    private static final String ANALYZE_NEW_TABLE = "ANALYZE sunat_taxpayers_new";
+    private static final String[] SWAP_TABLES = {
+            "ALTER TABLE sunat_taxpayers RENAME TO sunat_taxpayers_old",
+            "ALTER TABLE sunat_taxpayers_new RENAME TO sunat_taxpayers",
+            "DROP TABLE sunat_taxpayers_old",
+            "ALTER TABLE sunat_taxpayers RENAME CONSTRAINT pk_sunat_taxpayers_new TO pk_sunat_taxpayers"
+    };
+    private static final String RECORD_LOAD =
+            "INSERT INTO sunat_registry_loads (loaded_at, row_count, source) VALUES (?, ?, ?)";
+    private static final String PREVIOUS_ROWS = "SELECT row_count FROM sunat_registry_loads ORDER BY id DESC LIMIT 1";
+    private static final String LAST_LOADED_AT = "SELECT loaded_at FROM sunat_registry_loads ORDER BY id DESC LIMIT 1";
+    /** A new registry with fewer rows than this share of the previous load is taken as a partial file. */
+    private static final double MINIMUM_SHARE_OF_PREVIOUS = 0.9;
+    private static final int SOURCE_LENGTH = 255;
     private static final String TRY_LOCK = "SELECT pg_try_advisory_xact_lock(hashtext(?))";
 
     private final DataSource dataSource;
@@ -123,8 +146,7 @@ public class SunatRegistryLoader {
 
     /** The moment of the last complete load, empty while the registry has never been loaded. */
     public Optional<Instant> lastLoadedAt() {
-        var last = jdbc.queryForObject("SELECT max(loaded_at) FROM sunat_taxpayers", Timestamp.class);
-        return Optional.ofNullable(last).map(Timestamp::toInstant);
+        return jdbc.query(LAST_LOADED_AT, (row, index) -> row.getTimestamp(1).toInstant()).stream().findFirst();
     }
 
     private void fetch(URI url, Path target) throws IOException, InterruptedException {
@@ -136,27 +158,66 @@ public class SunatRegistryLoader {
     }
 
     private SunatLoadReport replaceRegistry(String origin, InputStream input, boolean zipped, Instant started) {
-        var report = transactions.execute(status -> {
-            if (!Boolean.TRUE.equals(jdbc.queryForObject(TRY_LOCK, Boolean.class, LOAD_LOCK))) {
-                LOGGER.info("sunat.registry.load.skipped reason=another-load-in-progress");
+        var loadedAt = clock.instant();
+        var built = transactions.execute(status -> {
+            if (!holdsLoadLock()) {
                 return null;
             }
+            jdbc.execute(DROP_NEW_TABLE);
             jdbc.execute(CREATE_LOAD_TABLE);
             var counts = copyIntoLoadTable(input, zipped);
             if (counts.kept() == 0) {
                 throw new SunatRegistryLoadException("The file has no taxpayer of Lima or Callao");
             }
-            jdbc.update(DELETE_REGISTRY);
-            var stored = jdbc.update(INSERT_REGISTRY, Timestamp.from(clock.instant()));
-            return new SunatLoadReport(stored, counts.filtered(), counts.malformed(),
-                    Duration.between(started, clock.instant()), false);
+            jdbc.execute(CREATE_NEW_TABLE);
+            long rows = jdbc.update(FILL_NEW_TABLE, Timestamp.from(loadedAt));
+            ensureNotPartial(rows);
+            jdbc.execute(INDEX_NEW_TABLE);
+            jdbc.execute(ANALYZE_NEW_TABLE);
+            return new CopyCounts(rows, counts.filtered(), counts.malformed());
         });
-        if (report == null) {
+        if (built == null) {
             return SunatLoadReport.skipped();
         }
+        var swapped = transactions.execute(status -> {
+            if (!holdsLoadLock()) {
+                return false;
+            }
+            for (var statement : SWAP_TABLES) {
+                jdbc.execute(statement);
+            }
+            jdbc.update(RECORD_LOAD, Timestamp.from(loadedAt), built.kept(), cut(origin));
+            return true;
+        });
+        if (!Boolean.TRUE.equals(swapped)) {
+            return SunatLoadReport.skipped();
+        }
+        var report = new SunatLoadReport(built.kept(), built.filtered(), built.malformed(),
+                Duration.between(started, clock.instant()), false);
         LOGGER.info("sunat.registry.loaded source={} rows={} filtered={} malformed={} durationMs={}", origin,
                 report.rows(), report.filtered(), report.malformed(), report.duration().toMillis());
         return report;
+    }
+
+    private boolean holdsLoadLock() {
+        if (Boolean.TRUE.equals(jdbc.queryForObject(TRY_LOCK, Boolean.class, LOAD_LOCK))) {
+            return true;
+        }
+        LOGGER.info("sunat.registry.load.skipped reason=another-load-in-progress");
+        return false;
+    }
+
+    /** The new table is still inside the build transaction: refusing it rolls it back with everything else. */
+    private void ensureNotPartial(long rows) {
+        var previous = jdbc.query(PREVIOUS_ROWS, (row, index) -> row.getLong(1)).stream().findFirst();
+        if (previous.isPresent() && rows < previous.get() * MINIMUM_SHARE_OF_PREVIOUS) {
+            throw new SunatRegistryLoadException("Partial registry: %d rows against %d of the previous load"
+                    .formatted(rows, previous.get()));
+        }
+    }
+
+    private static String cut(String value) {
+        return value.length() <= SOURCE_LENGTH ? value : value.substring(0, SOURCE_LENGTH);
     }
 
     private CopyCounts copyIntoLoadTable(InputStream input, boolean zipped) {

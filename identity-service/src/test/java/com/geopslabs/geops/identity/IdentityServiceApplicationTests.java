@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class IdentityServiceApplicationTests {
     private static final DockerImageName POSTGIS_IMAGE =
             DockerImageName.parse("imresamu/postgis:16-3.4").asCompatibleSubstituteFor("postgres");
-    private static final String LATEST_VERSION = "3";
+    private static final String LATEST_VERSION = "4";
 
     @ServiceConnection
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(POSTGIS_IMAGE);
