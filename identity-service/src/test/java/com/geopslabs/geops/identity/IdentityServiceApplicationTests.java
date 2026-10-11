@@ -17,7 +17,7 @@ import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
+@SpringBootTest(properties = "geops.outbox.relay-enabled=false")
 class IdentityServiceApplicationTests {
     private static final DockerImageName POSTGIS_IMAGE =
             DockerImageName.parse("imresamu/postgis:16-3.4").asCompatibleSubstituteFor("postgres");
