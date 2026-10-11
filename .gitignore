@@ -4,6 +4,7 @@ target/
 *.iml
 .vscode/
 .env
+.env.admin
 *.log
 node_modules/
 dist/

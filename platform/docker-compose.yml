@@ -3,7 +3,8 @@ name: geops
 x-service: &service
   profiles: [app]
   restart: unless-stopped
-  env_file: .env
+  # Sin env_file compartido: cada servicio recibe solo su usuario de base, su contraseña y lo
+  # propio que necesita (ver README.md). Compose toma los valores de .env para interpolar.
   # 448 MB por servicio: los cinco, PostgreSQL, Kafka, Redis y nginx caben en la B2s (4 GB).
   mem_limit: 448m
   environment: &service-env
@@ -113,6 +114,11 @@ services:
       <<: *service-env
       SERVER_PORT: 8081
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/identity_db
+      SPRING_DATASOURCE_USERNAME: identity_user
+      SPRING_DATASOURCE_PASSWORD: ${IDENTITY_DB_PASSWORD:?IDENTITY_DB_PASSWORD en .env}
+      OUTBOX_RELAY_ENABLED: ${OUTBOX_RELAY_ENABLED:-true}
+      GEOPS_SUNAT_SOURCE: ${GEOPS_SUNAT_SOURCE:-file}
+      NOMINATIM_CONTACT_EMAIL: ${NOMINATIM_CONTACT_EMAIL:-}
       JWT_PRIVATE_KEY_PATH: /run/keys/jwt-private.pem
       JWT_PUBLIC_KEY_PATH: /run/keys/jwt-public.pem
     volumes:
@@ -128,6 +134,9 @@ services:
       <<: *service-env
       SERVER_PORT: 8082
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/catalog_db
+      SPRING_DATASOURCE_USERNAME: catalog_user
+      SPRING_DATASOURCE_PASSWORD: ${CATALOG_DB_PASSWORD:?CATALOG_DB_PASSWORD en .env}
+      NOMINATIM_CONTACT_EMAIL: ${NOMINATIM_CONTACT_EMAIL:-}
       IDENTITY_JWKS_URI: http://identity-service:8081/.well-known/jwks.json
     depends_on:
       <<: *service-deps
@@ -146,6 +155,9 @@ services:
       <<: *service-env
       SERVER_PORT: 8083
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/reservation_db
+      SPRING_DATASOURCE_USERNAME: reservation_user
+      SPRING_DATASOURCE_PASSWORD: ${RESERVATION_DB_PASSWORD:?RESERVATION_DB_PASSWORD en .env}
+      OUTBOX_RELAY_ENABLED: ${OUTBOX_RELAY_ENABLED:-true}
       IDENTITY_JWKS_URI: http://identity-service:8081/.well-known/jwks.json
       CATALOG_INTERNAL_URL: http://catalog-service:8082
     depends_on:
@@ -163,6 +175,8 @@ services:
       <<: *service-env
       SERVER_PORT: 8084
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/engagement_db
+      SPRING_DATASOURCE_USERNAME: engagement_user
+      SPRING_DATASOURCE_PASSWORD: ${ENGAGEMENT_DB_PASSWORD:?ENGAGEMENT_DB_PASSWORD en .env}
       IDENTITY_JWKS_URI: http://identity-service:8081/.well-known/jwks.json
       SPRING_PROFILES_ACTIVE: demo
     depends_on:
@@ -180,6 +194,13 @@ services:
       <<: *service-env
       SERVER_PORT: 8085
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notification_db
+      SPRING_DATASOURCE_USERNAME: notification_user
+      SPRING_DATASOURCE_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?NOTIFICATION_DB_PASSWORD en .env}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      FCM_CREDENTIALS_PATH: ${FCM_CREDENTIALS_PATH:-}
       IDENTITY_JWKS_URI: http://identity-service:8081/.well-known/jwks.json
       SPRING_PROFILES_ACTIVE: demo
     depends_on:
