@@ -1,10 +1,13 @@
 package com.geopslabs.geops.catalog.configuration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.geopslabs.geops.catalog.application.services.CellInvalidator;
 import com.geopslabs.geops.catalog.application.services.NearbyOfferQueryService;
+import com.geopslabs.geops.catalog.application.services.OfferExpirationScheduler;
 import com.geopslabs.geops.catalog.application.usecases.SearchNearbyOffersUseCase;
 import com.geopslabs.geops.catalog.domain.models.ProximitySearchService;
 import com.geopslabs.geops.catalog.domain.ports.CellCachePort;
+import com.geopslabs.geops.catalog.domain.ports.JobLockPort;
 import com.geopslabs.geops.catalog.domain.ports.OfferRepositoryPort;
 import com.geopslabs.geops.catalog.infrastructure.cache.DisabledCellCache;
 import com.geopslabs.geops.catalog.infrastructure.cache.RedisCellCacheAdapter;
@@ -15,6 +18,7 @@ import org.springframework.boot.autoconfigure.data.redis.LettuceClientConfigurat
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -57,5 +61,18 @@ public class ProximitySearchConfiguration {
     @Bean
     public SearchNearbyOffersUseCase searchNearbyOffersUseCase(ProximitySearchService proximitySearchService) {
         return new NearbyOfferQueryService(proximitySearchService);
+    }
+
+    @Bean
+    public CellInvalidator cellInvalidator(CellCachePort cellCache, OfferRepositoryPort offerRepository,
+                                           Clock clock) {
+        return new CellInvalidator(cellCache, offerRepository, clock);
+    }
+
+    @Bean
+    public OfferExpirationScheduler offerExpirationScheduler(OfferRepositoryPort offerRepository,
+                                                             JobLockPort jobLock, CellInvalidator cellInvalidator,
+                                                             TransactionOperations transactions, Clock clock) {
+        return new OfferExpirationScheduler(offerRepository, jobLock, cellInvalidator, transactions, clock);
     }
 }

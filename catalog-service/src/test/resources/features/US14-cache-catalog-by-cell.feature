@@ -13,6 +13,12 @@ Feature: Cache the catalog by geographic cell
     Then the result has "Menú ejecutivo"
     And the database was not queried for the cells of the second search
 
+  Scenario: A published campaign shows up in the next search of its cell
+    Given I searched within 10 minutes once
+    When business 84 publishes a campaign with offer "Ceviche 2x1" 300 meters north of the origin
+    And I search within 10 minutes again
+    Then the result has "Ceviche 2x1"
+
   Scenario: An expired offer disappears from the next search of its cell
     Given I searched within 10 minutes once
     And the date moves to the day after "Menú ejecutivo" expires

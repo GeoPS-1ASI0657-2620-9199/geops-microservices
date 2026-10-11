@@ -2,6 +2,7 @@ package com.geopslabs.geops.catalog.configuration;
 
 import com.geopslabs.geops.catalog.application.services.CampaignCommandService;
 import com.geopslabs.geops.catalog.application.services.CampaignQueryService;
+import com.geopslabs.geops.catalog.application.services.CellInvalidator;
 import com.geopslabs.geops.catalog.application.services.OfferQueryService;
 import com.geopslabs.geops.catalog.application.usecases.CreateCampaignUseCase;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
@@ -31,8 +32,9 @@ public class BeanConfiguration {
     public CreateCampaignUseCase createCampaignUseCase(CampaignRepositoryPort campaignRepository,
                                                        OfferRepositoryPort offerRepository,
                                                        MerchantStandingRepositoryPort merchantStandingRepository,
-                                                       Clock clock) {
-        return new CampaignCommandService(campaignRepository, offerRepository, merchantStandingRepository, clock);
+                                                       CellInvalidator cellInvalidator, Clock clock) {
+        return new CampaignCommandService(campaignRepository, offerRepository, merchantStandingRepository,
+                cellInvalidator, clock);
     }
 
     @Bean

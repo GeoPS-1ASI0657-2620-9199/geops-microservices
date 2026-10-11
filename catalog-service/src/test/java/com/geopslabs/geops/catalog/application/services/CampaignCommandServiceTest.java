@@ -61,12 +61,15 @@ class CampaignCommandServiceTest {
     @Mock
     private MerchantStandingRepositoryPort merchantStandingRepository;
 
+    @Mock
+    private CellInvalidator cellInvalidator;
+
     private CampaignCommandService service;
 
     @BeforeEach
     void setUp() {
         service = new CampaignCommandService(campaignRepository, offerRepository, merchantStandingRepository,
-                Clock.fixed(NOW, ZoneId.of("America/Lima")));
+                cellInvalidator, Clock.fixed(NOW, ZoneId.of("America/Lima")));
     }
 
     @Test
@@ -132,6 +135,15 @@ class CampaignCommandServiceTest {
 
         assertThat(service.publish(lowerCase).offers()).singleElement()
                 .extracting(offer -> offer.getCategory()).isEqualTo("Gastronomía");
+    }
+
+    @Test
+    void publishingEvictsTheCellsOfTheNewOffers() {
+        stubSaves();
+
+        service.publish(command(START, END, BUDGET, ZoneType.RADIUS, OFFER_VALID_TO));
+
+        verify(cellInvalidator).evictCellsOf(List.of(STORE));
     }
 
     @Test

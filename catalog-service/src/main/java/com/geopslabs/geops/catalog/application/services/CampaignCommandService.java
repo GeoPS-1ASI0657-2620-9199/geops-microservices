@@ -34,13 +34,16 @@ public class CampaignCommandService implements CreateCampaignUseCase {
     private final CampaignRepositoryPort campaignRepository;
     private final OfferRepositoryPort offerRepository;
     private final MerchantStandingRepositoryPort merchantStandingRepository;
+    private final CellInvalidator cellInvalidator;
     private final Clock clock;
 
     public CampaignCommandService(CampaignRepositoryPort campaignRepository, OfferRepositoryPort offerRepository,
-                                  MerchantStandingRepositoryPort merchantStandingRepository, Clock clock) {
+                                  MerchantStandingRepositoryPort merchantStandingRepository,
+                                  CellInvalidator cellInvalidator, Clock clock) {
         this.campaignRepository = campaignRepository;
         this.offerRepository = offerRepository;
         this.merchantStandingRepository = merchantStandingRepository;
+        this.cellInvalidator = cellInvalidator;
         this.clock = clock;
     }
 
@@ -52,6 +55,8 @@ public class CampaignCommandService implements CreateCampaignUseCase {
         ensureMerchantStanding(command.businessId(), command.businessName());
         var saved = campaignRepository.save(campaign);
         var savedOffers = addOffers(saved, offers);
+        // QAS08: the next search of these cells reads the new offers, not the cached cell.
+        cellInvalidator.evictCellsOf(savedOffers.stream().map(Offer::getLocation).toList());
         LOGGER.info("campaign.published campaignId={} businessId={} offers={}", saved.getId(), saved.getBusinessId(),
                 savedOffers.size());
         return new PublishedCampaign(saved, savedOffers);
