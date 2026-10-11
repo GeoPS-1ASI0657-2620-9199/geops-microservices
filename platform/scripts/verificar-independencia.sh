@@ -45,25 +45,34 @@ done
 echo "== Conexiones entre bases"
 rejected=0
 attempts=0
+unexpected=0
 for user_service in "${SERVICES[@]}"; do
   for db_service in "${SERVICES[@]}"; do
     [ "$user_service" = "$db_service" ] && continue
     attempts=$((attempts + 1))
-    # Sin contraseña: el rechazo esperado es por privilegio CONNECT; la conexión local del
-    # contenedor confía en el usuario, así que lo único que la detiene es el REVOKE.
-    if psql_as -U "${user_service}_user" -d "${db_service}_db" -c "SELECT 1" > /dev/null 2>&1; then
+    # La conexión local del contenedor confía en el usuario: lo único que debe detenerla es el
+    # REVOKE, y su mensaje es "permission denied for database". Cualquier otro error no cuenta.
+    if output=$(psql_as -U "${user_service}_user" -d "${db_service}_db" -c "SELECT 1" 2>&1); then
       echo "  ACEPTADA: ${user_service}_user -> ${db_service}_db"
       failures=$((failures + 1))
-    else
+    elif printf '%s' "$output" | grep -q "permission denied for database"; then
       rejected=$((rejected + 1))
+    else
+      echo "  ERROR INESPERADO: ${user_service}_user -> ${db_service}_db: $(printf '%s' "$output" | head -n 1)"
+      unexpected=$((unexpected + 1))
+      failures=$((failures + 1))
     fi
   done
 done
-echo "  $rejected de $attempts conexiones cruzadas rechazadas"
+echo "  $rejected de $attempts conexiones cruzadas rechazadas por privilegio, $unexpected errores inesperados"
 
 own_ok=0
 for service in "${SERVICES[@]}"; do
-  psql_as -U "${service}_user" -d "${service}_db" -c "SELECT 1" > /dev/null 2>&1 && own_ok=$((own_ok + 1))
+  if output=$(psql_as -U "${service}_user" -d "${service}_db" -c "SELECT 1" 2>&1); then
+    own_ok=$((own_ok + 1))
+  else
+    echo "  ${service}_user no entra a ${service}_db: $(printf '%s' "$output" | head -n 1)"
+  fi
 done
 echo "  $own_ok de ${#SERVICES[@]} servicios entran a su propia base"
 [ "$own_ok" -eq "${#SERVICES[@]}" ] || failures=$((failures + 1))
