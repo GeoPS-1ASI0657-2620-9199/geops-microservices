@@ -1575,6 +1575,403 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Sprint 2",
+      "item": [
+        {
+          "name": "List categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "categories"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"eleven categories\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.lengthOf(11);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search nearby by category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/nearby?lat=-12.0697&lng=-77.0240&radiusMinutes=10&category=Gastronomía",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "-12.0697"
+                },
+                {
+                  "key": "lng",
+                  "value": "-77.0240"
+                },
+                {
+                  "key": "radiusMinutes",
+                  "value": "10"
+                },
+                {
+                  "key": "category",
+                  "value": "Gastronomía"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"only that category\", function () {",
+                  "    pm.response.json().content.forEach(o => pm.expect(o.category).to.eql(\"Gastronomía\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search with an unknown category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/nearby?lat=-12.0697&lng=-77.0240&radiusMinutes=10&category=Juguetería",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "-12.0697"
+                },
+                {
+                  "key": "lng",
+                  "value": "-77.0240"
+                },
+                {
+                  "key": "radiusMinutes",
+                  "value": "10"
+                },
+                {
+                  "key": "category",
+                  "value": "Juguetería"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"code is INVALID_CATEGORY\", function () {",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_CATEGORY\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search public source offers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/offers/nearby/public-sources?lat=-12.0464&lng=-77.0306&radiusMinutes=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "nearby",
+                "public-sources"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "-12.0464"
+                },
+                {
+                  "key": "lng",
+                  "value": "-77.0306"
+                },
+                {
+                  "key": "radiusMinutes",
+                  "value": "10"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"no seal on public sources\", function () {",
+                  "    pm.response.json().content.forEach(o => pm.expect(o).to.not.have.property('verifiedSeal'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Load public source offers",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/public-offers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "public-offers"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"offers\": [\n    {\n      \"title\": \"Feria de libros usados\",\n      \"conditions\": \"Entrada libre\",\n      \"price\": 0,\n      \"validTo\": \"{{offerValidTo}}\",\n      \"category\": \"Librería y útiles\",\n      \"address\": \"Jr. de la Unión 300, Cercado de Lima\",\n      \"sourceName\": \"Municipalidad de Lima\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Load public source offers as business owner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/public-offers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "public-offers"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{businessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"offers\": [\n    {\n      \"title\": \"Feria de libros usados\",\n      \"conditions\": \"Entrada libre\",\n      \"price\": 0,\n      \"validTo\": \"{{offerValidTo}}\",\n      \"category\": \"Librería y útiles\",\n      \"address\": \"Jr. de la Unión 300, Cercado de Lima\",\n      \"sourceName\": \"Municipalidad de Lima\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Run the geocoding",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/geocoding-runs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "geocoding-runs"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"report has the counts\", function () {",
+                  "    pm.expect(pm.response.json()).to.include.keys('processed', 'geocoded', 'manualReview', 'stillPending', 'stoppedByProvider');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Geocoding summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/geocoding-summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "geocoding-summary"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [
@@ -1640,6 +2037,10 @@
     },
     {
       "key": "offerValidTo",
+      "value": ""
+    },
+    {
+      "key": "adminToken",
       "value": ""
     }
   ]
