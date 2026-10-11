@@ -4,6 +4,8 @@ x-deps-identity: &deps-identity
   identity-service:
     condition: service_healthy
 
+# Redis y Kafka viven en el perfil messaging. Los servicios no esperan a Kafka:
+# la bandeja de salida guarda los eventos hasta que el broker responde.
 services:
   postgres:
     ports: !reset []
