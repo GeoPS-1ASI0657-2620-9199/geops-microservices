@@ -1,5 +1,6 @@
 package com.geopslabs.geops.catalog.configuration;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.geopslabs.geops.catalog.application.services.CellInvalidator;
 import com.geopslabs.geops.catalog.application.services.MerchantReputationService;
@@ -13,28 +14,35 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.transaction.support.TransactionOperations;
-import org.springframework.util.backoff.FixedBackOff;
+import org.springframework.util.backoff.ExponentialBackOff;
 
 import java.time.Clock;
+import java.time.DateTimeException;
 
 /**
- * E2-03: an event that cannot be processed is retried three times one second apart, then logged with its eventId and
- * acknowledged, so one bad event never stops the consumer. The dead letter topic arrives with iteration 4.
+ * E2-03 split in two. An event that cannot be read (bad JSON, missing fields, wrong id or date) is never going to
+ * work: it is logged with its eventId and acknowledged at once, so it does not stop the consumer. Any other failure
+ * (database or Redis down, timeouts) is transient: the event is retried with a backoff of 1 s doubling up to 60 s,
+ * with no limit, and is applied when the dependency comes back; it is never discarded. The dead letter topic
+ * arrives with iteration 4.
  */
 @Configuration
 public class MessagingConfiguration {
     private static final Logger LOGGER = LoggerFactory.getLogger(MessagingConfiguration.class);
-    private static final long RETRY_INTERVAL_MS = 1_000;
-    private static final long RETRIES = 3;
+    private static final long FIRST_RETRY_MS = 1_000;
+    private static final double RETRY_MULTIPLIER = 2.0;
+    private static final long MAX_RETRY_INTERVAL_MS = 60_000;
     private static final String UNKNOWN = "unknown";
 
     @Bean
     public DefaultErrorHandler identityEventsErrorHandler(ObjectMapper objectMapper) {
         var handler = new DefaultErrorHandler((record, exception) -> LOGGER.error(
-                "catalog.event.discarded eventId={} topic={} partition={} offset={} reason={}",
+                "catalog.event.discarded eventId={} topic={} partition={} offset={} reason={} (unreadable)",
                 eventIdOf(record, objectMapper), record.topic(), record.partition(), record.offset(),
                 rootCause(exception).getClass().getSimpleName()),
-                new FixedBackOff(RETRY_INTERVAL_MS, RETRIES));
+                retryForever());
+        handler.addNotRetryableExceptions(JsonProcessingException.class, IllegalArgumentException.class,
+                DateTimeException.class, NullPointerException.class);
         handler.setCommitRecovered(true);
         return handler;
     }
@@ -46,6 +54,13 @@ public class MessagingConfiguration {
                                                                      TransactionOperations transactions,
                                                                      Clock clock) {
         return new MerchantReputationService(standings, reputationEvents, cellInvalidator, transactions, clock);
+    }
+
+    static ExponentialBackOff retryForever() {
+        var backOff = new ExponentialBackOff(FIRST_RETRY_MS, RETRY_MULTIPLIER);
+        backOff.setMaxInterval(MAX_RETRY_INTERVAL_MS);
+        backOff.setMaxElapsedTime(ExponentialBackOff.DEFAULT_MAX_ELAPSED_TIME);
+        return backOff;
     }
 
     private static String eventIdOf(ConsumerRecord<?, ?> record, ObjectMapper objectMapper) {

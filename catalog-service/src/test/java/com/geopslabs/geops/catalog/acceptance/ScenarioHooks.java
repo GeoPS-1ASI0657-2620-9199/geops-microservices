@@ -46,6 +46,7 @@ public class ScenarioHooks {
 
     @After(order = 0)
     public void bringTheCacheBack() {
+        RedisControl.resumeDatabase();
         RedisControl.resume();
     }
 }

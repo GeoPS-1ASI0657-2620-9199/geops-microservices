@@ -52,5 +52,9 @@ public class CucumberSpringConfiguration {
         registry.add("geops.cache.pause-after-failure", () -> "0s");
         registry.add("geops.nominatim.base-url", NOMINATIM::baseUrl);
         registry.add("geops.nominatim.min-interval", () -> "0s");
+        // A paused database must fail fast, as a stopped one does, so the consumer retries instead of hanging.
+        registry.add("spring.datasource.hikari.connection-timeout", () -> "2000");
+        registry.add("spring.datasource.hikari.validation-timeout", () -> "1000");
+        registry.add("spring.datasource.hikari.data-source-properties.socketTimeout", () -> "5");
     }
 }

@@ -32,7 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class IdentityEventSteps {
     static final String TOPIC = "identity.events";
     private static final String GROUP = "catalog-service";
-    private static final Duration WAIT = Duration.ofSeconds(30);
+    private static final Duration WAIT = Duration.ofSeconds(90);
     private static final long POLL_MILLIS = 100;
     private static final long SEND_TIMEOUT_SECONDS = 10;
 
@@ -66,6 +66,18 @@ public class IdentityEventSteps {
         var event = businessVerified(UUID.randomUUID(), businessId, true);
         send(event);
         send(event);
+        awaitConsumed();
+    }
+
+    @When("Identity publishes BusinessVerified for business {long} while the database is down for {int} seconds")
+    public void identityPublishesWhileTheDatabaseIsDown(Long businessId, int seconds) throws Exception {
+        RedisControl.pauseDatabase();
+        try {
+            send(businessVerified(UUID.randomUUID(), businessId, true));
+            Thread.sleep(Duration.ofSeconds(seconds).toMillis());
+        } finally {
+            RedisControl.resumeDatabase();
+        }
         awaitConsumed();
     }
 
