@@ -42,7 +42,7 @@ services:
       ENGAGEMENT_DB_PASSWORD: ${ENGAGEMENT_DB_PASSWORD}
       NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres/init-databases.sh:/docker-entrypoint-initdb.d/20-init-databases.sh:ro
@@ -58,7 +58,7 @@ services:
     # Solo caché: se reconstruye desde la base, sin persistencia en disco.
     command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru --save "" --appendonly no
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s

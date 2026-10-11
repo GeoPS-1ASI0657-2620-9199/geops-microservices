@@ -22,6 +22,10 @@ Todos los servicios reciben además `SERVER_PORT`, `SPRING_DATASOURCE_URL`, `JAV
 `SERVER_TOMCAT_THREADS_MAX`, `SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE`,
 `KAFKA_BOOTSTRAP_SERVERS` y `REDIS_HOST`, ninguno secreto.
 
+PostgreSQL, Redis y Kafka se publican solo en `127.0.0.1`. Si la máquina ya usa el 5432 o el
+6379 (por ejemplo, un PostgreSQL o Redis dentro de WSL), `POSTGRES_HOST_PORT` y `REDIS_HOST_PORT`
+cambian el puerto del host sin tocar la red interna.
+
 La cuenta de administrador vive en `.env.admin` (plantilla `.env.admin.example`, ignorado por
 git). Solo la lee `postgres/seed-admin.sh`; ningún servicio la recibe.
 
