@@ -1,5 +1,6 @@
 package com.geopslabs.geops.reservation.application.services;
 
+import com.geopslabs.geops.reservation.domain.events.ReservationRedeemed;
 import com.geopslabs.geops.reservation.domain.models.OfferSnapshot;
 import com.geopslabs.geops.reservation.domain.models.Reservation;
 import com.geopslabs.geops.reservation.domain.models.ReservationCode;
@@ -16,6 +17,7 @@ import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationExpir
 import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationNotFoundException;
 import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationReportedException;
 import com.geopslabs.geops.reservation.domain.ports.OfferCatalogPort;
+import com.geopslabs.geops.reservation.domain.ports.OutboxPort;
 import com.geopslabs.geops.reservation.domain.ports.ReservationRepositoryPort;
 import com.geopslabs.geops.reservation.shared.domain.DomainException;
 import org.junit.jupiter.api.BeforeEach;
@@ -70,6 +72,8 @@ class ReservationCommandServiceTest {
     private ReservationRepositoryPort reservationRepository;
     @Mock
     private OfferCatalogPort offerCatalog;
+    @Mock
+    private OutboxPort outbox;
 
     private ReservationCommandService service;
 
@@ -204,7 +208,7 @@ class ReservationCommandServiceTest {
     }
 
     @Test
-    void redeemsWhenTheConditionalUpdateChangesOneRow() {
+    void redeemsWhenTheConditionalUpdateChangesOneRowAndStoresTheEvent() {
         var now = LocalDateTime.ofInstant(NOW, ZoneOffset.UTC);
         var redeemed = storedReservation(ReservationStatus.REDEEMED, END_OF_VALID_TO_IN_LIMA, now);
         when(reservationRepository.redeemIfActive(CODE, BUSINESS_ID, now)).thenReturn(1);
@@ -214,6 +218,14 @@ class ReservationCommandServiceTest {
 
         assertThat(result.getStatus()).isEqualTo(ReservationStatus.REDEEMED);
         assertThat(result.getRedeemedAt()).isEqualTo(now);
+        var event = ArgumentCaptor.forClass(ReservationRedeemed.class);
+        verify(outbox).append(event.capture());
+        assertThat(event.getValue().eventId()).isNotNull();
+        assertThat(event.getValue().eventType()).isEqualTo("ReservationRedeemed");
+        assertThat(event.getValue().aggregateId()).isEqualTo(RESERVATION_ID);
+        assertThat(event.getValue().occurredAt()).isEqualTo(NOW);
+        assertThat(event.getValue().payload()).isEqualTo(new ReservationRedeemed.Payload(RESERVATION_ID, CONSUMER_ID,
+                BUSINESS_ID, OFFER_ID, NOW));
     }
 
     @Test
@@ -226,23 +238,25 @@ class ReservationCommandServiceTest {
     }
 
     @Test
-    void rejectsAnUnknownCode() {
+    void rejectsAnUnknownCodeWithoutStoringAnEvent() {
         when(reservationRepository.redeemIfActive(eq(CODE), eq(BUSINESS_ID), any())).thenReturn(0);
         when(reservationRepository.findByCode(CODE)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.redeem(new RedeemReservationCommand(CODE, BUSINESS_ID)))
                 .isInstanceOf(ReservationNotFoundException.class);
+        verify(outbox, never()).append(any());
     }
 
     @ParameterizedTest
     @MethodSource("rejectedReservations")
-    void explainsWhyTheUpdateChangedNoRow(Long businessId, Reservation stored,
+    void explainsWhyTheUpdateChangedNoRowWithoutStoringAnEvent(Long businessId, Reservation stored,
                                                               Class<? extends DomainException> expected) {
         when(reservationRepository.redeemIfActive(eq(CODE), eq(businessId), any())).thenReturn(0);
         when(reservationRepository.findByCode(CODE)).thenReturn(Optional.of(stored));
 
         assertThatThrownBy(() -> service.redeem(new RedeemReservationCommand(CODE, businessId)))
                 .isInstanceOf(expected);
+        verify(outbox, never()).append(any());
     }
 
     @Test
@@ -265,6 +279,7 @@ class ReservationCommandServiceTest {
 
         assertThatThrownBy(() -> service.redeem(new RedeemReservationCommand(CODE, BUSINESS_ID)))
                 .isInstanceOf(IllegalStateException.class);
+        verify(outbox, never()).append(any());
     }
 
     static Stream<Arguments> rejectedReservations() {
@@ -281,7 +296,7 @@ class ReservationCommandServiceTest {
     }
 
     private ReservationCommandService serviceAt(Instant instant) {
-        return new ReservationCommandService(reservationRepository, offerCatalog,
+        return new ReservationCommandService(reservationRepository, offerCatalog, outbox,
                 Clock.fixed(instant, ZoneOffset.UTC),
                 new Random(SEED));
     }

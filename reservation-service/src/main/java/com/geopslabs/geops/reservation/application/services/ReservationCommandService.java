@@ -3,6 +3,7 @@ package com.geopslabs.geops.reservation.application.services;
 import com.geopslabs.geops.reservation.application.usecases.CreateReservationUseCase;
 import com.geopslabs.geops.reservation.application.usecases.RedeemReservationUseCase;
 import com.geopslabs.geops.reservation.application.usecases.ReservationResult;
+import com.geopslabs.geops.reservation.domain.events.ReservationRedeemed;
 import com.geopslabs.geops.reservation.domain.models.OfferSnapshot;
 import com.geopslabs.geops.reservation.domain.models.RedeemRejection;
 import com.geopslabs.geops.reservation.domain.models.Reservation;
@@ -13,6 +14,7 @@ import com.geopslabs.geops.reservation.domain.models.exceptions.ActiveReservatio
 import com.geopslabs.geops.reservation.domain.models.exceptions.OfferNotAvailableException;
 import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationNotFoundException;
 import com.geopslabs.geops.reservation.domain.ports.OfferCatalogPort;
+import com.geopslabs.geops.reservation.domain.ports.OutboxPort;
 import com.geopslabs.geops.reservation.domain.ports.ReservationRepositoryPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +27,7 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.UUID;
 import java.util.random.RandomGenerator;
 import java.util.stream.Stream;
 
@@ -39,13 +42,15 @@ public class ReservationCommandService implements CreateReservationUseCase, Rede
 
     private final ReservationRepositoryPort reservationRepository;
     private final OfferCatalogPort offerCatalog;
+    private final OutboxPort outbox;
     private final Clock clock;
     private final RandomGenerator random;
 
     public ReservationCommandService(ReservationRepositoryPort reservationRepository, OfferCatalogPort offerCatalog,
-                                     Clock clock, RandomGenerator random) {
+                                     OutboxPort outbox, Clock clock, RandomGenerator random) {
         this.reservationRepository = reservationRepository;
         this.offerCatalog = offerCatalog;
+        this.outbox = outbox;
         this.clock = clock;
         this.random = random;
     }
@@ -65,8 +70,8 @@ public class ReservationCommandService implements CreateReservationUseCase, Rede
     }
 
     /**
-     * The conditional update decides; the reservation is only read afterwards, to return it or to explain
-     * the rejection.
+     * The conditional update decides; the reservation is only read afterwards, to build the event or to explain
+     * the rejection. The event shares the transaction of the update, so a failed append undoes the redemption.
      */
     @Override
     @Transactional
@@ -75,6 +80,7 @@ public class ReservationCommandService implements CreateReservationUseCase, Rede
         if (reservationRepository.redeemIfActive(command.code(), command.businessId(), now) == 1) {
             var redeemed = reservationRepository.findByCode(command.code())
                     .orElseThrow(() -> ReservationNotFoundException.withCode(command.code()));
+            outbox.append(ReservationRedeemed.of(redeemed, UUID.randomUUID()));
             LOGGER.info("reservation.redeemed reservationId={} businessId={}", redeemed.getId(), command.businessId());
             return redeemed;
         }
