@@ -69,6 +69,11 @@ public class SunatRegistryLoader {
     private static final String INDEX_NEW_TABLE =
             "ALTER TABLE sunat_taxpayers_new ADD CONSTRAINT pk_sunat_taxpayers_new PRIMARY KEY (ruc)";
     private static final String ANALYZE_NEW_TABLE = "ANALYZE sunat_taxpayers_new";
+    /**
+     * The rename needs an exclusive lock on sunat_taxpayers. If a long reader holds it, the swap gives up after 5 s
+     * instead of queueing every verification behind it; the load fails, is logged and is tried again next round.
+     */
+    private static final String SWAP_LOCK_TIMEOUT = "SET LOCAL lock_timeout = '5s'";
     private static final String[] SWAP_TABLES = {
             "ALTER TABLE sunat_taxpayers RENAME TO sunat_taxpayers_old",
             "ALTER TABLE sunat_taxpayers_new RENAME TO sunat_taxpayers",
@@ -183,6 +188,7 @@ public class SunatRegistryLoader {
             if (!holdsLoadLock()) {
                 return false;
             }
+            jdbc.execute(SWAP_LOCK_TIMEOUT);
             for (var statement : SWAP_TABLES) {
                 jdbc.execute(statement);
             }

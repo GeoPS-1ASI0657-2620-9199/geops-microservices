@@ -187,6 +187,31 @@ class SunatRegistryLoaderTest {
     }
 
     @Test
+    void theSwapGivesUpAfterFiveSecondsWhenAReaderHoldsTheRegistry() throws Exception {
+        loader.loadFromResource(new DefaultResourceLoader().getResource(SAMPLE));
+        try (var reader = dataSource.getConnection()) {
+            reader.setAutoCommit(false);
+            try (var statement = reader.createStatement()) {
+                statement.executeQuery("SELECT count(*) FROM sunat_taxpayers").close();
+            }
+            var started = System.nanoTime();
+
+            assertThatThrownBy(() -> loader.loadFromResource(registryOf(lines(10))))
+                    .isInstanceOf(SunatRegistryLoadException.class)
+                    .hasRootCauseMessage("ERROR: canceling statement due to lock timeout");
+
+            assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(15));
+            reader.rollback();
+        }
+        assertThat(registry.findByRuc(new Ruc("20123456786"))).as("the previous registry stays").isPresent();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM sunat_registry_loads", Integer.class)).isEqualTo(1);
+
+        var retried = loader.loadFromResource(registryOf(lines(10)));
+
+        assertThat(retried.rows()).as("the next round swaps it").isEqualTo(10);
+    }
+
+    @Test
     void theLastLoadIsReadFromTheLoadsTable() {
         assertThat(loader.lastLoadedAt()).isEmpty();
 
