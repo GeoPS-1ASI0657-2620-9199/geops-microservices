@@ -2,9 +2,11 @@ package com.geopslabs.geops.identity.infrastructure.persistence;
 
 import com.geopslabs.geops.identity.domain.models.BusinessProfile;
 import com.geopslabs.geops.identity.domain.models.Ruc;
+import com.geopslabs.geops.identity.domain.models.VerificationStatus;
 import com.geopslabs.geops.identity.domain.ports.BusinessProfileRepositoryPort;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -19,6 +21,21 @@ public class BusinessProfileJpaAdapter implements BusinessProfileRepositoryPort 
     public BusinessProfile save(BusinessProfile businessProfile) {
         var saved = repository.save(BusinessProfilePersistenceMapper.toEntity(businessProfile));
         return BusinessProfilePersistenceMapper.toDomain(saved);
+    }
+
+    @Override
+    public Optional<BusinessProfile> findById(Long id) {
+        return repository.findById(id).map(BusinessProfilePersistenceMapper::toDomain);
+    }
+
+    @Override
+    public Optional<BusinessProfile> findByIdForUpdate(Long id) {
+        return repository.findWithLockById(id).map(BusinessProfilePersistenceMapper::toDomain);
+    }
+
+    @Override
+    public List<Long> findIdsByVerificationStatus(VerificationStatus status) {
+        return repository.findIdsByVerificationStatus(status);
     }
 
     @Override

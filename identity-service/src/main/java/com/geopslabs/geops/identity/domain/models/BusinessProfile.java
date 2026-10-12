@@ -44,6 +44,84 @@ public class BusinessProfile {
         return new BusinessProfile(id, ownerId, this, accountStatus, verificationStatus);
     }
 
+    /**
+     * Replaces the declared address with the one the owner corrected. The point marked on the map when the business
+     * registered (US22) stays as it was: geocoding only checks that the address exists.
+     */
+    public void correctAddress(String newAddress) {
+        ensureAddressIsPresent(newAddress);
+        this.address = newAddress.strip();
+    }
+
+    /**
+     * Applies a verification that checked {@code correctedAddress} instead of the declared one (null when the owner
+     * did not correct it). A business that is already verified only takes a new address that was geocoded: if the
+     * geocoder could not find it, or did not answer, the previous address and the seal stay and nothing changes.
+     * Otherwise the corrected address is kept even when the attempt is rejected, so the owner does not type it again.
+     */
+    public SealChange applyVerification(RucVerification verification, String correctedAddress) {
+        return applyVerification(verification, correctedAddress, correctedAddress != null ? correctedAddress : address);
+    }
+
+    /**
+     * Same as {@link #applyVerification(RucVerification, String)}, for an attempt that checked
+     * {@code checkedAddress}. An attempt built on data that changed meanwhile is stale and changes nothing: the RUC is
+     * no longer the one checked, or the attempt did not correct the address and the profile now has another one
+     * (for example the retry geocoded the old address while the owner corrected it and got approved).
+     */
+    public SealChange applyVerification(RucVerification verification, String correctedAddress,
+                                        String checkedAddress) {
+        var rucChanged = !ruc.equals(verification.ruc());
+        var addressChanged = correctedAddress == null && !address.equals(checkedAddress);
+        if (rucChanged || addressChanged) {
+            return SealChange.UNCHANGED;
+        }
+        if (correctedAddress != null) {
+            var addressNotConfirmed = verification.reason() == VerificationReason.ADDRESS_NOT_GEOCODABLE
+                    || verification.reason() == VerificationReason.GEOCODER_UNAVAILABLE;
+            if (isVerified() && addressNotConfirmed) {
+                return SealChange.UNCHANGED;
+            }
+            correctAddress(correctedAddress);
+        }
+        return applyVerification(verification);
+    }
+
+    /** The address as it would be stored, or InvalidLocationException when it is blank. */
+    public static String normalizedAddress(String address) {
+        ensureAddressIsPresent(address);
+        return address.strip();
+    }
+
+    /**
+     * Moves the profile to the status the verification leads to and says what happened to the seal. A verified
+     * business keeps its seal while the geocoder does not answer: the seal is never granted without an answer, and
+     * it is not taken away for one either.
+     */
+    public SealChange applyVerification(RucVerification verification) {
+        var wasVerified = verificationStatus == VerificationStatus.VERIFIED;
+        return switch (verification.result()) {
+            case APPROVED -> {
+                verificationStatus = VerificationStatus.VERIFIED;
+                yield wasVerified ? SealChange.CONFIRMED : SealChange.GRANTED;
+            }
+            case REJECTED -> {
+                verificationStatus = VerificationStatus.REJECTED;
+                yield wasVerified ? SealChange.REVOKED : SealChange.UNCHANGED;
+            }
+            case PENDING -> {
+                if (!wasVerified) {
+                    verificationStatus = VerificationStatus.PENDING;
+                }
+                yield SealChange.UNCHANGED;
+            }
+        };
+    }
+
+    public boolean isVerified() {
+        return verificationStatus == VerificationStatus.VERIFIED;
+    }
+
     private static void ensureRucIsWellFormed(Ruc ruc) {
         if (!ruc.isWellFormed()) {
             throw new InvalidRucException();

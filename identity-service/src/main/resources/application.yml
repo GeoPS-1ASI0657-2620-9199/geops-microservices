@@ -14,8 +14,29 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
   flyway:
     enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        # Con Kafka caído el envío falla en segundos y el relay deja la fila para la siguiente vuelta.
+        max.block.ms: 5000
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 10000
+  task:
+    scheduling:
+      # La carga del padrón puede tardar minutos; con tres hilos no frena el relay ni los reintentos.
+      pool:
+        size: 3
 
 geops:
   security:
@@ -24,6 +45,50 @@ geops:
       public-key-path: ${JWT_PUBLIC_KEY_PATH}
       issuer: geops-identity
       audience: geops-api
+  sunat:
+    # file: lee geops.sunat.file (pruebas y demo). url: descarga el padrón reducido de SUNAT.
+    source: ${GEOPS_SUNAT_SOURCE:file}
+    url: ${GEOPS_SUNAT_URL:https://www2.sunat.gob.pe/padron_reducido_ruc.zip}
+    file: ${GEOPS_SUNAT_FILE:classpath:sunat/padron-muestra.txt}
+    schedule-enabled: ${GEOPS_SUNAT_SCHEDULE_ENABLED:true}
+    ubigeo-prefixes: 1501,0701
+    charset: ISO-8859-1
+    separator: "|"
+    # Posición (desde 0) de cada campo en una línea del padrón, confirmada con la cabecera del archivo de SUNAT
+    # el 10/10/2026. Si SUNAT cambia el orden, solo cambia esto.
+    columns:
+      ruc: 0
+      business-name: 1
+      status: 2
+      condition: 3
+      ubigeo: 4
+
+  outbox:
+    relay-enabled: ${OUTBOX_RELAY_ENABLED:true}
+    relay-delay-ms: ${OUTBOX_RELAY_DELAY_MS:1000}
+    batch-size: ${OUTBOX_BATCH_SIZE:50}
+    send-timeout-ms: 5000
+    # Rechazos de Kafka antes de marcar la fila FAILED; los tiempos de espera agotados no cuentan.
+    max-attempts: ${OUTBOX_MAX_ATTEMPTS:10}
+    topic: identity.events
+  nominatim:
+    base-url: ${NOMINATIM_BASE_URL:https://nominatim.openstreetmap.org}
+    # Política de uso de Nominatim (E2-15): User-Agent con correo de contacto y una petición por segundo.
+    contact-email: ${NOMINATIM_CONTACT_EMAIL:}
+    timeout: 2s
+    min-interval: 1s
+
+# S2-03: abre con cinco fallos en diez segundos y queda abierto 30 s; mientras tanto la verificación queda PENDING.
+resilience4j:
+  circuitbreaker:
+    instances:
+      nominatim:
+        sliding-window-type: TIME_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 100
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 1
 
 management:
   endpoints:
