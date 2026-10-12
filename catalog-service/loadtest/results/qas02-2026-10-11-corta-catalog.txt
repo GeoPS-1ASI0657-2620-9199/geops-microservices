@@ -1,0 +1,18 @@
+# QAS02 corrida corta local (30 a 300 r/s en 1 min, 1 min en 300, 10 s de bajada), 11/10/2026
+# Contadores de catalog.cell.cache antes y después; buckets de http.server.requests de /api/v1/offers/nearby
+before hits=69.0 misses=12.0
+after hits=319078.0 misses=694.0
+http_server_requests_seconds_count{error="none",exception="none",method="GET",outcome="SUCCESS",status="200",uri="/api/v1/offers/nearby"} 29408
+http_server_requests_seconds_sum{error="none",exception="none",method="GET",outcome="SUCCESS",status="200",uri="/api/v1/offers/nearby"} 35.248013643
+http_server_requests_seconds_max{error="none",exception="none",method="GET",outcome="SUCCESS",status="200",uri="/api/v1/offers/nearby"} 0.024985818
+http_server_requests_seconds_bucket{error="none",exception="none",method="GET",outcome="SUCCESS",status="200",uri="/api/v1/offers/nearby",le="0.001"} 15527
+http_server_requests_seconds_bucket{error="none",exception="none",method="GET",outcome="SUCCESS",status="200",uri="/api/v1/offers/nearby",le="0.001048576"} 17402
+http_server_requests_seconds_bucket{error="none",exception="none",method="GET",outcome="SUCCESS",status="200",uri="/api/v1/offers/nearby",le="0.001398101"} 24801
+http_server_requests_seconds_bucket{error="none",exception="none",method="GET",outcome="SUCCESS",status="200",uri="/api/v1/offers/nearby",le="0.001747626"} 26834
+http_server_requests_seconds_bucket{error="none",exception="none",method="GET",outcome="SUCCESS",status="200",uri="/api/v1/offers/nearby",le="0.002097151"} 27670
+http_server_requests_seconds_bucket{error="none",exception="none",method="GET",outcome="SUCCESS",status="200",uri="/api/v1/offers/nearby",le="0.002446676"} 28093
+http_server_requests_seconds_bucket{error="none",exception="none",method="GET",outcome="SUCCESS",status="200",uri="/api/v1/offers/nearby",le="0.002796201"} 28454
+http_server_requests_seconds_bucket{error="none",exception="none",method="GET",outcome="SUCCESS",status="200",uri="/api/v1/offers/nearby",le="0.003145726"} 28737
+http_server_requests_seconds_bucket{error="none",exception="none",method="GET",outcome="SUCCESS",status="200",uri="/api/v1/offers/nearby",le="0.003495251"} 28884
+http_server_requests_seconds_bucket{error="none",exception="none",method="GET",outcome="SUCCESS",status="200",uri="/api/v1/offers/nearby",le="0.003844776"} 28979
+http_server_requests_seconds_bucket{error="none",exception="none",method="GET",outcome="SUCCESS",status="200",uri="/api/v1/offers/nearby",le="0.005592405"} 29187

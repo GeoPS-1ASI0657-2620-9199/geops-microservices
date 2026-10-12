@@ -152,7 +152,8 @@ services:
         condition: service_healthy
     healthcheck:
       <<: *health
-      test: ["CMD", "curl", "-fs", "http://localhost:8082/actuator/health"]
+      # Actuator listens on the management port 9082, not published nor routed by the gateway.
+      test: ["CMD", "curl", "-fs", "http://localhost:9082/actuator/health"]
 
   reservation-service:
     <<: *service

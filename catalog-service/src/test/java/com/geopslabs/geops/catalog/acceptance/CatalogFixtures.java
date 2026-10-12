@@ -19,8 +19,8 @@ import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Given;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 public class CatalogFixtures {
     private static final LocalDate CAMPAIGN_START = LocalDate.parse("2026-10-01");
@@ -53,7 +53,7 @@ public class CatalogFixtures {
     @Given("business {long} {string} has an active campaign")
     public void businessHasAnActiveCampaign(Long businessId, String businessName) {
         standings.save(new MerchantStanding(businessId, businessName, false, NO_REPORTS, FULL_COMPLIANCE, false,
-                LocalDateTime.now()));
+                Instant.now()));
         var campaign = campaigns.save(new Campaign(null, businessId, CAMPAIGN_NAME, CAMPAIGN_NAME,
                 new DateRange(CAMPAIGN_START, CAMPAIGN_END), new CampaignZone(ZoneType.RADIUS, STORE, RADIUS_METERS, null),
                 CampaignStatus.ACTIVE, Money.soles(BUDGET)));

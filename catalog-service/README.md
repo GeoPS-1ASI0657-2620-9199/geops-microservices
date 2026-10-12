@@ -9,7 +9,12 @@ ofertas y consulta sus campañas y las ofertas de cada una.
 
 | Operación | Acceso | Descripción |
 |---|---|---|
-| `GET /api/v1/offers/nearby` | Pública | Lista las ofertas vigentes a `radiusMinutes` (5 a 20) minutos a pie de `lat` y `lng` cuya campaña cubre ese punto, con su distancia en metros y en minutos, ordenadas por tramos de 100 m y, dentro de cada tramo, primero los comercios sin reportes abiertos y luego los verificados. Paginada por `page` y `size` (hasta 20) |
+| `GET /api/v1/offers/nearby` | Pública | Con `category` opcional (lista cerrada, se aplica antes de paginar). Lista las ofertas vigentes a `radiusMinutes` (5 a 20) minutos a pie de `lat` y `lng` cuya campaña cubre ese punto, con su distancia en metros y en minutos, ordenadas por tramos de 100 m y, dentro de cada tramo, primero los comercios sin reportes abiertos y luego los verificados. Paginada por `page` y `size` (hasta 20) |
+| `GET /api/v1/offers/categories` | Pública | Lista cerrada de las 11 categorías (E2-06); `nearby` y `POST /api/v1/campaigns` solo aceptan estas |
+| `GET /api/v1/offers/nearby/public-sources` | Pública | Mismos parámetros que `nearby`: ofertas de fuente pública ya geocodificadas, por distancia, con `sourceName` y sin sello (E2-08) |
+| `POST /api/v1/admin/public-offers` | `ROLE_ADMIN` | Carga de 1 a 200 ofertas de fuente pública; quedan `PENDING` y sin coordenadas (E2-09) |
+| `POST /api/v1/admin/geocoding-runs` | `ROLE_ADMIN` | Inicia la conversión a coordenadas y responde `202` con `runId`; la corrida sigue en segundo plano, una petición por segundo a Nominatim. Otra corrida en curso: `409 GEOCODING_RUN_IN_PROGRESS` |
+| `GET /api/v1/admin/geocoding-summary` | `ROLE_ADMIN` | Ofertas de fuente pública por `geocoding_status` y `lastRun`: `RUNNING`, `FINISHED` con su informe, `SKIPPED` (otra réplica tenía el bloqueo) o `FAILED` |
 | `GET /api/v1/offers/{offerId}` | Pública | Detalle de US04: precio, vigencia, condiciones, dirección, coordenadas, categoría, fuente, nombre y sello del comercio, y `available` |
 | `GET /internal/v1/offers/{offerId}/availability` | Interna, sin token | Para reservation-service: `offerId`, `businessId`, `title`, `validTo` y `available` |
 | `POST /api/v1/campaigns` | `ROLE_BUSINESS_OWNER` | Publica una campaña con zona por radio o por distrito y sus ofertas para el comercio del token; responde `201` con la campaña, su zona y sus ofertas |
@@ -57,6 +62,23 @@ Los errores responden `{"code": "...", "message": "..."}`. Los ejemplos de cada 
 | `INVALID_COORDINATES` | 400 | `nearby` con una latitud fuera de -90 a 90 o una longitud fuera de -180 a 180 |
 | `MISSING_PARAMETER`, `INVALID_PARAMETER` | 400 | `nearby` sin `lat`, `lng` o `radiusMinutes`, o con un valor que no es número |
 | `INVALID_PAGE` | 400 | `nearby` con `page` negativo o `size` fuera de 1 a 20 |
+
+## Conversión a coordenadas (US07)
+
+`POST /api/v1/admin/geocoding-runs` no espera a que termine la corrida: responde `202` con
+`{"runId", "status": "RUNNING", "startedAt"}` y la corrida avanza en segundo plano. El avance y el
+informe (`processed`, `geocoded`, `manualReview`, `stillPending`, `stoppedByProvider`) se leen en
+`GET /api/v1/admin/geocoding-summary`, en `lastRun`. `lastRun` vive en la memoria de la réplica que
+recibió la llamada; los conteos por estado salen de la base y valen para cualquier réplica. Una
+tarea cada 30 minutos lanza la corrida si quedan ofertas `PENDING`.
+
+## Métricas
+
+Actuator escucha en un puerto de gestión aparte (`MANAGEMENT_PORT`, 9082 por defecto), que el
+compose no publica y el gateway no enruta; en el puerto del servicio no hay `/actuator`. Desde la
+red del compose:
+`docker compose exec catalog-service curl -s localhost:9082/actuator/metrics/catalog.cell.cache.hits`.
+El healthcheck del compose usa `localhost:9082/actuator/health`.
 
 ## Base de datos
 

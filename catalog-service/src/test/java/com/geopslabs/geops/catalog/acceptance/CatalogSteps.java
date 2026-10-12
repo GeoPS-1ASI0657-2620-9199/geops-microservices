@@ -25,8 +25,8 @@ import io.cucumber.java.en.Given;
 import io.cucumber.java.en.When;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.stream.StreamSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -81,7 +81,7 @@ public class CatalogSteps {
     @Given("business {long} named {string} has the campaign {string} from {string} to {string}")
     public void businessHasCampaign(Long businessId, String businessName, String name, String start, String end) {
         standings.save(new MerchantStanding(businessId, businessName, false, NO_REPORTS, FULL_COMPLIANCE, false,
-                LocalDateTime.now()));
+                Instant.now()));
         var period = new DateRange(LocalDate.parse(start), LocalDate.parse(end));
         var zone = new CampaignZone(ZoneType.RADIUS, null, RADIUS_METERS, null);
         var campaign = campaigns.save(new Campaign(null, businessId, name, name, period, zone,

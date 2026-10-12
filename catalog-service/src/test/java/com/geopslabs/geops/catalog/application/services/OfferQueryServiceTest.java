@@ -21,7 +21,6 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
 
@@ -203,6 +202,6 @@ class OfferQueryServiceTest {
 
     private static MerchantStanding standing() {
         return new MerchantStanding(BUSINESS_ID, BUSINESS_NAME, true, 0, FULL_COMPLIANCE, true,
-                LocalDateTime.parse("2026-10-01T12:00:00"));
+                Instant.parse("2026-10-01T17:00:00Z"));
     }
 }

@@ -1,6 +1,7 @@
 package com.geopslabs.geops.catalog.infrastructure.web;
 
 import com.geopslabs.geops.catalog.application.usecases.GetOfferDetailUseCase;
+import com.geopslabs.geops.catalog.domain.models.OfferCategory;
 import com.geopslabs.geops.catalog.domain.models.queries.GetOfferByIdQuery;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 @Tag(name = "Offers", description = "Offers of the catalog, readable without an account")
@@ -26,6 +29,20 @@ public class OffersController {
 
     public OffersController(GetOfferDetailUseCase getOfferDetail) {
         this.getOfferDetail = getOfferDetail;
+    }
+
+    @Operation(summary = "List the closed list of offer categories",
+            description = "Public. The values accepted by the category filter of the nearby search and by the "
+                    + "campaign form.")
+    @SecurityRequirements
+    @ApiResponse(responseCode = "200", description = "Categories in display order",
+            content = @Content(examples = @ExampleObject(value = """
+                    ["Gastronomía", "Cafetería y panadería", "Bodega y minimarket", "Salud y farmacia",
+                     "Belleza y cuidado personal", "Deporte", "Mascotas", "Hogar y ferretería",
+                     "Librería y útiles", "Servicios", "Cultura y entretenimiento"]""")))
+    @GetMapping("/categories")
+    public List<String> listCategories() {
+        return OfferCategory.LABELS;
     }
 
     @Operation(summary = "Get the detail of an offer with its conditions and merchant seal",

@@ -10,6 +10,7 @@ import com.geopslabs.geops.catalog.domain.models.DateRange;
 import com.geopslabs.geops.catalog.domain.models.MerchantStanding;
 import com.geopslabs.geops.catalog.domain.models.Money;
 import com.geopslabs.geops.catalog.domain.models.Offer;
+import com.geopslabs.geops.catalog.domain.models.OfferCategory;
 import com.geopslabs.geops.catalog.domain.models.ZoneType;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.MerchantStandingRepositoryPort;
@@ -21,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
@@ -34,13 +34,16 @@ public class CampaignCommandService implements CreateCampaignUseCase {
     private final CampaignRepositoryPort campaignRepository;
     private final OfferRepositoryPort offerRepository;
     private final MerchantStandingRepositoryPort merchantStandingRepository;
+    private final CellInvalidator cellInvalidator;
     private final Clock clock;
 
     public CampaignCommandService(CampaignRepositoryPort campaignRepository, OfferRepositoryPort offerRepository,
-                                  MerchantStandingRepositoryPort merchantStandingRepository, Clock clock) {
+                                  MerchantStandingRepositoryPort merchantStandingRepository,
+                                  CellInvalidator cellInvalidator, Clock clock) {
         this.campaignRepository = campaignRepository;
         this.offerRepository = offerRepository;
         this.merchantStandingRepository = merchantStandingRepository;
+        this.cellInvalidator = cellInvalidator;
         this.clock = clock;
     }
 
@@ -52,6 +55,8 @@ public class CampaignCommandService implements CreateCampaignUseCase {
         ensureMerchantStanding(command.businessId(), command.businessName());
         var saved = campaignRepository.save(campaign);
         var savedOffers = addOffers(saved, offers);
+        // QAS08: the next search of these cells reads the new offers, not the cached cell.
+        cellInvalidator.evictCellsOf(savedOffers.stream().map(Offer::getLocation).toList());
         LOGGER.info("campaign.published campaignId={} businessId={} offers={}", saved.getId(), saved.getBusinessId(),
                 savedOffers.size());
         return new PublishedCampaign(saved, savedOffers);
@@ -59,8 +64,7 @@ public class CampaignCommandService implements CreateCampaignUseCase {
 
     private void ensureMerchantStanding(Long businessId, String businessName) {
         if (merchantStandingRepository.findByBusinessId(businessId).isEmpty()) {
-            merchantStandingRepository.save(MerchantStanding.provisional(businessId, businessName,
-                    LocalDateTime.now(clock.withZone(LIMA))));
+            merchantStandingRepository.save(MerchantStanding.provisional(businessId, businessName));
         }
     }
 
@@ -70,7 +74,7 @@ public class CampaignCommandService implements CreateCampaignUseCase {
 
     private static Offer offerOf(Campaign campaign, CreateOfferCommand offer, CreateCampaignCommand command) {
         return Offer.publishFor(campaign, offer.title(), offer.conditions(), Money.soles(offer.price()),
-                offer.validTo(), offer.category(), offer.imageUrl(), command.storeAddress(), command.storeLocation());
+                offer.validTo(), OfferCategory.of(offer.category()).label(), offer.imageUrl(), command.storeAddress(), command.storeLocation());
     }
 
     private static CampaignZone zoneOf(CreateCampaignCommand command) {

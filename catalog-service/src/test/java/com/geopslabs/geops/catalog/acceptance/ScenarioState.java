@@ -1,5 +1,6 @@
 package com.geopslabs.geops.catalog.acceptance;
 
+import com.geopslabs.geops.catalog.domain.models.GeoPoint;
 import com.geopslabs.geops.catalog.domain.models.Offer;
 import io.cucumber.spring.ScenarioScope;
 import org.springframework.stereotype.Component;
@@ -14,6 +15,9 @@ public class ScenarioState {
     private final Map<String, Long> offerIds = new HashMap<>();
     private final Map<Long, Long> campaignIdsByBusiness = new HashMap<>();
     private Offer currentOffer;
+    private GeoPoint origin;
+    private double hitsAfterFirstSearch;
+    private double missesAfterFirstSearch;
 
     public void rememberCampaign(String name, Long campaignId) {
         campaignIds.put(name, campaignId);
@@ -41,6 +45,27 @@ public class ScenarioState {
 
     public Long campaignIdOfBusiness(Long businessId) {
         return campaignIdsByBusiness.get(businessId);
+    }
+
+    public void rememberOrigin(GeoPoint point) {
+        origin = point;
+    }
+
+    public GeoPoint origin() {
+        return origin;
+    }
+
+    public void rememberCacheCounters(double hits, double misses) {
+        hitsAfterFirstSearch = hits;
+        missesAfterFirstSearch = misses;
+    }
+
+    public double hitsAfterFirstSearch() {
+        return hitsAfterFirstSearch;
+    }
+
+    public double missesAfterFirstSearch() {
+        return missesAfterFirstSearch;
     }
 
     public Offer currentOffer() {
