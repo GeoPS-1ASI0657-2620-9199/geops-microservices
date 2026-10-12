@@ -1,11 +1,16 @@
 #!/bin/bash
 set -euo pipefail
 
+# La contraseña viaja como variable de psql y se cita con :'pw'; usuario y base son nombres
+# fijos de este script, citados como identificadores con :"owner" y :"database".
 create_database() {
   local database="$1" owner="$2" password="$3"
-  psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<SQL
-CREATE USER ${owner} WITH PASSWORD '${password}';
-CREATE DATABASE ${database} OWNER ${owner};
+  psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres \
+    -v database="$database" -v owner="$owner" -v pw="$password" <<'SQL'
+CREATE USER :"owner" WITH PASSWORD :'pw';
+CREATE DATABASE :"database" OWNER :"owner";
+REVOKE CONNECT ON DATABASE :"database" FROM PUBLIC;
+GRANT CONNECT ON DATABASE :"database" TO :"owner";
 SQL
 }
 

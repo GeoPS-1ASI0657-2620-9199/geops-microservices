@@ -3,16 +3,23 @@ name: geops
 x-service: &service
   profiles: [app]
   restart: unless-stopped
-  env_file: .env
-  mem_limit: 512m
+  # Sin env_file compartido: cada servicio recibe solo su usuario de base, su contraseña y lo
+  # propio que necesita (ver README.md). Compose toma los valores de .env para interpolar.
+  # 448 MB por servicio: los cinco, PostgreSQL, Kafka, Redis y nginx caben en la B2s (4 GB).
+  mem_limit: 448m
   environment: &service-env
-    JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70
+    # Heap al 55 % del límite y techo a metaspace, code cache y memoria directa: lo que no es
+    # heap también cuenta contra los 448 MB del contenedor.
+    JAVA_TOOL_OPTIONS: >-
+      -XX:MaxRAMPercentage=55 -XX:+UseSerialGC -Xss512k -XX:MaxMetaspaceSize=128m
+      -XX:ReservedCodeCacheSize=64m -XX:MaxDirectMemorySize=32m
+    SERVER_TOMCAT_THREADS_MAX: 40
+    SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
     KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     REDIS_HOST: redis
+  # Sin depends_on de Kafka: la bandeja de salida guarda los eventos si Kafka tarda en subir.
   depends_on: &service-deps
     postgres:
-      condition: service_healthy
-    kafka:
       condition: service_healthy
 
 x-health: &health
@@ -24,6 +31,8 @@ services:
   postgres:
     image: imresamu/postgis:16-3.4
     restart: unless-stopped
+    mem_limit: 512m
+    command: postgres -c shared_buffers=128MB -c max_connections=60 -c work_mem=4MB
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -33,7 +42,7 @@ services:
       ENGAGEMENT_DB_PASSWORD: ${ENGAGEMENT_DB_PASSWORD}
       NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./postgres/init-databases.sh:/docker-entrypoint-initdb.d/20-init-databases.sh:ro
@@ -45,8 +54,11 @@ services:
   redis:
     image: redis:7
     restart: unless-stopped
+    mem_limit: 96m
+    # Solo caché: se reconstruye desde la base, sin persistencia en disco.
+    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru --save "" --appendonly no
     ports:
-      - "6379:6379"
+      - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -55,8 +67,9 @@ services:
   kafka:
     image: apache/kafka:3.7.0
     restart: unless-stopped
+    mem_limit: 512m
     ports:
-      - "29092:29092"
+      - "127.0.0.1:29092:29092"
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -68,12 +81,37 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_HEAP_OPTS: -Xmx256m -Xms256m
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_RETENTION_HOURS: 168
     volumes:
       - kafka-data:/var/lib/kafka/data
     healthcheck:
       test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
       interval: 15s
+      start_period: 30s
       retries: 10
+
+  # Crea los tópicos de eventos una vez y termina (E2-02: un tópico por servicio publicador).
+  kafka-init:
+    image: apache/kafka:3.7.0
+    profiles: [app, messaging]
+    restart: "no"
+    mem_limit: 256m
+    environment:
+      KAFKA_HEAP_OPTS: -Xmx128m
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        for topic in identity.events reservation.events; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic "$$topic" --partitions 3 --replication-factor 1
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --describe --topic "$$topic"
+        done
 
   identity-service:
     <<: *service
@@ -82,6 +120,11 @@ services:
       <<: *service-env
       SERVER_PORT: 8081
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/identity_db
+      SPRING_DATASOURCE_USERNAME: identity_user
+      SPRING_DATASOURCE_PASSWORD: ${IDENTITY_DB_PASSWORD:?IDENTITY_DB_PASSWORD en .env}
+      OUTBOX_RELAY_ENABLED: ${OUTBOX_RELAY_ENABLED:-true}
+      GEOPS_SUNAT_SOURCE: ${GEOPS_SUNAT_SOURCE:-file}
+      NOMINATIM_CONTACT_EMAIL: ${NOMINATIM_CONTACT_EMAIL:-}
       JWT_PRIVATE_KEY_PATH: /run/keys/jwt-private.pem
       JWT_PUBLIC_KEY_PATH: /run/keys/jwt-public.pem
     volumes:
@@ -97,6 +140,9 @@ services:
       <<: *service-env
       SERVER_PORT: 8082
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/catalog_db
+      SPRING_DATASOURCE_USERNAME: catalog_user
+      SPRING_DATASOURCE_PASSWORD: ${CATALOG_DB_PASSWORD:?CATALOG_DB_PASSWORD en .env}
+      NOMINATIM_CONTACT_EMAIL: ${NOMINATIM_CONTACT_EMAIL:-}
       IDENTITY_JWKS_URI: http://identity-service:8081/.well-known/jwks.json
     depends_on:
       <<: *service-deps
@@ -115,6 +161,9 @@ services:
       <<: *service-env
       SERVER_PORT: 8083
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/reservation_db
+      SPRING_DATASOURCE_USERNAME: reservation_user
+      SPRING_DATASOURCE_PASSWORD: ${RESERVATION_DB_PASSWORD:?RESERVATION_DB_PASSWORD en .env}
+      OUTBOX_RELAY_ENABLED: ${OUTBOX_RELAY_ENABLED:-true}
       IDENTITY_JWKS_URI: http://identity-service:8081/.well-known/jwks.json
       CATALOG_INTERNAL_URL: http://catalog-service:8082
     depends_on:
@@ -132,6 +181,8 @@ services:
       <<: *service-env
       SERVER_PORT: 8084
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/engagement_db
+      SPRING_DATASOURCE_USERNAME: engagement_user
+      SPRING_DATASOURCE_PASSWORD: ${ENGAGEMENT_DB_PASSWORD:?ENGAGEMENT_DB_PASSWORD en .env}
       IDENTITY_JWKS_URI: http://identity-service:8081/.well-known/jwks.json
       SPRING_PROFILES_ACTIVE: demo
     depends_on:
@@ -149,6 +200,13 @@ services:
       <<: *service-env
       SERVER_PORT: 8085
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notification_db
+      SPRING_DATASOURCE_USERNAME: notification_user
+      SPRING_DATASOURCE_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?NOTIFICATION_DB_PASSWORD en .env}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      FCM_CREDENTIALS_PATH: ${FCM_CREDENTIALS_PATH:-}
       IDENTITY_JWKS_URI: http://identity-service:8081/.well-known/jwks.json
       SPRING_PROFILES_ACTIVE: demo
     depends_on:
@@ -163,11 +221,13 @@ services:
     image: nginx:1.27
     profiles: [app]
     restart: unless-stopped
+    mem_limit: 32m
     ports:
       - "8080:80"
     volumes:
       - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./gateway/routes.conf:/etc/nginx/geops/routes.conf:ro
+      - ./gateway/http-common.conf:/etc/nginx/geops/http-common.conf:ro
     depends_on:
       - identity-service
       - catalog-service
