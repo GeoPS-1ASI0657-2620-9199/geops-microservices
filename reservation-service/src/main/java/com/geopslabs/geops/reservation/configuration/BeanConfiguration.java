@@ -2,8 +2,8 @@ package com.geopslabs.geops.reservation.configuration;
 
 import com.geopslabs.geops.reservation.application.services.ReservationCommandService;
 import com.geopslabs.geops.reservation.application.services.ReservationQueryService;
-import com.geopslabs.geops.reservation.application.usecases.CreateReservationUseCase;
 import com.geopslabs.geops.reservation.domain.ports.OfferCatalogPort;
+import com.geopslabs.geops.reservation.domain.ports.OutboxPort;
 import com.geopslabs.geops.reservation.domain.ports.ReservationRepositoryPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,10 +26,10 @@ public class BeanConfiguration {
     }
 
     @Bean
-    public CreateReservationUseCase createReservationUseCase(ReservationRepositoryPort reservationRepository,
-                                                             OfferCatalogPort offerCatalog, Clock clock,
-                                                             RandomGenerator codeRandom) {
-        return new ReservationCommandService(reservationRepository, offerCatalog, clock, codeRandom);
+    public ReservationCommandService reservationCommandService(ReservationRepositoryPort reservationRepository,
+                                                               OfferCatalogPort offerCatalog, OutboxPort outbox,
+                                                               Clock clock, RandomGenerator codeRandom) {
+        return new ReservationCommandService(reservationRepository, offerCatalog, outbox, clock, codeRandom);
     }
 
     @Bean

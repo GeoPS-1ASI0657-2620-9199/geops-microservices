@@ -4,7 +4,9 @@ import com.geopslabs.geops.reservation.application.usecases.CreateReservationUse
 import com.geopslabs.geops.reservation.application.usecases.GetReservationByCodeUseCase;
 import com.geopslabs.geops.reservation.application.usecases.GetReservationByIdUseCase;
 import com.geopslabs.geops.reservation.application.usecases.ListConsumerReservationsUseCase;
+import com.geopslabs.geops.reservation.application.usecases.RedeemReservationUseCase;
 import com.geopslabs.geops.reservation.domain.models.ReservationStatus;
+import com.geopslabs.geops.reservation.domain.models.commands.RedeemReservationCommand;
 import com.geopslabs.geops.reservation.domain.models.queries.GetReservationByCodeQuery;
 import com.geopslabs.geops.reservation.domain.models.queries.GetReservationByIdQuery;
 import com.geopslabs.geops.reservation.domain.models.queries.GetReservationsByConsumerIdQuery;
@@ -51,15 +53,60 @@ public class ReservationsController {
     private final GetReservationByIdUseCase getReservationById;
     private final GetReservationByCodeUseCase getReservationByCode;
     private final ListConsumerReservationsUseCase listConsumerReservations;
+    private final RedeemReservationUseCase redeemReservation;
 
     public ReservationsController(CreateReservationUseCase createReservation,
                                   GetReservationByIdUseCase getReservationById,
                                   GetReservationByCodeUseCase getReservationByCode,
-                                  ListConsumerReservationsUseCase listConsumerReservations) {
+                                  ListConsumerReservationsUseCase listConsumerReservations,
+                                  RedeemReservationUseCase redeemReservation) {
         this.createReservation = createReservation;
         this.getReservationById = getReservationById;
         this.getReservationByCode = getReservationByCode;
         this.listConsumerReservations = listConsumerReservations;
+        this.redeemReservation = redeemReservation;
+    }
+
+    @Operation(summary = "Redeem the code the consumer shows at the business",
+            description = "The business is the businessId claim of the token. The reservation changes to REDEEMED "
+                    + "only if it is ACTIVE, belongs to that business and is within its deadline; a second "
+                    + "attempt gets 409 with the date of the first one. The code is read in uppercase and "
+                    + "without blanks.")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = @ExampleObject(value = """
+            {"code": "7KQ2M9XA"}""")))
+    @ApiResponse(responseCode = "200", description = "Reservation redeemed",
+            content = @Content(examples = @ExampleObject(value = """
+                    {"reservationId": 5012, "code": "7KQ2M9XA", "offerId": 1052,
+                     "offerTitle": "2x1 en almuerzos ejecutivos", "status": "REDEEMED",
+                     "redeemedAt": "2026-10-20T17:42:10Z"}""")))
+    @ApiResponse(responseCode = "400", description = "Missing code or code with an invalid format",
+            content = @Content(examples = @ExampleObject(value = """
+                    {"code": "INVALID_REQUEST", "message": "code must not be blank"}""")))
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token",
+            content = @Content(examples = @ExampleObject(value = UNAUTHORIZED_EXAMPLE)))
+    @ApiResponse(responseCode = "403", description = "Token without ROLE_BUSINESS_OWNER or code of another business",
+            content = @Content(examples = @ExampleObject(value = """
+                    {"code": "FORBIDDEN", "message": "This code belongs to another business"}""")))
+    @ApiResponse(responseCode = "404", description = "No reservation has this code",
+            content = @Content(examples = @ExampleObject(value = """
+                    {"code": "RESERVATION_NOT_FOUND", "message": "Reservation with code ZZZZ9999 was not found"}""")))
+    @ApiResponse(responseCode = "409", description = "Already redeemed (with redeemedAt) or reported by the consumer",
+            content = @Content(examples = {
+                    @ExampleObject(name = "Already redeemed", value = """
+                            {"code": "RESERVATION_ALREADY_REDEEMED", "message": "Reservation 5012 was already redeemed",
+                             "redeemedAt": "2026-10-20T17:42:10Z"}"""),
+                    @ExampleObject(name = "Reported", value = """
+                            {"code": "RESERVATION_REPORTED",
+                             "message": "Reservation 5012 was reported by the consumer"}""")}))
+    @ApiResponse(responseCode = "410", description = "The reservation is past its deadline",
+            content = @Content(examples = @ExampleObject(value = """
+                    {"code": "RESERVATION_EXPIRED", "message": "Reservation 5012 is past its deadline"}""")))
+    @PostMapping(value = "/redeem", consumes = APPLICATION_JSON_VALUE)
+    public RedeemedReservationResponse redeemReservation(@AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody RedeemReservationRequest request) {
+        var businessId = AuthenticatedUser.from(jwt).requireBusinessId();
+        var redeemed = redeemReservation.redeem(new RedeemReservationCommand(request.code(), businessId));
+        return ReservationResponseAssembler.toRedeemedResponse(redeemed);
     }
 
     @Operation(summary = "Create a reservation for a valid offer, paid later at the business",
@@ -131,7 +178,7 @@ public class ReservationsController {
             content = @Content(examples = @ExampleObject(value = UNAUTHORIZED_EXAMPLE)))
     @ApiResponse(responseCode = "403", description = "Token without ROLE_BUSINESS_OWNER or code of another business",
             content = @Content(examples = @ExampleObject(value = """
-                    {"code": "FORBIDDEN", "message": "Reservation 15 belongs to another account"}""")))
+                    {"code": "FORBIDDEN", "message": "This code belongs to another business"}""")))
     @ApiResponse(responseCode = "404", description = "No reservation has this code",
             content = @Content(examples = @ExampleObject(value = """
                     {"code": "RESERVATION_NOT_FOUND", "message": "Reservation with code ZZZZ2222 was not found"}""")))

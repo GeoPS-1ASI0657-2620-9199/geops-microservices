@@ -39,4 +39,10 @@ class ReservationCodeTest {
     void rejectsAValueOfAnotherLengthOrAlphabet(String value) {
         assertThatThrownBy(() -> new ReservationCode(value)).isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void normalizesWhatTheBusinessTypesToUppercaseWithoutBlanks() {
+        assertThat(ReservationCode.normalize(" 7kq2 m9xa\t")).isEqualTo("7KQ2M9XA");
+        assertThat(ReservationCode.normalize(null)).isNull();
+    }
 }

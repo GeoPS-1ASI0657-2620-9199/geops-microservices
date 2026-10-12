@@ -20,6 +20,18 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        # Con Kafka caído el envío falla en segundos y el relay deja la fila para la siguiente vuelta.
+        max.block.ms: 5000
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 10000
   security:
     oauth2:
       resourceserver:
@@ -31,6 +43,14 @@ spring:
 geops:
   catalog:
     base-url: ${CATALOG_INTERNAL_URL:http://localhost:8082}
+  outbox:
+    relay-enabled: ${OUTBOX_RELAY_ENABLED:true}
+    relay-delay-ms: ${OUTBOX_RELAY_DELAY_MS:1000}
+    batch-size: ${OUTBOX_BATCH_SIZE:50}
+    send-timeout-ms: 5000
+    # Intentos con Kafka respondiendo antes de marcar la fila FAILED; una caída de Kafka no los agota.
+    max-attempts: ${OUTBOX_MAX_ATTEMPTS:10}
+    topic: reservation.events
 
 management:
   endpoints:

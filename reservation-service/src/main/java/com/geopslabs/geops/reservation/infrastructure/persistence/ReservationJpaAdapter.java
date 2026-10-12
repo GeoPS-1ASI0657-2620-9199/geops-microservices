@@ -8,6 +8,8 @@ import org.springframework.core.NestedExceptionUtils;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -58,6 +60,12 @@ public class ReservationJpaAdapter implements ReservationRepositoryPort {
     @Override
     public boolean existsByCode(String code) {
         return repository.existsByCode(code);
+    }
+
+    @Override
+    public int redeemIfActive(String code, Long businessId, LocalDateTime now) {
+        return repository.redeemIfActive(code, businessId, now.toInstant(ZoneOffset.UTC), ReservationStatus.ACTIVE,
+                ReservationStatus.REDEEMED);
     }
 
     private static RuntimeException translate(DataIntegrityViolationException exception, Reservation reservation) {

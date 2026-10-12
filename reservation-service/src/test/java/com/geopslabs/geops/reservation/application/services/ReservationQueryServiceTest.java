@@ -80,6 +80,15 @@ class ReservationQueryServiceTest {
     }
 
     @Test
+    void findsTheReservationOfACodeTypedInLowercaseWithBlanks() {
+        var reservation = reservation();
+        when(reservationRepository.findByCode(CODE)).thenReturn(Optional.of(reservation));
+
+        var typed = " " + CODE.substring(0, 4).toLowerCase() + " " + CODE.substring(4).toLowerCase() + " ";
+        assertThat(service.getByCode(new GetReservationByCodeQuery(typed, BUSINESS_ID))).isSameAs(reservation);
+    }
+
+    @Test
     void unknownCodeIsNotFound() {
         when(reservationRepository.findByCode(UNKNOWN_CODE)).thenReturn(Optional.empty());
 
