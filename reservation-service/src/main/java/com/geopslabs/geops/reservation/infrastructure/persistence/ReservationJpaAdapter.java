@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,6 +37,23 @@ public class ReservationJpaAdapter implements ReservationRepositoryPort {
     @Override
     public Optional<Reservation> findById(Long id) {
         return repository.findById(id).map(ReservationPersistenceMapper::toDomain);
+    }
+
+    @Override
+    public Optional<Reservation> findByIdForUpdate(Long id) {
+        return repository.findByIdForUpdate(id).map(ReservationPersistenceMapper::toDomain);
+    }
+
+    @Override
+    public List<Reservation> findAllByIds(Collection<Long> ids) {
+        return ids.isEmpty() ? List.of()
+                : repository.findByIdIn(ids).stream().map(ReservationPersistenceMapper::toDomain).toList();
+    }
+
+    @Override
+    public int expireActiveUntil(LocalDateTime now) {
+        return repository.expireActiveUntil(now.toInstant(ZoneOffset.UTC), ReservationStatus.ACTIVE,
+                ReservationStatus.EXPIRED);
     }
 
     @Override
