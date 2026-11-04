@@ -1,0 +1,16 @@
+{
+  "eventId": "2e3f4a5b-6c7d-4e8f-9a0b-1c2d3e4f5a6b",
+  "eventType": "ReportAnswered",
+  "version": 1,
+  "occurredAt": "2026-10-29T12:00:00Z",
+  "aggregateId": 5013,
+  "payload": {
+    "reportId": 31,
+    "reservationId": 5013,
+    "reservationCode": "Q4ZT8K2M",
+    "consumerId": 2001,
+    "businessId": 84,
+    "offerTitle": "2x1 en almuerzos ejecutivos",
+    "answeredAt": "2026-10-29T12:00:00Z"
+  }
+}
