@@ -1,8 +1,10 @@
 package com.geopslabs.geops.reservation.domain.models;
 
+import com.geopslabs.geops.reservation.domain.models.exceptions.ReportAlreadyExistsException;
 import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationAccessDeniedException;
 import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationAlreadyRedeemedException;
 import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationExpiredException;
+import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationNotReportableException;
 import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationReportedException;
 import org.junit.jupiter.api.Test;
 
@@ -89,6 +91,34 @@ class ReservationTest {
         var reservation = reservation(ReservationStatus.REDEEMED, EXPIRES_AT, FIRST_REDEMPTION);
 
         assertThat(reservation.rejectionFor(OTHER_BUSINESS_ID, NOW)).contains(RedeemRejection.OTHER_BUSINESS);
+    }
+
+    @Test
+    void reportsAnActiveReservationBeforeItsDeadlineAndKeepsEverythingElse() {
+        var reported = reservation(ReservationStatus.ACTIVE, EXPIRES_AT, null).report(NOW);
+
+        assertThat(reported.getStatus()).isEqualTo(ReservationStatus.REPORTED);
+        assertThat(reported.getId()).isEqualTo(5012L);
+        assertThat(reported.getExpiresAt()).isEqualTo(EXPIRES_AT);
+    }
+
+    @Test
+    void anActiveReservationPastItsDeadlineCannotBeReportedAndTheDeadlineIsExclusive() {
+        var reservation = reservation(ReservationStatus.ACTIVE, EXPIRES_AT, null);
+
+        assertThatThrownBy(() -> reservation.report(EXPIRES_AT)).isInstanceOf(ReservationExpiredException.class);
+        assertThatThrownBy(() -> reservation.report(EXPIRES_AT.plusSeconds(1)))
+                .isInstanceOf(ReservationExpiredException.class);
+    }
+
+    @Test
+    void aRedeemedOrExpiredReservationIsNotReportableAndAReportedOneAlreadyHasItsReport() {
+        assertThatThrownBy(() -> reservation(ReservationStatus.REDEEMED, EXPIRES_AT, FIRST_REDEMPTION).report(NOW))
+                .isInstanceOf(ReservationNotReportableException.class);
+        assertThatThrownBy(() -> reservation(ReservationStatus.EXPIRED, EXPIRES_AT, null).report(NOW))
+                .isInstanceOf(ReservationNotReportableException.class);
+        assertThatThrownBy(() -> reservation(ReservationStatus.REPORTED, EXPIRES_AT, null).report(NOW))
+                .isInstanceOf(ReportAlreadyExistsException.class);
     }
 
     private static Reservation reservation(ReservationStatus status, LocalDateTime expiresAt,

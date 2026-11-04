@@ -1,5 +1,6 @@
 package com.geopslabs.geops.reservation.infrastructure.web;
 
+import com.geopslabs.geops.reservation.domain.models.NonComplianceReport;
 import com.geopslabs.geops.reservation.domain.models.Reservation;
 
 import java.time.Instant;
@@ -12,10 +13,15 @@ public final class ReservationResponseAssembler {
     }
 
     public static ReservationResponse toResponse(Reservation reservation) {
+        return toResponse(reservation, null);
+    }
+
+    public static ReservationResponse toResponse(Reservation reservation, NonComplianceReport report) {
         return new ReservationResponse(reservation.getId(), reservation.getCode().value(),
                 reservation.getConsumerId(), reservation.getOfferId(), reservation.getBusinessId(),
                 reservation.getOfferTitle(), reservation.getStatus().name(), toInstant(reservation.getReservedAt()),
-                toInstant(reservation.getExpiresAt()), toInstant(reservation.getRedeemedAt()));
+                toInstant(reservation.getExpiresAt()), toInstant(reservation.getRedeemedAt()),
+                ReportResponseAssembler.toSummary(report));
     }
 
     public static CreatedReservationResponse toCreatedResponse(Reservation reservation) {

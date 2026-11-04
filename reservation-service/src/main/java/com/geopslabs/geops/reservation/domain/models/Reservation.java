@@ -3,6 +3,8 @@ package com.geopslabs.geops.reservation.domain.models;
 import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationAccessDeniedException;
 import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationAlreadyRedeemedException;
 import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationExpiredException;
+import com.geopslabs.geops.reservation.domain.models.exceptions.ReportAlreadyExistsException;
+import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationNotReportableException;
 import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationReportedException;
 import com.geopslabs.geops.reservation.shared.domain.DomainException;
 
@@ -82,6 +84,25 @@ public class Reservation {
         }
         return new Reservation(id, code, consumerId, offerId, businessId, offerTitle, reservedAt, expiresAt, now,
                 ReservationStatus.REDEEMED);
+    }
+
+    /**
+     * The consumer reports that the business did not honor the offer. Only an ACTIVE reservation before its deadline
+     * can be reported; a reservation that is already REPORTED has its report, one that was redeemed or expired is
+     * past the point of reporting.
+     */
+    public Reservation report(LocalDateTime now) {
+        return switch (status) {
+            case REPORTED -> throw new ReportAlreadyExistsException(id);
+            case REDEEMED, EXPIRED -> throw new ReservationNotReportableException(id);
+            case ACTIVE -> {
+                if (!expiresAt.isAfter(now)) {
+                    throw new ReservationExpiredException(id);
+                }
+                yield new Reservation(id, code, consumerId, offerId, businessId, offerTitle, reservedAt, expiresAt,
+                        redeemedAt, ReservationStatus.REPORTED);
+            }
+        };
     }
 
     public DomainException rejectionException(RedeemRejection rejection) {

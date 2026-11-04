@@ -12,5 +12,6 @@ public record ReservationResponse(
         String status,
         Instant reservedAt,
         Instant expiresAt,
-        Instant redeemedAt) {
+        Instant redeemedAt,
+        ReservationReportSummary report) {
 }
