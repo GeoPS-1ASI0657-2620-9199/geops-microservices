@@ -1,10 +1,12 @@
 package com.geopslabs.geops.reservation.infrastructure.web;
 
 import com.geopslabs.geops.reservation.application.usecases.CreateReservationUseCase;
+import com.geopslabs.geops.reservation.application.usecases.FindReportsOfReservationsUseCase;
 import com.geopslabs.geops.reservation.application.usecases.GetReservationByCodeUseCase;
 import com.geopslabs.geops.reservation.application.usecases.GetReservationByIdUseCase;
 import com.geopslabs.geops.reservation.application.usecases.ListConsumerReservationsUseCase;
 import com.geopslabs.geops.reservation.application.usecases.RedeemReservationUseCase;
+import com.geopslabs.geops.reservation.domain.models.Reservation;
 import com.geopslabs.geops.reservation.domain.models.ReservationStatus;
 import com.geopslabs.geops.reservation.domain.models.commands.RedeemReservationCommand;
 import com.geopslabs.geops.reservation.domain.models.queries.GetReservationByCodeQuery;
@@ -43,7 +45,8 @@ public class ReservationsController {
     private static final String RESERVATION_EXAMPLE = """
             {"reservationId": 15, "code": "K7P3XM9Q", "consumerId": 2001, "offerId": 1052, "businessId": 301,
              "offerTitle": "Menú ejecutivo a mitad de precio", "status": "ACTIVE",
-             "reservedAt": "2026-10-08T13:05:00Z", "expiresAt": "2026-10-15T04:59:59Z", "redeemedAt": null}""";
+             "reservedAt": "2026-10-08T13:05:00Z", "expiresAt": "2026-10-15T04:59:59Z", "redeemedAt": null,
+             "report": null}""";
     private static final String UNAUTHORIZED_EXAMPLE = """
             {"code": "UNAUTHORIZED", "message": "A valid token is required"}""";
     private static final String FORBIDDEN_EXAMPLE = """
@@ -54,17 +57,20 @@ public class ReservationsController {
     private final GetReservationByCodeUseCase getReservationByCode;
     private final ListConsumerReservationsUseCase listConsumerReservations;
     private final RedeemReservationUseCase redeemReservation;
+    private final FindReportsOfReservationsUseCase findReports;
 
     public ReservationsController(CreateReservationUseCase createReservation,
                                   GetReservationByIdUseCase getReservationById,
                                   GetReservationByCodeUseCase getReservationByCode,
                                   ListConsumerReservationsUseCase listConsumerReservations,
-                                  RedeemReservationUseCase redeemReservation) {
+                                  RedeemReservationUseCase redeemReservation,
+                                  FindReportsOfReservationsUseCase findReports) {
         this.createReservation = createReservation;
         this.getReservationById = getReservationById;
         this.getReservationByCode = getReservationByCode;
         this.listConsumerReservations = listConsumerReservations;
         this.redeemReservation = redeemReservation;
+        this.findReports = findReports;
     }
 
     @Operation(summary = "Redeem the code the consumer shows at the business",
@@ -168,7 +174,8 @@ public class ReservationsController {
             @Parameter(description = "Reservation id", example = "15") @PathVariable Long id) {
         var consumerId = AuthenticatedUser.from(jwt).consumerId();
         var reservation = getReservationById.getById(new GetReservationByIdQuery(id, consumerId));
-        return ReservationResponseAssembler.toResponse(reservation);
+        var report = findReports.findByReservationIds(List.of(reservation.getId())).get(reservation.getId());
+        return ReservationResponseAssembler.toResponse(reservation, report);
     }
 
     @Operation(summary = "Get the reservation that matches a code, for the business that owns the offer")
@@ -206,6 +213,9 @@ public class ReservationsController {
             @RequestParam(required = false) ReservationStatus status) {
         var consumerId = AuthenticatedUser.from(jwt).consumerId();
         var reservations = listConsumerReservations.list(new GetReservationsByConsumerIdQuery(consumerId, status));
-        return reservations.stream().map(ReservationResponseAssembler::toResponse).toList();
+        var reports = findReports.findByReservationIds(reservations.stream().map(Reservation::getId).toList());
+        return reservations.stream()
+                .map(reservation -> ReservationResponseAssembler.toResponse(reservation, reports.get(reservation.getId())))
+                .toList();
     }
 }

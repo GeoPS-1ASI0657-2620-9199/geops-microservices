@@ -51,6 +51,11 @@ geops:
     # Intentos con Kafka respondiendo antes de marcar la fila FAILED; una caída de Kafka no los agota.
     max-attempts: ${OUTBOX_MAX_ATTEMPTS:10}
     topic: reservation.events
+  reports:
+    # Plazo del comercio para responder un reporte (S3-08) y cada cuánto se revisan los plazos vencidos.
+    response-window: 48h
+    deadline-check-ms: ${REPORTS_DEADLINE_CHECK_MS:300000}
+    scheduler-enabled: ${REPORTS_SCHEDULER_ENABLED:true}
 
 management:
   endpoints:
