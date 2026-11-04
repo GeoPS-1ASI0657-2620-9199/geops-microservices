@@ -34,4 +34,10 @@ public class AcceptanceTestConfiguration {
     public NewTopic identityEvents() {
         return TopicBuilder.name(IdentityEventSteps.TOPIC).partitions(3).replicas(1).build();
     }
+
+    /** What Catalog cannot apply is written here (US33), so the topic must exist as kafka-init creates it. */
+    @Bean
+    public NewTopic identityEventsDeadLetter() {
+        return TopicBuilder.name(IdentityEventSteps.TOPIC + ".DLT").partitions(3).replicas(1).build();
+    }
 }

@@ -41,9 +41,10 @@ public class BeanConfiguration {
     public RegisterUserUseCase registerUserUseCase(UserRepositoryPort userRepository,
                                                    ConsumerProfileRepositoryPort consumerProfileRepository,
                                                    BusinessProfileRepositoryPort businessProfileRepository,
-                                                   PasswordHasherPort passwordHasher) {
+                                                   PasswordHasherPort passwordHasher, OutboxPort outbox,
+                                                   Clock clock) {
         return new UserCommandService(userRepository, consumerProfileRepository, businessProfileRepository,
-                passwordHasher);
+                passwordHasher, outbox, clock, UUID::randomUUID);
     }
 
     @Bean

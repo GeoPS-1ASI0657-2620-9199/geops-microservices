@@ -4,6 +4,7 @@ import com.geopslabs.geops.identity.application.usecases.BusinessProfileData;
 import com.geopslabs.geops.identity.application.usecases.RegisterUserCommand;
 import com.geopslabs.geops.identity.application.usecases.RegisterUserUseCase;
 import com.geopslabs.geops.identity.application.usecases.RegisteredUser;
+import com.geopslabs.geops.identity.domain.events.UserRegistered;
 import com.geopslabs.geops.identity.domain.models.BusinessProfile;
 import com.geopslabs.geops.identity.domain.models.BusinessProfileNotAllowedException;
 import com.geopslabs.geops.identity.domain.models.BusinessProfileRequiredException;
@@ -19,11 +20,16 @@ import com.geopslabs.geops.identity.domain.models.RucAlreadyRegisteredException;
 import com.geopslabs.geops.identity.domain.models.User;
 import com.geopslabs.geops.identity.domain.ports.BusinessProfileRepositoryPort;
 import com.geopslabs.geops.identity.domain.ports.ConsumerProfileRepositoryPort;
+import com.geopslabs.geops.identity.domain.ports.OutboxPort;
 import com.geopslabs.geops.identity.domain.ports.PasswordHasherPort;
 import com.geopslabs.geops.identity.domain.ports.UserRepositoryPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Clock;
+import java.util.UUID;
+import java.util.function.Supplier;
 
 @Transactional
 public class UserCommandService implements RegisterUserUseCase {
@@ -33,15 +39,22 @@ public class UserCommandService implements RegisterUserUseCase {
     private final ConsumerProfileRepositoryPort consumerProfileRepository;
     private final BusinessProfileRepositoryPort businessProfileRepository;
     private final PasswordHasherPort passwordHasher;
+    private final OutboxPort outbox;
+    private final Clock clock;
+    private final Supplier<UUID> eventIds;
 
     public UserCommandService(UserRepositoryPort userRepository,
                               ConsumerProfileRepositoryPort consumerProfileRepository,
                               BusinessProfileRepositoryPort businessProfileRepository,
-                              PasswordHasherPort passwordHasher) {
+                              PasswordHasherPort passwordHasher, OutboxPort outbox, Clock clock,
+                              Supplier<UUID> eventIds) {
         this.userRepository = userRepository;
         this.consumerProfileRepository = consumerProfileRepository;
         this.businessProfileRepository = businessProfileRepository;
         this.passwordHasher = passwordHasher;
+        this.outbox = outbox;
+        this.clock = clock;
+        this.eventIds = eventIds;
     }
 
     @Override
@@ -58,6 +71,7 @@ public class UserCommandService implements RegisterUserUseCase {
         ensureAccountIsAvailable(email, command.phone());
         var user = saveUser(command, email);
         var profile = consumerProfileRepository.save(ConsumerProfile.createFor(user.getId()));
+        outbox.append(UserRegistered.of(user, null, eventIds.get(), clock.instant()));
         LOGGER.info("user.registered userId={} role={}", user.getId(), user.getRole());
         return RegisteredUser.consumer(user, profile);
     }
@@ -69,6 +83,7 @@ public class UserCommandService implements RegisterUserUseCase {
         ensureRucIsAvailable(draft.getRuc());
         var user = saveUser(command, email);
         var profile = businessProfileRepository.save(draft.ownedBy(user.getId()));
+        outbox.append(UserRegistered.of(user, profile, eventIds.get(), clock.instant()));
         LOGGER.info("user.registered userId={} role={} businessProfileId={}", user.getId(), user.getRole(),
                 profile.getId());
         return RegisteredUser.businessOwner(user, profile);

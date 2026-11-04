@@ -20,6 +20,28 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    consumer:
+      group-id: notification-service
+      # Un grupo nuevo lee los tópicos desde el principio: ningún evento anterior se pierde.
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      # El evento se confirma solo después de aplicarlo; si falla, el manejador de errores decide.
+      ack-mode: manual_immediate
+    # Notification no publica eventos: el productor solo escribe en los tópicos de mensajes muertos.
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        max.block.ms: 5000
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 10000
   security:
     oauth2:
       resourceserver:
@@ -27,6 +49,10 @@ spring:
           jwk-set-uri: ${IDENTITY_JWKS_URI:http://localhost:8081/.well-known/jwks.json}
           issuer-uri: geops-identity
           audiences: geops-api
+
+geops:
+  messaging:
+    enabled: ${GEOPS_MESSAGING_ENABLED:true}
 
 management:
   endpoints:
