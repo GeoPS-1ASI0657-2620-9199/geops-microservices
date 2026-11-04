@@ -108,9 +108,11 @@ services:
     command:
       - |
         set -e
-        for topic in identity.events reservation.events; do
-          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic "$$topic" --partitions 3 --replication-factor 1
-          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --describe --topic "$$topic"
+        for source in identity.events catalog.events reservation.events engagement.events; do
+          for topic in "$$source" "$$source.DLT"; do
+            /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic "$$topic" --partitions 3 --replication-factor 1
+            /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --describe --topic "$$topic"
+          done
         done
 
   identity-service:
@@ -143,6 +145,7 @@ services:
       SPRING_DATASOURCE_USERNAME: catalog_user
       SPRING_DATASOURCE_PASSWORD: ${CATALOG_DB_PASSWORD:?CATALOG_DB_PASSWORD en .env}
       NOMINATIM_CONTACT_EMAIL: ${NOMINATIM_CONTACT_EMAIL:-}
+      OUTBOX_RELAY_ENABLED: ${OUTBOX_RELAY_ENABLED:-true}
       IDENTITY_JWKS_URI: http://identity-service:8081/.well-known/jwks.json
     depends_on:
       <<: *service-deps
@@ -184,6 +187,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/engagement_db
       SPRING_DATASOURCE_USERNAME: engagement_user
       SPRING_DATASOURCE_PASSWORD: ${ENGAGEMENT_DB_PASSWORD:?ENGAGEMENT_DB_PASSWORD en .env}
+      OUTBOX_RELAY_ENABLED: ${OUTBOX_RELAY_ENABLED:-true}
       IDENTITY_JWKS_URI: http://identity-service:8081/.well-known/jwks.json
       SPRING_PROFILES_ACTIVE: demo
     depends_on:
@@ -203,13 +207,20 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notification_db
       SPRING_DATASOURCE_USERNAME: notification_user
       SPRING_DATASOURCE_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?NOTIFICATION_DB_PASSWORD en .env}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_AUTH: ${SMTP_AUTH:-false}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
+      NOTIFICATION_EMAIL_FROM: ${NOTIFICATION_EMAIL_FROM:-avisos@geops.local}
+      NOTIFICATION_UNSUBSCRIBE_SECRET: ${NOTIFICATION_UNSUBSCRIBE_SECRET:?NOTIFICATION_UNSUBSCRIBE_SECRET en .env}
+      WEB_BASE_URL: ${WEB_BASE_URL:-http://localhost:4200}
       FCM_CREDENTIALS_PATH: ${FCM_CREDENTIALS_PATH:-}
       IDENTITY_JWKS_URI: http://identity-service:8081/.well-known/jwks.json
       SPRING_PROFILES_ACTIVE: demo
+    volumes:
+      - ./keys:/run/keys:ro
     depends_on:
       <<: *service-deps
       identity-service:
@@ -217,6 +228,15 @@ services:
     healthcheck:
       <<: *health
       test: ["CMD", "curl", "-fs", "http://localhost:8085/actuator/health"]
+
+  # Correo local de desarrollo: Notification envía aquí y la bandeja se ve en http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:v1.20
+    profiles: [app]
+    restart: unless-stopped
+    mem_limit: 64m
+    ports:
+      - "127.0.0.1:8025:8025"
 
   gateway:
     image: nginx:1.27
