@@ -53,6 +53,19 @@ class UserRegisteredContractTest {
         assertThat(written().getPayload()).contains("\"businessId\":84", "\"role\":\"BUSINESS_OWNER\"");
     }
 
+    @Test
+    void theCorrelationIdOfTheRequestTravelsInTheEnvelopeWithoutChangingItsShape() {
+        org.slf4j.MDC.put("correlationId", "req-42");
+        try {
+            adapter.append(UserRegistered.of(user(2001L, Role.CONSUMER, "lucia.fernandez@ejemplo.pe"), null,
+                    UUID.randomUUID(), NOW));
+        } finally {
+            org.slf4j.MDC.remove("correlationId");
+        }
+
+        assertThat(written().getPayload()).contains("\"correlationId\":\"req-42\"");
+    }
+
     private static User user(Long id, Role role, String email) {
         return new User(id, User.register("Nombre Apellido", new Email(email), "987123456", "hash", role), null, 0,
                 null, NOW);

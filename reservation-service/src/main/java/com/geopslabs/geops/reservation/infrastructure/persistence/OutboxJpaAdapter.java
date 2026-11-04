@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.geopslabs.geops.reservation.domain.events.DomainEvent;
 import com.geopslabs.geops.reservation.domain.ports.OutboxPort;
+import com.geopslabs.geops.reservation.infrastructure.web.CorrelationIdFilter;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
@@ -42,6 +44,10 @@ public class OutboxJpaAdapter implements OutboxPort {
         envelope.put("version", event.version());
         envelope.put("occurredAt", event.occurredAt());
         envelope.put("aggregateId", event.aggregateId());
+        var correlationId = MDC.get(CorrelationIdFilter.MDC_KEY);
+        if (correlationId != null) {
+            envelope.put("correlationId", correlationId);
+        }
         envelope.put("payload", event.payload());
         try {
             return objectMapper.writeValueAsString(envelope);
