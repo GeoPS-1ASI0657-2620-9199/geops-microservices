@@ -22,6 +22,16 @@ spring:
     enabled: true
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    consumer:
+      group-id: engagement-service
+      # Un grupo nuevo lee los tópicos desde el principio: ningún evento anterior se pierde.
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      # El evento se confirma solo después de aplicarlo; si falla, el manejador de errores decide.
+      ack-mode: manual_immediate
     producer:
       acks: all
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -41,6 +51,8 @@ spring:
           audiences: geops-api
 
 geops:
+  messaging:
+    enabled: ${GEOPS_MESSAGING_ENABLED:true}
   outbox:
     relay-enabled: ${OUTBOX_RELAY_ENABLED:true}
     relay-delay-ms: ${OUTBOX_RELAY_DELAY_MS:1000}
