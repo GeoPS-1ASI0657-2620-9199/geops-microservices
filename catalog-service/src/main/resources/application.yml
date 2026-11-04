@@ -44,6 +44,16 @@ spring:
     listener:
       # The event is acknowledged only after the standing is committed and its cells deleted.
       ack-mode: manual_immediate
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        # Con Kafka caído el envío falla en segundos y el relay deja la fila para la siguiente vuelta.
+        max.block.ms: 5000
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 10000
   security:
     oauth2:
       resourceserver:
