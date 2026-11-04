@@ -18,7 +18,8 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 @CucumberContextConfiguration
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "geops.reports.scheduler-enabled=false")
 @Import(AcceptanceTestConfiguration.class)
 public class CucumberSpringConfiguration {
     private static final DockerImageName POSTGIS_IMAGE =

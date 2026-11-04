@@ -38,6 +38,17 @@ public class HttpScenario {
         return last;
     }
 
+    public HttpResult patch(String path, String token, String jsonBody) {
+        var request = restClient.patch().uri(path).contentType(MediaType.APPLICATION_JSON).body(jsonBody);
+        if (token != null) {
+            request.header(HttpHeaders.AUTHORIZATION, BEARER + token);
+        }
+        last = request.exchange((ignored, response) -> new HttpResult(response.getStatusCode().value(),
+                StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8),
+                response.getHeaders().getFirst(HttpHeaders.LOCATION)));
+        return last;
+    }
+
     public Callable<HttpResult> postLater(String path, String token, String jsonBody) {
         var client = restClient;
         return () -> send(client, path, token, jsonBody);
