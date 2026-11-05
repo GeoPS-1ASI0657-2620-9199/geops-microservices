@@ -12,6 +12,7 @@ import com.geopslabs.geops.catalog.application.usecases.CreateCampaignUseCase;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.MerchantStandingRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.OfferRepositoryPort;
+import com.geopslabs.geops.catalog.domain.ports.OutboxPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -36,8 +37,9 @@ public class BeanConfiguration {
     public CreateCampaignUseCase createCampaignUseCase(CampaignRepositoryPort campaignRepository,
                                                        OfferRepositoryPort offerRepository,
                                                        MerchantStandingRepositoryPort merchantStandingRepository,
-                                                       CellInvalidator cellInvalidator, Clock clock) {
-        return new CampaignCommandService(campaignRepository, offerRepository, merchantStandingRepository,
+                                                       OutboxPort outbox, CellInvalidator cellInvalidator,
+                                                       Clock clock) {
+        return new CampaignCommandService(campaignRepository, offerRepository, merchantStandingRepository, outbox,
                 cellInvalidator, clock);
     }
 
