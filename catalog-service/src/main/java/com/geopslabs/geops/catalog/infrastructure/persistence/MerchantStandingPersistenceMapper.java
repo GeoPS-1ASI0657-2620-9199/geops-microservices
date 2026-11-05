@@ -11,7 +11,7 @@ final class MerchantStandingPersistenceMapper {
     static MerchantStanding toDomain(MerchantStandingJpaEntity entity) {
         return new MerchantStanding(entity.getBusinessId(), entity.getBusinessName(), entity.isRucVerified(),
                 entity.getOpenReports(), entity.getComplianceIndex(), entity.isVerifiedSeal(),
-                entity.getUpdatedAt());
+                entity.getUpdatedAt(), entity.getRedeemedReservations(), entity.getConsumerFavorReports());
     }
 
     static MerchantStandingJpaEntity toEntity(MerchantStanding standing) {
@@ -23,6 +23,8 @@ final class MerchantStandingPersistenceMapper {
         entity.setComplianceIndex(standing.getComplianceIndex());
         entity.setVerifiedSeal(standing.hasVerifiedSeal());
         entity.setUpdatedAt(standing.getUpdatedAt());
+        entity.setRedeemedReservations(standing.getRedeemedReservations());
+        entity.setConsumerFavorReports(standing.getConsumerFavorReports());
         return entity;
     }
 }
