@@ -1,6 +1,7 @@
 package com.geopslabs.geops.catalog.domain.models;
 
 import com.geopslabs.geops.catalog.domain.models.exceptions.CampaignAlreadyEndedException;
+import com.geopslabs.geops.catalog.domain.models.exceptions.CampaignEndedException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.OfferValidityOutsideCampaignException;
 import org.junit.jupiter.api.Test;
 
@@ -18,6 +19,7 @@ class CampaignTest {
     private static final GeoPoint STORE = new GeoPoint(-12.1211, -77.0297);
     private static final int RADIUS_METERS = 800;
     private static final String ADDRESS = "Av. Larco 345, Miraflores";
+    private static final LocalDate AFTER_OCTOBER = LocalDate.parse("2026-11-01");
 
     @Test
     void belongsToItsBusiness() {
@@ -90,6 +92,62 @@ class CampaignTest {
         assertThatThrownBy(() -> Offer.publishFor(campaign, "Noviembre", "Sin condiciones",
                 Money.soles(BigDecimal.TEN), november, "Gastronomía", null, ADDRESS, STORE))
                 .isInstanceOf(OfferValidityOutsideCampaignException.class);
+    }
+
+    @Test
+    void anActiveCampaignIsPausedWithTheRestOfItsData() {
+        var active = campaign();
+
+        var paused = active.pause(TODAY);
+
+        assertThat(paused.getStatus()).isEqualTo(CampaignStatus.PAUSED);
+        assertThat(paused.isActive()).isFalse();
+        assertThat(paused).usingRecursiveComparison().ignoringFields("status").isEqualTo(active);
+    }
+
+    @Test
+    void pausingAPausedCampaignChangesNothing() {
+        var paused = campaign().pause(TODAY);
+
+        assertThat(paused.pause(TODAY)).isSameAs(paused);
+    }
+
+    @Test
+    void aPausedCampaignIsReactivatedWhileItsValidityHasNotEnded() {
+        var reactivated = campaign().pause(TODAY).reactivate(OCTOBER.end());
+
+        assertThat(reactivated.getStatus()).isEqualTo(CampaignStatus.ACTIVE);
+        assertThat(reactivated.isActive()).isTrue();
+    }
+
+    @Test
+    void reactivatingAnActiveCampaignChangesNothing() {
+        var active = campaign();
+
+        assertThat(active.reactivate(TODAY)).isSameAs(active);
+    }
+
+    @Test
+    void aCampaignWhoseValidityEndedCannotBeReactivated() {
+        var paused = campaign().pause(TODAY);
+
+        assertThatThrownBy(() -> paused.reactivate(AFTER_OCTOBER))
+                .isInstanceOf(CampaignEndedException.class)
+                .hasMessage("La campaña terminó el 2026-10-31. Ya no se puede pausar ni reactivar.")
+                .extracting("code").isEqualTo("CAMPAIGN_ALREADY_ENDED");
+    }
+
+    @Test
+    void aCampaignWhoseValidityEndedCannotBePaused() {
+        assertThatThrownBy(() -> campaign().pause(AFTER_OCTOBER)).isInstanceOf(CampaignEndedException.class);
+    }
+
+    @Test
+    void aFinishedCampaignCannotBeReactivated() {
+        var finished = new Campaign(14L, BUSINESS_ID, "Almuerzos de octubre", "Menú ejecutivo", OCTOBER,
+                CampaignZone.radius(STORE, RADIUS_METERS), CampaignStatus.FINISHED, Money.soles(BigDecimal.TEN));
+
+        assertThatThrownBy(() -> finished.reactivate(TODAY)).isInstanceOf(CampaignEndedException.class);
     }
 
     private static Campaign publish(DateRange period) {
