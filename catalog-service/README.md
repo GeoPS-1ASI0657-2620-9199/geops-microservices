@@ -63,6 +63,23 @@ Los errores responden `{"code": "...", "message": "..."}`. Los ejemplos de cada 
 | `MISSING_PARAMETER`, `INVALID_PARAMETER` | 400 | `nearby` sin `lat`, `lng` o `radiusMinutes`, o con un valor que no es número |
 | `INVALID_PAGE` | 400 | `nearby` con `page` negativo o `size` fuera de 1 a 20 |
 
+## Eventos (US33)
+
+Catalog publica en el tópico `catalog.events` por bandeja de salida: el `Service` guarda el evento en
+`outbox_events` en la misma transacción que el cambio, y un relay lo envía a Kafka cada segundo en el
+orden de `seq`, con el `campaignId` como clave para que los eventos de una campaña lleguen en orden.
+Si Kafka no responde, la publicación de la campaña igual responde `201` y las filas esperan; una fila
+pasa a `FAILED` después de `OUTBOX_MAX_ATTEMPTS` intentos (10) con Kafka respondiendo. La entrega es
+al menos una vez: quien consume descarta repetidos por `eventId`.
+
+| Evento | Cuándo | Contrato |
+|---|---|---|
+| `OfferPublished` | Una por oferta al publicar una campaña; `reactivated: false` | `platform/messaging/events/OfferPublished.v1.json` |
+| `OfferExpired` | El Programador de Vencimientos marca `EXPIRED` una oferta de campaña | `platform/messaging/events/OfferExpired.v1.json` |
+
+La migración `V5` carga un `OfferPublished` por cada oferta ya publicada y vigente de una campaña
+activa, para que Engagement y Notification arranquen con las ofertas que existían antes del relay.
+
 ## Conversión a coordenadas (US07)
 
 `POST /api/v1/admin/geocoding-runs` no espera a que termine la corrida: responde `202` con
@@ -89,7 +106,10 @@ El healthcheck del compose usa `localhost:9082/actuator/health`.
 |---|---|---|
 | V1 | `V1__baseline.sql` | Tablas del diagrama de base de datos del informe, sin `offers.location` ni su índice espacial |
 | V2 | `V2__add_offer_location_and_spatial_index.sql` | `offers.location` e `ix_offers_location` (US01) |
-| V3 en adelante | — | Siguientes cambios de Catalog |
+| V3 | `V3__normalize_offer_categories.sql` | Categorías de la lista cerrada (E2-06) |
+| V4 | `V4__outbox_relay_columns.sql` | `status`, `attempts`, `last_error` y `seq` de `outbox_events` para el relay (US33) |
+| V5 | `V5__backfill_offer_published_events.sql` | `OfferPublished` de las ofertas vigentes publicadas antes del relay (US33) |
+| V6 en adelante | — | Siguientes cambios de Catalog |
 
 Reglas:
 
@@ -125,6 +145,7 @@ PostgreSQL con PostGIS en Testcontainers, con tokens firmados con una clave de p
 | US05 Crear una campaña publicitaria (GEO-30) | `US05-create-advertising-campaign.feature` | 6 |
 | US06 Segmentar campañas por ubicación (GEO-31) | `US06-segment-campaign-by-location.feature` | 5 |
 | Migraciones versionadas (GEO-9, GEO-51) | `schema-migrations.feature` | 3 |
+| US33 Publicar los eventos de Catalog (GEO-34) | `outbox-relay.feature` | 2 |
 
 ## Ejecución local
 
