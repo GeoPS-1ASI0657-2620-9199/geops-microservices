@@ -170,8 +170,12 @@ class OfferJpaAdapterNearbyTest extends CucumberSpringConfiguration {
 
         var expired = transactions.execute(status -> offers.expirePublishedBefore(TODAY));
 
-        assertThat(expired).singleElement().satisfies(point ->
-                assertThat(ORIGIN.distanceTo(point)).isCloseTo(100, within(SAME_METERS)));
+        assertThat(expired).singleElement().satisfies(offer -> {
+            assertThat(offer.campaignId()).isEqualTo(activeCampaignId);
+            assertThat(offer.businessId()).isEqualTo(BUSINESS_ID);
+            assertThat(offer.validTo()).isEqualTo(EXPIRED);
+            assertThat(ORIGIN.distanceTo(offer.location())).isCloseTo(100, within(SAME_METERS));
+        });
         assertThat(jdbc.queryForObject("SELECT count(*) FROM offers WHERE status = 'EXPIRED'", Integer.class))
                 .isEqualTo(1);
         assertThat(offers.findPublishedLocationsOfBusiness(BUSINESS_ID, TODAY)).hasSize(1);

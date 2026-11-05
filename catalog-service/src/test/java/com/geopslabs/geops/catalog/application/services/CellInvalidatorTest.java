@@ -1,10 +1,12 @@
 package com.geopslabs.geops.catalog.application.services;
 
+import com.geopslabs.geops.catalog.domain.models.ExpiredOffer;
 import com.geopslabs.geops.catalog.domain.models.GeoCell;
 import com.geopslabs.geops.catalog.domain.models.GeoPoint;
 import com.geopslabs.geops.catalog.domain.ports.CellCachePort;
 import com.geopslabs.geops.catalog.domain.ports.JobLockPort;
 import com.geopslabs.geops.catalog.domain.ports.OfferRepositoryPort;
+import com.geopslabs.geops.catalog.domain.ports.OutboxPort;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -92,8 +94,9 @@ class CellInvalidatorTest {
     void theExpirationRoundMarksTheOffersAndDeletesTheirCells() {
         var lock = mock(JobLockPort.class);
         when(lock.tryLock(OfferExpirationScheduler.LOCK)).thenReturn(true);
-        when(offers.expirePublishedBefore(TODAY)).thenReturn(List.of(MIRAFLORES));
-        var scheduler = new OfferExpirationScheduler(offers, lock, invalidator,
+        when(offers.expirePublishedBefore(TODAY))
+                .thenReturn(List.of(new ExpiredOffer(1052L, 77L, 84L, TODAY.minusDays(1), MIRAFLORES)));
+        var scheduler = new OfferExpirationScheduler(offers, lock, mock(OutboxPort.class), invalidator,
                 TransactionOperations.withoutTransaction(), CLOCK);
 
         assertThat(scheduler.expireOffers()).isEqualTo(1);
@@ -104,7 +107,7 @@ class CellInvalidatorTest {
     void anotherReplicaHoldingTheLockSkipsTheRound() {
         var lock = mock(JobLockPort.class);
         when(lock.tryLock(OfferExpirationScheduler.LOCK)).thenReturn(false);
-        var scheduler = new OfferExpirationScheduler(offers, lock, invalidator,
+        var scheduler = new OfferExpirationScheduler(offers, lock, mock(OutboxPort.class), invalidator,
                 TransactionOperations.withoutTransaction(), CLOCK);
 
         assertThat(scheduler.expireOffers()).isEqualTo(-1);

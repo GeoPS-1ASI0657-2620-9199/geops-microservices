@@ -1,5 +1,6 @@
 package com.geopslabs.geops.catalog.domain.ports;
 
+import com.geopslabs.geops.catalog.domain.models.ExpiredOffer;
 import com.geopslabs.geops.catalog.domain.models.GeoCell;
 import com.geopslabs.geops.catalog.domain.models.GeoPoint;
 import com.geopslabs.geops.catalog.domain.models.GeocodingStatus;
@@ -35,10 +36,10 @@ public interface OfferRepositoryPort {
     List<GeoPoint> findPublishedLocationsOfBusiness(Long businessId, LocalDate today);
 
     /**
-     * Marks EXPIRED the published offers whose validity ended before today and returns the locations of the ones
-     * that had coordinates. Runs inside the caller's transaction.
+     * Marks EXPIRED the published offers whose validity ended before today and returns them. Runs inside the
+     * caller's transaction.
      */
-    List<GeoPoint> expirePublishedBefore(LocalDate today);
+    List<ExpiredOffer> expirePublishedBefore(LocalDate today);
 
     /** Offers waiting for coordinates, in id order. */
     List<Offer> findPendingGeocoding();
