@@ -21,12 +21,20 @@ ofertas y consulta sus campañas y las ofertas de cada una.
 | `GET /api/v1/campaigns` | `ROLE_BUSINESS_OWNER` | Lista las campañas del comercio del token, de la más antigua a la más reciente |
 | `GET /api/v1/campaigns/{campaignId}` | `ROLE_BUSINESS_OWNER` dueño de la campaña | Devuelve la campaña con su periodo, zona, estado y presupuesto |
 | `GET /api/v1/campaigns/{campaignId}/offers` | `ROLE_BUSINESS_OWNER` dueño de la campaña | Lista las ofertas de la campaña |
+| `PATCH /api/v1/campaigns/{campaignId}/status` | `ROLE_BUSINESS_OWNER` dueño de la campaña | Con `{"status": "PAUSED"}` o `{"status": "ACTIVE"}` pausa o reactiva la campaña y responde la campaña con su nuevo estado (US10) |
 
 Una oferta está disponible (`available`) mientras está `PUBLISHED` y hoy, en hora de Lima, no es
 posterior a su `validTo`; es la misma regla que aplica reservation-service. Para reservar, además,
 tiene que ser de un comercio afiliado: una oferta de fuente pública responde `available: false` y
 sin `businessId`. Una oferta retirada (`REMOVED`) responde 404 en el detalle y `available: false`
-en la disponibilidad.
+en la disponibilidad. Mientras su campaña está pausada, la oferta responde `available: false` en el
+detalle y en la disponibilidad, y la búsqueda `nearby` no la muestra.
+
+Pausar o reactivar (US10) guarda el estado y su evento en una transacción: `CampaignPaused` con los
+`offerIds` de la campaña al pausar, y un `OfferPublished` con `reactivated: true` por cada oferta
+vigente al reactivar. Justo después de confirmar, y antes de responder, se borran las celdas en caché
+de sus ofertas, así que la siguiente búsqueda ya refleja el cambio. Pedir el estado que la campaña ya
+tiene no escribe nada. Una campaña cuya vigencia terminó ya no se pausa ni se reactiva.
 
 Al publicar una campaña, todo se valida antes de guardar: el periodo (fin desde hoy en Lima y no
 antes del inicio), la zona (por radio, centro y radio de 400 a 5 000 m; por distrito, nombre y
@@ -52,6 +60,8 @@ Los errores responden `{"code": "...", "message": "..."}`. Los ejemplos de cada 
 |---|---|---|
 | `INVALID_REQUEST` | 400 | El id no es un número, o falta un campo obligatorio de la campaña o no tiene ofertas |
 | `CAMPAIGN_ALREADY_ENDED` | 400 | La campaña termina antes de hoy en Lima |
+| `CAMPAIGN_ALREADY_ENDED` | 409 | Pausar o reactivar una campaña cuya vigencia ya terminó |
+| `INVALID_CAMPAIGN_STATUS` | 400 | `PATCH .../status` con un estado distinto de `PAUSED` o `ACTIVE` |
 | `INVALID_CAMPAIGN_PERIOD` | 400 | La campaña termina antes de empezar |
 | `INVALID_CAMPAIGN_ZONE` | 400 | Zona por radio sin centro o con radio fuera de 400 a 5 000 m, o zona por distrito sin nombre o sin centro |
 | `OFFER_VALIDITY_OUTSIDE_CAMPAIGN` | 400 | La vigencia de una oferta queda fuera del periodo de la campaña |
@@ -76,6 +86,8 @@ al menos una vez: quien consume descarta repetidos por `eventId`.
 |---|---|---|
 | `OfferPublished` | Una por oferta al publicar una campaña; `reactivated: false` | `platform/messaging/events/OfferPublished.v1.json` |
 | `OfferExpired` | El Programador de Vencimientos marca `EXPIRED` una oferta de campaña | `platform/messaging/events/OfferExpired.v1.json` |
+| `CampaignPaused` | El dueño pausa una campaña, con los `offerIds` de la campaña | `platform/messaging/events/CampaignPaused.v1.json` |
+| `OfferPublished` | Una por oferta vigente al reactivar una campaña; `reactivated: true` | `platform/messaging/events/OfferPublished.v1.json` |
 
 La migración `V5` carga un `OfferPublished` por cada oferta ya publicada y vigente de una campaña
 activa, para que Engagement y Notification arranquen con las ofertas que existían antes del relay.
@@ -146,6 +158,7 @@ PostgreSQL con PostGIS en Testcontainers, con tokens firmados con una clave de p
 | US06 Segmentar campañas por ubicación (GEO-31) | `US06-segment-campaign-by-location.feature` | 5 |
 | Migraciones versionadas (GEO-9, GEO-51) | `schema-migrations.feature` | 3 |
 | US33 Publicar los eventos de Catalog (GEO-34) | `outbox-relay.feature` | 2 |
+| US10 Pausar y reactivar una campaña (GEO-32) | `US10-pause-and-reactivate-campaign.feature` | 8 |
 
 ## Ejecución local
 
@@ -164,7 +177,11 @@ endpoint; las dos peticiones de login de Identity llenan `token` y `businessToke
 «List my campaigns» llena `campaignId`. La carpeta `US05` publica una campaña con el token del
 negocio (las fechas se calculan desde hoy en un script previo) y prueba un periodo vencido, un
 token de consumidor y la falta de token. La carpeta `US06` publica una campaña con zona por distrito
-en Miraflores, la busca desde dentro y desde fuera de la zona y prueba un distrito sin nombre. La carpeta `Internal` solo responde con `baseUrl` en el puerto
+en Miraflores, la busca desde dentro y desde fuera de la zona y prueba un distrito sin nombre.
+La carpeta `US10` pausa y reactiva `campaignId`: guarda la primera oferta de esa campaña en
+`pausedOfferId`, comprueba que no está disponible mientras la campaña está pausada y que vuelve a
+estarlo al reactivarla, y deja la campaña `ACTIVE`. El `409` de una campaña vencida necesita una
+fecha de fin pasada y lo cubren los escenarios de aceptación. La carpeta `Internal` solo responde con `baseUrl` en el puerto
 del servicio; su última petición comprueba que el gateway no publica `/internal`.
 
 Hasta que llegue la creación de campañas (US05) no hay endpoint que cree datos. Para correr la
