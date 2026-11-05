@@ -1,5 +1,9 @@
 package com.geopslabs.geops.catalog.application.services;
 
+import com.geopslabs.geops.catalog.domain.models.Campaign;
+import com.geopslabs.geops.catalog.domain.models.CampaignStatus;
+import com.geopslabs.geops.catalog.domain.models.CampaignZone;
+import com.geopslabs.geops.catalog.domain.models.DateRange;
 import com.geopslabs.geops.catalog.domain.models.GeoPoint;
 import com.geopslabs.geops.catalog.domain.models.GeocodingStatus;
 import com.geopslabs.geops.catalog.domain.models.MerchantStanding;
@@ -9,6 +13,7 @@ import com.geopslabs.geops.catalog.domain.models.OfferSource;
 import com.geopslabs.geops.catalog.domain.models.OfferStatus;
 import com.geopslabs.geops.catalog.domain.models.exceptions.OfferNotFoundException;
 import com.geopslabs.geops.catalog.domain.models.queries.GetOfferByIdQuery;
+import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.MerchantStandingRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.OfferRepositoryPort;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,9 +47,13 @@ class OfferQueryServiceTest {
     private static final BigDecimal PRICE = new BigDecimal("15.00");
     private static final BigDecimal FULL_COMPLIANCE = new BigDecimal("100.00");
     private static final GeoPoint STORE = new GeoPoint(-12.1211, -77.0297);
+    private static final int RADIUS_METERS = 800;
 
     @Mock
     private OfferRepositoryPort offerRepository;
+
+    @Mock
+    private CampaignRepositoryPort campaignRepository;
 
     @Mock
     private MerchantStandingRepositoryPort merchantStandingRepository;
@@ -53,7 +62,7 @@ class OfferQueryServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new OfferQueryService(offerRepository, merchantStandingRepository,
+        service = new OfferQueryService(offerRepository, campaignRepository, merchantStandingRepository,
                 Clock.fixed(NOW, OfferQueryService.OFFER_ZONE));
     }
 
@@ -61,6 +70,7 @@ class OfferQueryServiceTest {
     void detailOfAValidOfferCarriesItsLocationAndMerchant() {
         var offer = affiliated(TODAY_IN_LIMA.plusWeeks(1), OfferStatus.PUBLISHED);
         when(offerRepository.findById(OFFER_ID)).thenReturn(Optional.of(offer));
+        stubCampaign(CampaignStatus.ACTIVE);
         when(merchantStandingRepository.findByBusinessId(BUSINESS_ID)).thenReturn(Optional.of(standing()));
 
         var detail = service.getDetail(new GetOfferByIdQuery(OFFER_ID));
@@ -107,10 +117,11 @@ class OfferQueryServiceTest {
 
     @Test
     void offerIsStillAvailableOnItsLastDayInLimaWhenUtcIsAlreadyTheNextDay() {
-        var lateNightInLima = new OfferQueryService(offerRepository, merchantStandingRepository,
+        var lateNightInLima = new OfferQueryService(offerRepository, campaignRepository, merchantStandingRepository,
                 Clock.fixed(LATE_NIGHT_IN_LIMA, ZoneOffset.UTC));
         when(offerRepository.findById(OFFER_ID))
                 .thenReturn(Optional.of(affiliated(TODAY_IN_LIMA, OfferStatus.PUBLISHED)));
+        stubCampaign(CampaignStatus.ACTIVE);
 
         assertThat(lateNightInLima.getDetail(new GetOfferByIdQuery(OFFER_ID)).available()).isTrue();
     }
@@ -143,6 +154,7 @@ class OfferQueryServiceTest {
     void validOfferCanBeReservedWithTheFieldsReservationReads() {
         when(offerRepository.findById(OFFER_ID))
                 .thenReturn(Optional.of(affiliated(TODAY_IN_LIMA.plusWeeks(1), OfferStatus.PUBLISHED)));
+        stubCampaign(CampaignStatus.ACTIVE);
 
         var availability = service.getAvailability(new GetOfferByIdQuery(OFFER_ID));
 
@@ -151,6 +163,34 @@ class OfferQueryServiceTest {
         assertThat(availability.title()).isEqualTo("2x1 en almuerzos ejecutivos");
         assertThat(availability.validTo()).isEqualTo(TODAY_IN_LIMA.plusWeeks(1));
         assertThat(availability.available()).isTrue();
+    }
+
+    @Test
+    void offerOfAPausedCampaignIsShownAsNotAvailable() {
+        when(offerRepository.findById(OFFER_ID))
+                .thenReturn(Optional.of(affiliated(TODAY_IN_LIMA.plusWeeks(1), OfferStatus.PUBLISHED)));
+        stubCampaign(CampaignStatus.PAUSED);
+
+        assertThat(service.getDetail(new GetOfferByIdQuery(OFFER_ID)).available()).isFalse();
+    }
+
+    @Test
+    void offerOfAPausedCampaignCannotBeReserved() {
+        when(offerRepository.findById(OFFER_ID))
+                .thenReturn(Optional.of(affiliated(TODAY_IN_LIMA.plusWeeks(1), OfferStatus.PUBLISHED)));
+        stubCampaign(CampaignStatus.PAUSED);
+
+        assertThat(service.getAvailability(new GetOfferByIdQuery(OFFER_ID)).available()).isFalse();
+    }
+
+    @Test
+    void offerOfAReactivatedCampaignCanBeReservedAgain() {
+        when(offerRepository.findById(OFFER_ID))
+                .thenReturn(Optional.of(affiliated(TODAY_IN_LIMA.plusWeeks(1), OfferStatus.PUBLISHED)));
+        when(campaignRepository.findById(CAMPAIGN_ID))
+                .thenReturn(Optional.of(campaign(CampaignStatus.PAUSED).reactivate(TODAY_IN_LIMA)));
+
+        assertThat(service.getAvailability(new GetOfferByIdQuery(OFFER_ID)).available()).isTrue();
     }
 
     @Test
@@ -185,6 +225,16 @@ class OfferQueryServiceTest {
 
         assertThatThrownBy(() -> service.getAvailability(new GetOfferByIdQuery(OFFER_ID)))
                 .isInstanceOf(OfferNotFoundException.class);
+    }
+
+    private void stubCampaign(CampaignStatus status) {
+        when(campaignRepository.findById(CAMPAIGN_ID)).thenReturn(Optional.of(campaign(status)));
+    }
+
+    private static Campaign campaign(CampaignStatus status) {
+        var period = new DateRange(TODAY_IN_LIMA.minusDays(3), TODAY_IN_LIMA.plusWeeks(2));
+        return new Campaign(CAMPAIGN_ID, BUSINESS_ID, "Almuerzos de octubre", "Menú ejecutivo", period,
+                CampaignZone.radius(STORE, RADIUS_METERS), status, Money.soles(PRICE));
     }
 
     private static Offer publicSource() {

@@ -30,9 +30,10 @@ public class BeanConfiguration {
 
     @Bean
     public OfferQueryService offerQueryService(OfferRepositoryPort offerRepository,
+                                               CampaignRepositoryPort campaignRepository,
                                                MerchantStandingRepositoryPort merchantStandingRepository,
                                                Clock clock) {
-        return new OfferQueryService(offerRepository, merchantStandingRepository, clock);
+        return new OfferQueryService(offerRepository, campaignRepository, merchantStandingRepository, clock);
     }
 
     @Bean
