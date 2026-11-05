@@ -40,4 +40,9 @@ public class AcceptanceTestConfiguration {
     public NewTopic identityEventsDeadLetter() {
         return TopicBuilder.name(IdentityEventSteps.TOPIC + ".DLT").partitions(3).replicas(1).build();
     }
+
+    @Bean
+    public NewTopic catalogEvents() {
+        return TopicBuilder.name(OutboxSteps.TOPIC).partitions(3).replicas(1).build();
+    }
 }
