@@ -67,6 +67,14 @@ geops:
     enabled: ${GEOPS_MESSAGING_ENABLED:true}
   events:
     identity-topic: identity.events
+  outbox:
+    relay-enabled: ${OUTBOX_RELAY_ENABLED:true}
+    relay-delay-ms: ${OUTBOX_RELAY_DELAY_MS:1000}
+    batch-size: ${OUTBOX_BATCH_SIZE:50}
+    send-timeout-ms: 5000
+    # Intentos con Kafka respondiendo antes de marcar la fila FAILED; una caída de Kafka no los agota.
+    max-attempts: ${OUTBOX_MAX_ATTEMPTS:10}
+    topic: catalog.events
   cache:
     # false: the search goes straight to PostgreSQL with the radius query of Sprint 1.
     enabled: ${GEOPS_CACHE_ENABLED:true}
