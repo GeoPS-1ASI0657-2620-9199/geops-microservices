@@ -1,0 +1,19 @@
+{
+  "eventId": "9d8c7b6a-5f4e-4d3c-8b2a-1f0e9d8c7b6a",
+  "eventType": "ReportOpened",
+  "version": 1,
+  "occurredAt": "2026-10-28T19:10:00Z",
+  "aggregateId": 5013,
+  "payload": {
+    "reportId": 31,
+    "reservationId": 5013,
+    "reservationCode": "Q4ZT8K2M",
+    "consumerId": 2001,
+    "businessId": 84,
+    "offerId": 1052,
+    "offerTitle": "2x1 en almuerzos ejecutivos",
+    "reason": "No me aplicaron el 2x1 y me cobraron los dos platos.",
+    "openedAt": "2026-10-28T19:10:00Z",
+    "responseDeadline": "2026-10-30T19:10:00Z"
+  }
+}
