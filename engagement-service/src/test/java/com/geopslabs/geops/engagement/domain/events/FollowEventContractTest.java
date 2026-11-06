@@ -22,7 +22,7 @@ class FollowEventContractTest {
             try (var stream = getClass().getResourceAsStream("/events/" + event.eventType() + ".v1.json")) {
                 var expected = mapper.readTree(stream);
                 assertThat(actual.propertyStream().map(java.util.Map.Entry::getKey)).containsExactlyInAnyOrderElementsOf(expected.propertyStream().map(java.util.Map.Entry::getKey).toList());
-                assertThat(actual.get("payload")).isEqualTo(mapper.valueToTree(event.payload()));
+                assertThat(actual.get("payload")).isEqualTo(mapper.readTree(mapper.writeValueAsString(event.payload())));
                 assertThat(actual.get("version").asInt()).isEqualTo(expected.get("version").asInt());
                 assertThat(actual.get("eventType")).isEqualTo(expected.get("eventType"));
                 assertThat(actual.get("payload").propertyStream().map(java.util.Map.Entry::getKey)).containsExactlyInAnyOrderElementsOf(expected.get("payload").propertyStream().map(java.util.Map.Entry::getKey).toList());
