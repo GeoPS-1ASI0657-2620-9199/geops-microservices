@@ -5,7 +5,7 @@ import java.time.Instant;
 import java.util.*;
 public interface SavedBusinessRepositoryPort {
     List<SavedBusiness> findByConsumer(Long consumerId);
-    SavedBusiness save(Long consumerId, Long businessId, Instant now);
-    boolean exists(Long consumerId, Long businessId);
+    Optional<SavedBusiness> saveIfAbsent(Long consumerId, Long businessId, Instant now);
+    Optional<SavedBusiness> findByConsumerAndBusiness(Long consumerId, Long businessId);
     long delete(Long consumerId, Long businessId);
 }

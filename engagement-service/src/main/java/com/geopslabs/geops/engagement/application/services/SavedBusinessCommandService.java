@@ -20,8 +20,8 @@ public class SavedBusinessCommandService implements SaveBusinessUseCase, RemoveS
     @Transactional
     public Result save(Long consumerId, Long businessId) {
         businesses.findById(businessId).orElseThrow(BusinessNotFoundException::new);
-        var existing = saved.exists(consumerId, businessId);
-        return new Result(saved.save(consumerId, businessId, clock.instant()), !existing);
+        var inserted = saved.saveIfAbsent(consumerId, businessId, clock.instant());
+        return new Result(inserted.orElseGet(() -> saved.findByConsumerAndBusiness(consumerId, businessId).orElseThrow()), inserted.isPresent());
     }
 
     @Override

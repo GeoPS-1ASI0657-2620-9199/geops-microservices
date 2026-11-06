@@ -20,13 +20,18 @@ public class SavedBusinessJpaAdapter implements SavedBusinessRepositoryPort {
     }
 
     @Override
-    public SavedBusiness save(Long consumerId, Long businessId, Instant now) {
-        jdbc.update("INSERT INTO saved_businesses (consumer_id, business_id, saved_at) VALUES (?, ?, ?) ON CONFLICT (consumer_id, business_id) DO NOTHING", consumerId, businessId, Timestamp.from(now));
-        return jdbc.query("SELECT s.*, b.business_name FROM saved_businesses s JOIN business_snapshots b USING (business_id) WHERE consumer_id = ? AND business_id = ?", ROW, consumerId, businessId).get(0);
+    public java.util.Optional<SavedBusiness> saveIfAbsent(Long consumerId, Long businessId, Instant now) {
+        return jdbc.query("""
+                WITH inserted AS (
+                    INSERT INTO saved_businesses (consumer_id, business_id, saved_at) VALUES (?, ?, ?)
+                    ON CONFLICT (consumer_id, business_id) DO NOTHING RETURNING *)
+                SELECT inserted.*, b.business_name FROM inserted JOIN business_snapshots b USING (business_id)""",
+                ROW, consumerId, businessId, Timestamp.from(now)).stream().findFirst();
     }
-
     @Override
-    public boolean exists(Long consumerId, Long businessId) { return jdbc.queryForObject("SELECT count(*) FROM saved_businesses WHERE consumer_id = ? AND business_id = ?", Long.class, consumerId, businessId) > 0; }
+    public java.util.Optional<SavedBusiness> findByConsumerAndBusiness(Long consumerId, Long businessId) {
+        return jdbc.query("SELECT s.*, b.business_name FROM saved_businesses s JOIN business_snapshots b USING (business_id) WHERE consumer_id = ? AND business_id = ?", ROW, consumerId, businessId).stream().findFirst();
+    }
 
     @Override
     public long delete(Long consumerId, Long businessId) { return jdbc.update("DELETE FROM saved_businesses WHERE consumer_id = ? AND business_id = ?", consumerId, businessId); }

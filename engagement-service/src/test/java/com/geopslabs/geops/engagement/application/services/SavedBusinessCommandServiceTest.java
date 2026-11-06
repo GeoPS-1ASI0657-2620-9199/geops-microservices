@@ -16,14 +16,16 @@ class SavedBusinessCommandServiceTest {
     @Test
     void savesKnownBusinessesAndReusesExistingEntries() {
         when(businesses.findById(84L)).thenReturn(Optional.of(new BusinessSnapshot(84L, "Don Pepe")));
-        when(saved.exists(2001L, 84L)).thenReturn(false, true);
+        var business = new SavedBusiness(1L, 2001L, 84L, "Don Pepe", Instant.now());
+        when(saved.saveIfAbsent(eq(2001L), eq(84L), any())).thenReturn(Optional.of(business), Optional.empty());
+        when(saved.findByConsumerAndBusiness(2001L, 84L)).thenReturn(Optional.of(business));
         assertThat(service.save(2001L, 84L).created()).isTrue();
         assertThat(service.save(2001L, 84L).created()).isFalse();
     }
     @Test
     void missingBusinessIsNotSavedAndRemovalIsScopedToTheConsumer() {
         assertThatThrownBy(() -> service.save(2001L, 99L)).isInstanceOf(BusinessNotFoundException.class);
-        verify(saved, never()).save(any(), any(), any());
+        verify(saved, never()).saveIfAbsent(any(), any(), any());
         assertThatThrownBy(() -> service.remove(2001L, 84L)).isInstanceOf(SavedBusinessNotFoundException.class);
         verify(saved).delete(2001L, 84L);
     }
