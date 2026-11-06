@@ -44,6 +44,7 @@ public class SecurityConfiguration {
             AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry requests) {
         requests
                 .requestMatchers(PUBLIC_PATHS).permitAll()
+                .requestMatchers("/api/v1/push-subscriptions", "/api/v1/push-subscriptions/**").hasAuthority(ROLE_CONSUMER)
                 .requestMatchers(HttpMethod.POST, "/api/v1/email-unsubscriptions").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/notification-preferences").hasAuthority(ROLE_CONSUMER)
                 .requestMatchers(HttpMethod.PUT, NOTIFICATION_PREFERENCES).hasAuthority(ROLE_CONSUMER)

@@ -87,3 +87,8 @@ geops:
     email-from: ${NOTIFICATION_EMAIL_FROM:avisos@geops.local}
     email-window: ${NOTIFICATION_EMAIL_WINDOW:60m}
     web-base-url: ${WEB_BASE_URL:http://localhost:4200}
+
+---
+geops:
+  notifications:
+    fcm-credentials-path: ${FCM_CREDENTIALS_PATH:}
