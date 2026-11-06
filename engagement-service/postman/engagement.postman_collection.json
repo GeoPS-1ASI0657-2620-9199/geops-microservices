@@ -926,7 +926,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"businessId\": 84}",
+              "raw": "{\"businessId\": {{businessId}}}",
               "options": {
                 "raw": {
                   "language": "json"
