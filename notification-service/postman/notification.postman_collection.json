@@ -504,7 +504,19 @@
           "mode": "raw",
           "raw": "{\"fcmToken\": \"{{fcmToken}}\", \"userAgent\": \"Postman\"}"
         }
-      }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "pm.collectionVariables.set(\"subscriptionId\", pm.response.json().subscriptionId);"
+            ]
+          }
+        }
+      ]
     },
     {
       "name": "DELETE push-subscriptions/{{subscriptionId}}",
@@ -552,6 +564,18 @@
     },
     {
       "key": "futureCapturedAt",
+      "value": ""
+    },
+    {
+      "key": "fcmToken",
+      "value": ""
+    },
+    {
+      "key": "subscriptionId",
+      "value": ""
+    },
+    {
+      "key": "unsubscribeToken",
       "value": ""
     }
   ]

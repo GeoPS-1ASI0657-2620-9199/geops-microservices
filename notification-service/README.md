@@ -66,3 +66,41 @@ El servicio escucha en `http://localhost:8085`. La colección
 `postman/notification.postman_collection.json` tiene un caso correcto y uno de error por endpoint;
 la petición de login de Identity llena `token` y las de ubicación ponen la hora actual antes de
 enviarse.
+
+
+## Sprint 3: correo y web push
+
+`GET /api/v1/notification-preferences` lee la elecci?n actual. `POST /api/v1/email-unsubscriptions`
+valida el token firmado del enlace sin exigir una sesi?n y conserva la cuenta y la preferencia general.
+`POST /api/v1/push-subscriptions` registra el navegador del consumidor; repetir su token devuelve
+la suscripci?n existente. `DELETE /api/v1/push-subscriptions/{subscriptionId}` solo elimina filas propias.
+Los contratos, ejemplos y errores est?n en Swagger y en la colecci?n Postman del servicio.
+
+Los consumidores aplican `UserRegistered`, `ConsumerPreferencesChanged`, `BusinessFollowed`,
+`BusinessUnfollowed`, `OfferPublished`, `CampaignPaused`, `OfferExpired` y los tres eventos de reportes.
+El planificador bloquea las preferencias antes de reservar un cupo diario, da precedencia al seguidor
+y evita repetir una oferta entre canales. El env?o revisa de nuevo consentimiento, ubicaci?n reciente
+y cuota vigente. Reducir la cuota antes de enviar descarta los avisos que excedan la nueva elecci?n.
+
+SMTP usa `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_AUTH` y `SMTP_STARTTLS`.
+El compose apunta a Mailpit en local. `NOTIFICATION_UNSUBSCRIBE_SECRET` es obligatorio y se entrega
+por variable de entorno; nunca se guarda en Git. `NOTIFICATION_EMAIL_WINDOW` admite, por ejemplo,
+`60m` o `2m` para una demostraci?n. `WEB_BASE_URL` define el destino del enlace de baja.
+
+El correo se agrupa por ventanas ancladas al inicio del d?a en Lima. Solo se env?an avisos todav?a
+permitidos, con correo confirmado; una oferta pausada o vencida cancela los avisos que no salieron.
+Un fallo SMTP conserva el resumen para otro intento, hasta 24 horas despu?s del cierre de su ventana.
+Los avisos de reportes salen de inmediato y no consumen cupos de ofertas.
+
+FCM utiliza Firebase Admin 9.11.0. `FCM_CREDENTIALS_PATH` referencia un archivo de cuenta de servicio
+fuera de Git; el compose monta `platform/keys` en `/run/keys` en modo de solo lectura. Sin ruta
+configurada el canal push queda desactivado y el planificador puede elegir correo. Un token no
+registrado o inv?lido se elimina; si el push falla y el usuario permite correo, se reutiliza el mismo
+aviso en el resumen. Las credenciales SMTP y Firebase reales se configuran en el entorno del equipo.
+
+Las pruebas de aceptaci?n cubren las tres historias de Notification: US29, US47 y US48, adem?s de
+la ubicaci?n. `RecordingPushChannel` y `RecordingEmailSender` son dobles exclusivos de las pruebas;
+los adaptadores de producci?n son `FcmWebPushChannel` y `SmtpEmailChannel`. GreenMail verifica el
+transporte SMTP real y `DailyLimitConcurrencyTest` prueba diez publicaciones concurrentes y una
+reducci?n posterior del m?ximo diario. Ejecutar `./mvnw verify` requiere Docker con PostgreSQL/PostGIS
+y Kafka; la CI ejecuta esa suite completa.
