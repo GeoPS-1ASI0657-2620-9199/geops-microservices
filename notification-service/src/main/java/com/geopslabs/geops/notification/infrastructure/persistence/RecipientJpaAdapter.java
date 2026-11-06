@@ -19,6 +19,6 @@ public class RecipientJpaAdapter implements RecipientRepositoryPort {
 
     @Override
     public void upsert(Recipient recipient) {
-        repository.upsert(recipient.userId(), recipient.email(), recipient.emailConfirmed(), recipient.role());
+        repository.upsert(recipient.userId(), recipient.email(), recipient.emailConfirmed(), recipient.role(), recipient.businessId());
     }
 }

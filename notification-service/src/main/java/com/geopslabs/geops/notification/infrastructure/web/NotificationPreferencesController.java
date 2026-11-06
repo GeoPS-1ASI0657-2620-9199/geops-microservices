@@ -28,9 +28,21 @@ public class NotificationPreferencesController {
             {"code": "FORBIDDEN", "message": "Your account is not allowed to perform this operation"}""";
 
     private final UpdateNotificationPreferencesUseCase updatePreferences;
+    private final com.geopslabs.geops.notification.application.usecases.GetNotificationPreferencesUseCase getPreferences;
 
-    public NotificationPreferencesController(UpdateNotificationPreferencesUseCase updatePreferences) {
+    public NotificationPreferencesController(UpdateNotificationPreferencesUseCase updatePreferences, com.geopslabs.geops.notification.application.usecases.GetNotificationPreferencesUseCase getPreferences) {
         this.updatePreferences = updatePreferences;
+        this.getPreferences = getPreferences;
+    }
+
+    @Operation(summary = "Read the current notification channels and daily limit")
+    @ApiResponse(responseCode = "200", description = "Current preferences", content = @Content(examples = @ExampleObject(value = "{\"pushEnabled\":false,\"emailEnabled\":true,\"dailyLimit\":3,\"updatedAt\":\"2026-10-27T14:10:00Z\"}")))
+    @ApiResponse(responseCode = "401", description = "Valid token required", content = @Content(examples = @ExampleObject(value = UNAUTHORIZED_EXAMPLE)))
+    @ApiResponse(responseCode = "403", description = "Consumer role required", content = @Content(examples = @ExampleObject(value = FORBIDDEN_EXAMPLE)))
+    @ApiResponse(responseCode = "404", description = "Recipient copy not received", content = @Content(examples = @ExampleObject(value = "{\"code\":\"RECIPIENT_NOT_FOUND\",\"message\":\"Tu cuenta todavía no está lista para recibir avisos.\"}")))
+    @org.springframework.web.bind.annotation.GetMapping
+    public PreferencesResponse preferences(@AuthenticationPrincipal Jwt jwt) {
+        return PreferencesResponse.from(getPreferences.get(AuthenticatedUser.from(jwt).consumerId()));
     }
 
     @Operation(summary = "Create or replace the notification preferences of the consumer",

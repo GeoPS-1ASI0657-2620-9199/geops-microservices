@@ -25,6 +25,9 @@ public class RecipientJpaEntity {
     @Column(name = "email_confirmed", nullable = false)
     private Boolean emailConfirmed;
 
+    @Column(name = "business_id")
+    private Long businessId;
+
     @Column(name = "role", nullable = false, length = ROLE_LENGTH)
     private String role;
 }
