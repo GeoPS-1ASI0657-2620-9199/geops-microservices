@@ -43,11 +43,6 @@ public class ReportNoticeService implements NotifyReportPartiesUseCase {
         var relatedId = "report-" + event.reportId();
         var existing = notices.caseNotice(recipient.userId(), type, relatedId);
         if (existing.isPresent()) return existing.get();
-        var message = switch (type) {
-            case REPORT_RECEIVED -> "Un consumidor reportó la reserva %s (%s). Responde dentro del plazo.".formatted(event.reservationCode(), event.offerTitle());
-            case REPORT_ANSWERED -> "El comercio respondió tu reporte de la reserva %s (%s).".formatted(event.reservationCode(), event.offerTitle());
-            default -> "El reporte de la reserva %s (%s) se cerró a favor del %s.".formatted(event.reservationCode(), event.offerTitle(), "CONSUMER_FAVOR".equals(event.resolution()) ? "cliente" : "comercio");
-        };
-        return notices.save(new Notification(null, recipient.userId(), type, Channel.EMAIL, "Novedades de tu reporte", message, relatedId, DeliveryStatus.PENDING, LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC)));
+        return notices.save(NotificationFactoryService.report(recipient.userId(), event, type, clock.instant()));
     }
 }

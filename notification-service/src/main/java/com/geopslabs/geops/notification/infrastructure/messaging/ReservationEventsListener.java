@@ -23,6 +23,7 @@ public class ReservationEventsListener {
     }
     private void apply(EventEnvelope event) {
         var p = event.payload();
+        if ("ReportResolved".equals(event.eventType()) && !Set.of("CONSUMER_FAVOR", "BUSINESS_FAVOR").contains(EventFields.text(p, "resolution"))) throw new UnreadableEventException("Invalid report resolution");
         notices.apply(new ReportNoticeEvent(event.eventType(), EventFields.id(p, "reportId"), EventFields.id(p, "consumerId"), EventFields.id(p, "businessId"), EventFields.text(p, "reservationCode"), EventFields.text(p, "offerTitle"), p.path("resolution").asText(null)));
     }
 }
