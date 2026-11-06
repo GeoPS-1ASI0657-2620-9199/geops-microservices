@@ -13,6 +13,6 @@ public final class SavedOfferResponseAssembler {
         var savedOffer = view.savedOffer();
         var offer = view.offer();
         return new SavedOfferResponse(savedOffer.getId(), offer.offerId(), offer.businessId(), view.businessName(),
-                offer.title(), offer.validTo(), view.expired(), savedOffer.getSavedAt().toInstant(ZoneOffset.UTC));
+                offer.title(), offer.validTo(), view.expired(), savedOffer.getSavedAt().toInstant(ZoneOffset.UTC), offer.status());
     }
 }

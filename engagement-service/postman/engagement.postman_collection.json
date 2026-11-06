@@ -899,6 +899,69 @@
           ]
         }
       ]
+    },
+    {
+      "name": "GET saved-businesses",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/v1/saved-businesses",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "POST saved-businesses",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/saved-businesses",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"businessId\": 84}"
+        }
+      }
+    },
+    {
+      "name": "DELETE saved-businesses/84",
+      "request": {
+        "method": "DELETE",
+        "url": "{{baseUrl}}/api/v1/saved-businesses/84",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
     }
   ],
   "variable": [
