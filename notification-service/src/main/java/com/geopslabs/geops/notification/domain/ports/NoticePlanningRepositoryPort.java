@@ -15,6 +15,7 @@ public interface NoticePlanningRepositoryPort {
     boolean hasFreshLocation(Long userId, Instant since);
     boolean existsOfferNotice(Long consumerId, Long offerId);
     long countOfferNoticesSince(Long consumerId, Instant start, Instant end);
+    long countEarlierOrSentOfferNotices(Notification notice, Instant start, Instant end);
     Notification save(Notification notice);
     Optional<Notification> findNotice(Long id);
     void status(Long noticeId, DeliveryStatus status);

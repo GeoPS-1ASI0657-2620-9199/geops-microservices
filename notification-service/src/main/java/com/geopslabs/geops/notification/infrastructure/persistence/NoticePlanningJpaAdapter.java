@@ -58,6 +58,17 @@ public class NoticePlanningJpaAdapter implements NoticePlanningRepositoryPort {
     @Override
     public long countOfferNoticesSince(Long consumerId, Instant start, Instant end) { return jdbc.queryForObject("SELECT count(*) FROM notifications WHERE recipient_id = ? AND notification_type IN ('NEARBY_OFFER', 'FOLLOWED_BUSINESS_OFFER') AND delivery_status IN ('PENDING', 'SENT') AND sent_at >= ? AND sent_at < ?", Long.class, consumerId, Timestamp.from(start), Timestamp.from(end)); }
     @Override
+    public long countEarlierOrSentOfferNotices(Notification notice, Instant start, Instant end) {
+        return jdbc.queryForObject("""
+                SELECT count(*) FROM notifications WHERE recipient_id = ?
+                AND notification_type IN ('NEARBY_OFFER', 'FOLLOWED_BUSINESS_OFFER')
+                AND sent_at >= ? AND sent_at < ?
+                AND (delivery_status = 'SENT' OR (delivery_status = 'PENDING'
+                    AND (sent_at < ? OR (sent_at = ? AND id <= ?))))""", Long.class,
+                notice.getRecipientId(), Timestamp.from(start), Timestamp.from(end),
+                Timestamp.from(notice.getSentAt().toInstant(ZoneOffset.UTC)), Timestamp.from(notice.getSentAt().toInstant(ZoneOffset.UTC)), notice.getId());
+    }
+    @Override
     public Notification save(Notification notice) {
         return jdbc.queryForObject("""
                 INSERT INTO notifications (recipient_id, notification_type, channel, title, message, related_entity_id, delivery_status, sent_at)
