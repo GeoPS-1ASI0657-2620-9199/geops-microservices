@@ -11,6 +11,9 @@ import java.time.LocalDate;
 
 public interface OfferSnapshotJpaRepository extends JpaRepository<OfferSnapshotJpaEntity, Long> {
 
+    @Query("select o from OfferSnapshotJpaEntity o where o.businessId in :ids and o.status = 'PUBLISHED' and o.validTo >= :today order by o.offerId")
+    java.util.List<OfferSnapshotJpaEntity> findAvailable(@Param("ids") java.util.Collection<Long> ids, @Param("today") LocalDate today);
+
     @Modifying
     @Transactional
     @Query(value = """
