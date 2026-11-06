@@ -53,7 +53,10 @@ public class EmailDigestScheduler {
         var eligible = new ArrayList<Notification>();
         for (var notice : pending) {
             var fresh = notice.getType() != NotificationType.NEARBY_OFFER || notices.hasFreshLocation(digest.consumerId(), clock.instant().minus(NotificationPlanner.FRESHNESS));
-            if (preference.isPresent() && preference.get().getEmailEnabled() && confirmed && fresh && !unsubscriptions.exists(digest.consumerId(), notice.getType())) eligible.add(notice);
+            if (preference.isPresent() && preference.get().getEmailEnabled() && confirmed && fresh && !unsubscriptions.exists(digest.consumerId(), notice.getType())) {
+                if (NotificationPlanner.withinDailyLimit(notices, notice, preference.get().getDailyLimit())) eligible.add(notice);
+                else notices.status(notice.getId(), DeliveryStatus.SKIPPED_BY_LIMIT);
+            }
             else notices.status(notice.getId(), DeliveryStatus.CANCELLED);
         }
         return eligible;

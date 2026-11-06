@@ -28,6 +28,17 @@ public class NotificationFactoryService {
             NotificationType.VERIFICATION_RESULT, new Template("Resultado de la verificación de tu negocio",
                     "La verificación de tu RUC terminó: %s.", List.of(VERIFICATION_RESULT)));
 
+    public static Notification offer(Long consumerId, NotificationType type,
+                                     com.geopslabs.geops.notification.domain.models.OfferPublishedEvent offer,
+                                     Integer meters, Channel channel,
+                                     com.geopslabs.geops.notification.domain.models.DeliveryStatus status, java.time.Instant now) {
+        var title = type == NotificationType.FOLLOWED_BUSINESS_OFFER ? "Nueva oferta de un comercio que sigues" : "Oferta cerca de ti";
+        var validTo = java.time.format.DateTimeFormatter.ofPattern("dd/MM").format(offer.validTo());
+        var message = meters == null ? "%s: %s, válida hasta el %s.".formatted(offer.businessName(), offer.title(), validTo)
+                : "%s: %s, a %d m, válida hasta el %s.".formatted(offer.businessName(), offer.title(), meters, validTo);
+        return new Notification(null, consumerId, type, channel, title, message, offer.offerId().toString(), status, java.time.LocalDateTime.ofInstant(now, java.time.ZoneOffset.UTC));
+    }
+
     public Notification create(NotificationType type, Map<String, String> data) {
         var template = TEMPLATES.get(type);
         var values = template.keys().stream().map(key -> required(type, data, key)).toArray();

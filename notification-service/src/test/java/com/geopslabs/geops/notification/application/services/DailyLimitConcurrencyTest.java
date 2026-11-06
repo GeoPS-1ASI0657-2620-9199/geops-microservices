@@ -25,6 +25,10 @@ class DailyLimitConcurrencyTest {
     @Autowired RecipientProjectionPort projections;
     @Autowired JdbcTemplate jdbc;
     @Autowired Clock clock;
+    @Autowired NoticePlanningRepositoryPort notices;
+    @Autowired EmailDigestRepositoryPort digests;
+    @Autowired EmailUnsubscriptionRepositoryPort unsubscriptions;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactions;
     @Test
     void tenSimultaneousOffersReserveOnlyThreeDailySlots() throws Exception {
         recipients.upsert(new Recipient(2001L, "consumer@example.test", true, "CONSUMER"));
@@ -41,5 +45,13 @@ class DailyLimitConcurrencyTest {
         } finally { executor.shutdownNow(); }
         assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE delivery_status = 'PENDING'", Long.class)).isEqualTo(3L);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE delivery_status = 'SKIPPED_BY_LIMIT'", Long.class)).isEqualTo(7L);
+        preferences.upsert(new NotificationPreference(2001L, false, true, 1, LocalDateTime.now(clock)));
+        var sender = org.mockito.Mockito.mock(com.geopslabs.geops.notification.application.ports.EmailSender.class);
+        new EmailDigestScheduler(digests, notices, unsubscriptions, sender,
+                new org.springframework.transaction.support.TransactionTemplate(transactions),
+                Clock.offset(clock, Duration.ofHours(2)), "test-key", "http://localhost:4200", "<ul>{{offers}}</ul>{{unsubscribeLinks}}").sendDue();
+        org.mockito.Mockito.verify(sender).send(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.argThat(html -> html.split("<li>").length - 1 == 1));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE delivery_status = 'SENT'", Long.class)).isEqualTo(1L);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE delivery_status = 'SKIPPED_BY_LIMIT'", Long.class)).isEqualTo(9L);
     }
 }

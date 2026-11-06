@@ -84,7 +84,11 @@ public class NotificationPlanner implements PlanOfferNoticesUseCase, CancelOffer
         var current = repository.findNotice(notice.getId());
         var fresh = notice.getType() != NotificationType.NEARBY_OFFER || repository.hasFreshLocation(notice.getRecipientId(), clock.instant().minus(FRESHNESS));
         if (current.isEmpty() || current.get().getStatus() != DeliveryStatus.PENDING) return false;
-        if (preference.isPresent() && preference.get().getPushEnabled() && fresh) return true;
+        if (preference.isPresent() && preference.get().getPushEnabled() && fresh) {
+            if (withinDailyLimit(repository, notice, preference.get().getDailyLimit())) return true;
+            repository.status(notice.getId(), DeliveryStatus.SKIPPED_BY_LIMIT);
+            return false;
+        }
         repository.status(notice.getId(), DeliveryStatus.CANCELLED);
         return false;
     }
@@ -103,9 +107,12 @@ public class NotificationPlanner implements PlanOfferNoticesUseCase, CancelOffer
     private Optional<NotificationChannelStrategy> pushChannel() { return channels.stream().filter(c -> c.channel() == Channel.WEB_PUSH && c.available()).findFirst(); }
 
     private Notification notice(Long consumerId, NotificationType type, OfferPublishedEvent offer, Integer meters, Channel channel, DeliveryStatus status) {
-        var title = type == NotificationType.FOLLOWED_BUSINESS_OFFER ? "Nueva oferta de un comercio que sigues" : "Oferta cerca de ti";
-        var message = "%s: %s, a %d m, válida hasta el %s.".formatted(offer.businessName(), offer.title(), meters, DATE.format(offer.validTo()));
-        return new Notification(null, consumerId, type, channel, title, message, offer.offerId().toString(), status, LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
+        return NotificationFactoryService.offer(consumerId, type, offer, meters, channel, status, clock.instant());
+    }
+
+    static boolean withinDailyLimit(NoticePlanningRepositoryPort repository, Notification notice, int limit) {
+        var day = notice.getSentAt().toInstant(ZoneOffset.UTC).atZone(LIMA).toLocalDate();
+        return repository.countEarlierOrSentOfferNotices(notice, day.atStartOfDay(LIMA).toInstant(), day.plusDays(1).atStartOfDay(LIMA).toInstant()) <= limit;
     }
 
     private LocalDate today() { return LocalDate.now(clock.withZone(LIMA)); }
