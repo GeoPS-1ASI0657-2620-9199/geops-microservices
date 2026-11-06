@@ -92,6 +92,32 @@ al menos una vez: quien consume descarta repetidos por `eventId`.
 La migración `V5` carga un `OfferPublished` por cada oferta ya publicada y vigente de una campaña
 activa, para que Engagement y Notification arranquen con las ofertas que existían antes del relay.
 
+## Ranking por reportes (US44)
+
+Catalog escucha `reservation.events` con el grupo `catalog-service` y confirmación manual. Cada
+evento cambia la copia local de la reputación del comercio (`merchant_standings`) en una sola
+transacción con `processed_events`, así que un evento repetido cuenta una vez:
+
+| Evento | `open_reports` | `redeemed_reservations` | `consumer_favor_reports` |
+|---|---|---|---|
+| `ReservationRedeemed` | igual | +1 | igual |
+| `ReportOpened` | +1 | igual | igual |
+| `ReportAnswered` | -1 (pasa a revisión) | igual | igual |
+| `ReportResolved` desde `OPEN` | -1 | igual | +1 si `resolution = CONSUMER_FAVOR` |
+| `ReportResolved` desde `IN_REVIEW` | igual | igual | +1 si `resolution = CONSUMER_FAVOR` |
+
+`open_reports` nunca baja de cero. El índice de cumplimiento es
+`100 × redeemed_reservations / (redeemed_reservations + consumer_favor_reports)`, 100,00 sin casos y
+con dos decimales; el sello sigue pidiendo RUC verificado e índice de al menos 90,00. Si el sello
+cambia, `standing_changes` guarda `COMPLIANCE_BELOW_THRESHOLD` o `COMPLIANCE_RESTORED`. Si cambian los
+reportes abiertos o el sello, se borran las celdas del comercio antes de confirmar el evento, y la
+siguiente búsqueda ya lo ordena con su nueva posición: dentro de cada tramo de 100 m van primero los
+comercios sin reportes abiertos. `updated_at` sigue siendo el instante de la última respuesta de
+Identity sobre el RUC: los contadores solo suman y no dependen del orden.
+
+Los demás tipos de evento se confirman y se ignoran. Un evento sin `businessId`, un `ReportResolved`
+sin `previousStatus` o `resolution`, o una versión mayor que 1 va a `reservation.events.DLT`.
+
 ## Conversión a coordenadas (US07)
 
 `POST /api/v1/admin/geocoding-runs` no espera a que termine la corrida: responde `202` con
@@ -121,7 +147,8 @@ El healthcheck del compose usa `localhost:9082/actuator/health`.
 | V3 | `V3__normalize_offer_categories.sql` | Categorías de la lista cerrada (E2-06) |
 | V4 | `V4__outbox_relay_columns.sql` | `status`, `attempts`, `last_error` y `seq` de `outbox_events` para el relay (US33) |
 | V5 | `V5__backfill_offer_published_events.sql` | `OfferPublished` de las ofertas vigentes publicadas antes del relay (US33) |
-| V6 en adelante | — | Siguientes cambios de Catalog |
+| V6 | `V6__merchant_standing_compliance_counters.sql` | `redeemed_reservations` y `consumer_favor_reports` de `merchant_standings` (US44) |
+| V7 en adelante | — | Siguientes cambios de Catalog |
 
 Reglas:
 
@@ -159,6 +186,7 @@ PostgreSQL con PostGIS en Testcontainers, con tokens firmados con una clave de p
 | Migraciones versionadas (GEO-9, GEO-51) | `schema-migrations.feature` | 3 |
 | US33 Publicar los eventos de Catalog (GEO-34) | `outbox-relay.feature` | 2 |
 | US10 Pausar y reactivar una campaña (GEO-32) | `US10-pause-and-reactivate-campaign.feature` | 8 |
+| US44 Ordenar comercios por sus reportes (GEO-201) | `US44-rank-business-by-reports.feature` | 5 |
 
 ## Ejecución local
 
