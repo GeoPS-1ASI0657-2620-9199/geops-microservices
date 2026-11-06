@@ -57,6 +57,54 @@
               }
             }
           ]
+        },
+        {
+          "name": "Log in as business owner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{identityUrl}}/api/v1/auth/login",
+              "host": [
+                "{{identityUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{businessEmail}}\",\"password\":\"{{businessPassword}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(200);",
+                  "pm.collectionVariables.set(\"businessToken\", pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -964,6 +1012,22 @@
     {
       "key": "savedOfferId",
       "value": ""
+    },
+    {
+      "key": "businessEmail",
+      "value": ""
+    },
+    {
+      "key": "businessPassword",
+      "value": ""
+    },
+    {
+      "key": "businessToken",
+      "value": ""
+    },
+    {
+      "key": "reviewId",
+      "value": "3"
     }
   ]
 }
