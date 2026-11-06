@@ -8,5 +8,6 @@ public record ReviewResponse(
         Integer rating,
         String text,
         boolean verifiedRedemption,
-        Instant createdAt) {
+        Instant createdAt,
+        com.geopslabs.geops.engagement.domain.models.ReviewReply reply) {
 }

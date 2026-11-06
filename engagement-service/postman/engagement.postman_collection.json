@@ -899,6 +899,33 @@
           ]
         }
       ]
+    },
+    {
+      "name": "US49 Reply to a review",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/reviews/{{reviewId}}/replies",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{businessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"text\":\"Gracias por venir.\"}"
+        }
+      }
     }
   ],
   "variable": [
