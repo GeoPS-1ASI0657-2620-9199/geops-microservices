@@ -80,3 +80,23 @@ Feature: Save offers
       | with a token signed with another key | 401    | UNAUTHORIZED |
       | with a business owner token          | 403    | FORBIDDEN    |
       | with a token without roles           | 403    | FORBIDDEN    |
+
+
+  Scenario: Catalog projections let the consumer save a newly published offer
+    Given Catalog published offer 1060 of business 84
+    When consumer 2001 saves offer 1060
+    Then the response has status 201
+
+  Scenario: A saved offer in a paused campaign is distinguishable
+    Given Catalog published offer 1060 of business 84
+    When consumer 2001 saves offer 1060
+    And Catalog pauses saved offer 1060
+    And consumer 2001 lists the saved offers
+    Then the saved offer response has status "PAUSED"
+
+  Scenario: The consumer saves a business for later
+    Given business 84 is called "Don Pepe"
+    When consumer 2001 saves business 84
+    Then the response has status 201
+    When consumer 2001 lists saved businesses
+    Then the saved business is called "Don Pepe"

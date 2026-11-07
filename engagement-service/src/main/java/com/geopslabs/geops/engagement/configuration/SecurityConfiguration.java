@@ -45,6 +45,7 @@ public class SecurityConfiguration {
             AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry requests) {
         requests
                 .requestMatchers(PUBLIC_PATHS).permitAll()
+                .requestMatchers("/api/v1/saved-businesses", "/api/v1/saved-businesses/**").hasAuthority(ROLE_CONSUMER)
                 .requestMatchers(HttpMethod.POST, "/api/v1/reviews/*/replies").hasAuthority("ROLE_BUSINESS_OWNER")
                 .requestMatchers("/api/v1/follows", "/api/v1/follows/**").hasAuthority(ROLE_CONSUMER)
                 .requestMatchers(HttpMethod.POST, SAVED_OFFERS).hasAuthority(ROLE_CONSUMER)
