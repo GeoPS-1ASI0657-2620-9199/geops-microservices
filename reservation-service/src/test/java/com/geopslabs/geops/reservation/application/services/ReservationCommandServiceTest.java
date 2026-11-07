@@ -47,6 +47,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -154,7 +155,6 @@ class ReservationCommandServiceTest {
 
     @Test
     void returnsTheActiveReservationWithoutGeneratingACode() {
-        givenOfferValidTo(VALID_TO);
         var existing = storedReservation();
         when(reservationRepository.findActiveByConsumerAndOffer(CONSUMER_ID, OFFER_ID))
                 .thenReturn(Optional.of(existing));
@@ -165,6 +165,18 @@ class ReservationCommandServiceTest {
         assertThat(result.reservation()).isSameAs(existing);
         verify(reservationRepository, never()).existsByCode(anyString());
         verify(reservationRepository, never()).save(any());
+    }
+
+    @Test
+    void returnsTheActiveReservationWithoutAskingTheCatalog() {
+        var existing = storedReservation();
+        when(reservationRepository.findActiveByConsumerAndOffer(CONSUMER_ID, OFFER_ID))
+                .thenReturn(Optional.of(existing));
+
+        var result = service.create(COMMAND);
+
+        assertThat(result.reservation()).isSameAs(existing);
+        verifyNoInteractions(offerCatalog);
     }
 
     @Test
