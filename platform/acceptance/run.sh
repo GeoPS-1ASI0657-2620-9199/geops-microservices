@@ -255,6 +255,9 @@ us33() {
   echo "Feature: US33 Communicate the services asynchronously"
   US33_OWNER_TOKEN=""
   local code lag marker
+  # US17 deja a Catalog reiniciando; sin Catalog sano no se puede publicar la oferta del escenario.
+  step "Catalog is healthy before the scenarios"
+  [ "$(wait_catalog_healthy 1)" -ge 1 ] && ok || { ko; return; }
 
   echo " Scenario: The redemption completes while the consumer service is down"
   step "Background: a business owner has an ACTIVE reservation code"
