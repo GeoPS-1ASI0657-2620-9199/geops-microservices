@@ -68,3 +68,17 @@ Feature: Review a business after a verified redemption
       | token                       | status | code         |
       | without a token             | 401    | UNAUTHORIZED |
       | with a business owner token | 403    | FORBIDDEN    |
+
+
+  Scenario: The business reply appears next to the original review
+    Given business 84 is called "Don Pepe"
+    And consumer 2001 published a review of business 84 with rating 5 and text "Respetaron el precio."
+    When the business owner of business 84 replies "Gracias, te esperamos pronto."
+    Then the response has status 201
+    And the reviews of business 84 show "Respetaron el precio." with the reply "Gracias, te esperamos pronto."
+
+  Scenario: Another business cannot reply
+    Given business 84 is called "Don Pepe"
+    And consumer 2001 published a review of business 84 with rating 5 and text "Respetaron el precio."
+    When the business owner of business 99 replies "No es mío."
+    Then the response has status 403
