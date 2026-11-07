@@ -57,14 +57,15 @@ public class ReservationCommandService implements CreateReservationUseCase, Rede
 
     @Override
     public ReservationResult create(CreateReservationCommand command) {
+        // An active reservation is answered from this service alone: repeating the request must not depend on Catalog.
+        var existing = reservationRepository.findActiveByConsumerAndOffer(command.consumerId(), command.offerId());
+        if (existing.isPresent()) {
+            LOGGER.info("reservation.reused reservationId={} offerId={}", existing.get().getId(), command.offerId());
+            return ReservationResult.existing(existing.get());
+        }
         var offer = offerCatalog.findValidOffer(command.offerId());
         if (offer.validTo().isBefore(LocalDate.now(clock.withZone(OFFER_ZONE)))) {
             throw new OfferNotAvailableException(offer.offerId());
-        }
-        var existing = reservationRepository.findActiveByConsumerAndOffer(command.consumerId(), command.offerId());
-        if (existing.isPresent()) {
-            LOGGER.info("reservation.reused reservationId={} offerId={}", existing.get().getId(), offer.offerId());
-            return ReservationResult.existing(existing.get());
         }
         return insert(command, offer);
     }
