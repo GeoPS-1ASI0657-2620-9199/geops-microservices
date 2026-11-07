@@ -1,6 +1,7 @@
 package com.geopslabs.geops.catalog.domain.models;
 
 import com.geopslabs.geops.catalog.domain.models.exceptions.CampaignAlreadyEndedException;
+import com.geopslabs.geops.catalog.domain.models.exceptions.CampaignEndedException;
 
 import java.time.LocalDate;
 
@@ -37,12 +38,34 @@ public class Campaign {
                 estimatedBudget);
     }
 
+    public Campaign pause(LocalDate today) {
+        return changeTo(CampaignStatus.PAUSED, today);
+    }
+
+    public Campaign reactivate(LocalDate today) {
+        return changeTo(CampaignStatus.ACTIVE, today);
+    }
+
+    public boolean isActive() {
+        return status == CampaignStatus.ACTIVE;
+    }
+
     public boolean isOfBusiness(Long candidateBusinessId) {
         return businessId.equals(candidateBusinessId);
     }
 
     public boolean covers(GeoPoint point) {
         return zone.covers(point);
+    }
+
+    private Campaign changeTo(CampaignStatus target, LocalDate today) {
+        if (status == CampaignStatus.FINISHED || period.hasEndedBefore(today)) {
+            throw new CampaignEndedException(period.end());
+        }
+        if (status == target) {
+            return this;
+        }
+        return new Campaign(id, businessId, name, description, period, zone, target, estimatedBudget);
     }
 
     public Long getId() {

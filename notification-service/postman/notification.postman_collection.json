@@ -440,6 +440,44 @@
           ]
         }
       ]
+    },
+    {
+      "name": "GET notification-preferences",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/v1/notification-preferences",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "POST email-unsubscriptions",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/email-unsubscriptions",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"token\": \"{{unsubscribeToken}}\"}"
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      }
     }
   ],
   "variable": [

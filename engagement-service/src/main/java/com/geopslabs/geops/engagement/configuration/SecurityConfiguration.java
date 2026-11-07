@@ -46,6 +46,7 @@ public class SecurityConfiguration {
         requests
                 .requestMatchers(PUBLIC_PATHS).permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/reviews/*/replies").hasAuthority("ROLE_BUSINESS_OWNER")
+                .requestMatchers("/api/v1/follows", "/api/v1/follows/**").hasAuthority(ROLE_CONSUMER)
                 .requestMatchers(HttpMethod.POST, SAVED_OFFERS).hasAuthority(ROLE_CONSUMER)
                 .requestMatchers(HttpMethod.GET, SAVED_OFFERS).hasAuthority(ROLE_CONSUMER)
                 .requestMatchers(HttpMethod.DELETE, SAVED_OFFER_PATHS).hasAuthority(ROLE_CONSUMER)

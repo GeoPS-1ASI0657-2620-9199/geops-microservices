@@ -1,0 +1,33 @@
+{
+  "eventId": "8e0f1c64-2a51-4f0b-9b8e-6f1d1c2a7e10",
+  "eventType": "OfferPublished",
+  "version": 1,
+  "occurredAt": "2026-10-27T15:04:05Z",
+  "aggregateId": 77,
+  "payload": {
+    "offerId": 1052,
+    "campaignId": 77,
+    "businessId": 84,
+    "businessName": "Restaurante Don Pepe",
+    "title": "2x1 en almuerzos ejecutivos",
+    "category": "Gastronomía",
+    "price": 18.5,
+    "validTo": "2026-11-15",
+    "location": {
+      "latitude": -12.1211,
+      "longitude": -77.0297
+    },
+    "zone": {
+      "type": "RADIUS",
+      "center": {
+        "latitude": -12.1205,
+        "longitude": -77.0301
+      },
+      "radiusMeters": 1200,
+      "district": null,
+      "reachMeters": 1200
+    },
+    "reactivated": false,
+    "publishedAt": "2026-10-27T15:04:05Z"
+  }
+}

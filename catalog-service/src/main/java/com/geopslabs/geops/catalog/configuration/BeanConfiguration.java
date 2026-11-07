@@ -2,16 +2,19 @@ package com.geopslabs.geops.catalog.configuration;
 
 import com.geopslabs.geops.catalog.application.services.CampaignCommandService;
 import com.geopslabs.geops.catalog.application.services.CampaignQueryService;
+import com.geopslabs.geops.catalog.application.services.CampaignStatusCommandService;
 import com.geopslabs.geops.catalog.application.services.CellInvalidator;
 import com.geopslabs.geops.catalog.application.services.OfferQueryService;
 import com.geopslabs.geops.catalog.application.services.PublicOfferCommandService;
 import com.geopslabs.geops.catalog.application.services.PublicSourceOfferQueryService;
 import com.geopslabs.geops.catalog.application.usecases.LoadPublicOffersUseCase;
 import com.geopslabs.geops.catalog.application.usecases.SearchPublicSourceOffersUseCase;
+import com.geopslabs.geops.catalog.application.usecases.ChangeCampaignStatusUseCase;
 import com.geopslabs.geops.catalog.application.usecases.CreateCampaignUseCase;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.MerchantStandingRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.OfferRepositoryPort;
+import com.geopslabs.geops.catalog.domain.ports.OutboxPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -27,17 +30,29 @@ public class BeanConfiguration {
 
     @Bean
     public OfferQueryService offerQueryService(OfferRepositoryPort offerRepository,
+                                               CampaignRepositoryPort campaignRepository,
                                                MerchantStandingRepositoryPort merchantStandingRepository,
                                                Clock clock) {
-        return new OfferQueryService(offerRepository, merchantStandingRepository, clock);
+        return new OfferQueryService(offerRepository, campaignRepository, merchantStandingRepository, clock);
     }
 
     @Bean
     public CreateCampaignUseCase createCampaignUseCase(CampaignRepositoryPort campaignRepository,
                                                        OfferRepositoryPort offerRepository,
                                                        MerchantStandingRepositoryPort merchantStandingRepository,
-                                                       CellInvalidator cellInvalidator, Clock clock) {
-        return new CampaignCommandService(campaignRepository, offerRepository, merchantStandingRepository,
+                                                       OutboxPort outbox, CellInvalidator cellInvalidator,
+                                                       Clock clock) {
+        return new CampaignCommandService(campaignRepository, offerRepository, merchantStandingRepository, outbox,
+                cellInvalidator, clock);
+    }
+
+    @Bean
+    public ChangeCampaignStatusUseCase changeCampaignStatusUseCase(CampaignRepositoryPort campaignRepository,
+                                                                   OfferRepositoryPort offerRepository,
+                                                                   MerchantStandingRepositoryPort standings,
+                                                                   OutboxPort outbox, CellInvalidator cellInvalidator,
+                                                                   Clock clock) {
+        return new CampaignStatusCommandService(campaignRepository, offerRepository, standings, outbox,
                 cellInvalidator, clock);
     }
 

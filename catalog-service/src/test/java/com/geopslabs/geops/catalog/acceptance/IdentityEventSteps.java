@@ -5,23 +5,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
-import org.apache.kafka.clients.admin.AdminClient;
-import org.apache.kafka.clients.admin.OffsetSpec;
-import org.apache.kafka.common.TopicPartition;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.kafka.core.KafkaTemplate;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -31,9 +24,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class IdentityEventSteps {
     static final String TOPIC = "identity.events";
-    private static final String GROUP = "catalog-service";
-    private static final Duration WAIT = Duration.ofSeconds(90);
-    private static final long POLL_MILLIS = 100;
     private static final long SEND_TIMEOUT_SECONDS = 10;
 
     private final KafkaTemplate<String, String> kafka;
@@ -168,28 +158,7 @@ public class IdentityEventSteps {
         kafka.send(TOPIC, key, value).get(SEND_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     }
 
-    /** Waits until the consumer group committed every record written to the topic. */
     private void awaitConsumed() throws Exception {
-        try (var admin = AdminClient.create(kafkaAdmin.getConfigurationProperties())) {
-            var partitions = admin.describeTopics(java.util.List.of(TOPIC)).allTopicNames().get().get(TOPIC)
-                    .partitions().stream().map(info -> new TopicPartition(TOPIC, info.partition())).toList();
-            var deadline = Instant.now().plus(WAIT);
-            while (Instant.now().isBefore(deadline)) {
-                var ends = admin.listOffsets(partitions.stream()
-                                .collect(Collectors.toMap(Function.identity(), partition -> OffsetSpec.latest())))
-                        .all().get();
-                Map<TopicPartition, Long> committed = admin.listConsumerGroupOffsets(GROUP)
-                        .partitionsToOffsetAndMetadata().get().entrySet().stream()
-                        .filter(entry -> entry.getValue() != null)
-                        .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().offset()));
-                var done = partitions.stream().allMatch(partition ->
-                        committed.getOrDefault(partition, 0L) >= ends.get(partition).offset());
-                if (done) {
-                    return;
-                }
-                Thread.sleep(POLL_MILLIS);
-            }
-        }
-        throw new AssertionError("Catalog did not consume identity.events within " + WAIT);
+        ConsumerGroupProgress.awaitConsumed(kafkaAdmin, TOPIC);
     }
 }

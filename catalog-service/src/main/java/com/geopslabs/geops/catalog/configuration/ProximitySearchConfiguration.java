@@ -9,6 +9,7 @@ import com.geopslabs.geops.catalog.domain.models.ProximitySearchService;
 import com.geopslabs.geops.catalog.domain.ports.CellCachePort;
 import com.geopslabs.geops.catalog.domain.ports.JobLockPort;
 import com.geopslabs.geops.catalog.domain.ports.OfferRepositoryPort;
+import com.geopslabs.geops.catalog.domain.ports.OutboxPort;
 import com.geopslabs.geops.catalog.infrastructure.cache.DisabledCellCache;
 import com.geopslabs.geops.catalog.infrastructure.cache.RedisCellCacheAdapter;
 import io.lettuce.core.ClientOptions;
@@ -71,8 +72,9 @@ public class ProximitySearchConfiguration {
 
     @Bean
     public OfferExpirationScheduler offerExpirationScheduler(OfferRepositoryPort offerRepository,
-                                                             JobLockPort jobLock, CellInvalidator cellInvalidator,
+                                                             JobLockPort jobLock, OutboxPort outbox,
+                                                             CellInvalidator cellInvalidator,
                                                              TransactionOperations transactions, Clock clock) {
-        return new OfferExpirationScheduler(offerRepository, jobLock, cellInvalidator, transactions, clock);
+        return new OfferExpirationScheduler(offerRepository, jobLock, outbox, cellInvalidator, transactions, clock);
     }
 }

@@ -1,5 +1,6 @@
 package com.geopslabs.geops.catalog.infrastructure.web;
 
+import com.geopslabs.geops.catalog.application.usecases.ChangeCampaignStatusUseCase;
 import com.geopslabs.geops.catalog.application.usecases.CreateCampaignUseCase;
 import com.geopslabs.geops.catalog.application.usecases.GetCampaignByIdUseCase;
 import com.geopslabs.geops.catalog.application.usecases.ListBusinessCampaignsUseCase;
@@ -19,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -82,20 +84,30 @@ public class CampaignsController {
             {"code": "FORBIDDEN", "message": "Campaign 14 belongs to another account"}""";
     private static final String NOT_FOUND_EXAMPLE = """
             {"code": "CAMPAIGN_NOT_FOUND", "message": "Campaign 9999 was not found"}""";
+    private static final String PAUSED_CAMPAIGN_EXAMPLE = """
+            {"campaignId": 77, "businessId": 84, "name": "Almuerzos de noviembre",
+             "description": "Menú ejecutivo 2x1 de lunes a viernes",
+             "period": {"start": "2026-10-27", "end": "2026-11-15"},
+             "zone": {"type": "RADIUS", "center": {"latitude": -12.1211, "longitude": -77.0297},
+                      "radiusMeters": 1200, "district": null},
+             "status": "PAUSED", "estimatedBudget": {"amount": 300.00, "currency": "PEN"}}""";
 
     private final CreateCampaignUseCase createCampaign;
     private final ListBusinessCampaignsUseCase listBusinessCampaigns;
     private final GetCampaignByIdUseCase getCampaignById;
     private final ListCampaignOffersUseCase listCampaignOffers;
+    private final ChangeCampaignStatusUseCase changeCampaignStatus;
 
     public CampaignsController(CreateCampaignUseCase createCampaign,
                                ListBusinessCampaignsUseCase listBusinessCampaigns,
                                GetCampaignByIdUseCase getCampaignById,
-                               ListCampaignOffersUseCase listCampaignOffers) {
+                               ListCampaignOffersUseCase listCampaignOffers,
+                               ChangeCampaignStatusUseCase changeCampaignStatus) {
         this.createCampaign = createCampaign;
         this.listBusinessCampaigns = listBusinessCampaigns;
         this.getCampaignById = getCampaignById;
         this.listCampaignOffers = listCampaignOffers;
+        this.changeCampaignStatus = changeCampaignStatus;
     }
 
     @Operation(summary = "Create a geo-referenced campaign with its offers",
@@ -171,6 +183,41 @@ public class CampaignsController {
             @Parameter(description = "Campaign id", example = "14") @PathVariable Long campaignId) {
         var businessId = AuthenticatedUser.from(jwt).requireBusinessId();
         var campaign = getCampaignById.getById(new GetCampaignByIdQuery(campaignId, businessId));
+        return CampaignResponseAssembler.toResponse(campaign);
+    }
+
+    @Operation(summary = "Pause or reactivate a campaign of the business in the token",
+            description = "PAUSED hides its offers from the catalog and from reservations; ACTIVE shows them again "
+                    + "if the validity has not ended. Asking for the status the campaign already has changes "
+                    + "nothing. Pausing publishes CampaignPaused and reactivating one OfferPublished per valid "
+                    + "offer; the cached cells of its offers are deleted before answering.")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = {
+            @ExampleObject(name = "pause", value = """
+                    {"status": "PAUSED"}"""),
+            @ExampleObject(name = "reactivate", value = """
+                    {"status": "ACTIVE"}""")}))
+    @ApiResponse(responseCode = "200", description = "Campaign with its new status",
+            content = @Content(examples = @ExampleObject(value = PAUSED_CAMPAIGN_EXAMPLE)))
+    @ApiResponse(responseCode = "400", description = "Status other than PAUSED or ACTIVE, or invalid id",
+            content = @Content(examples = {
+                    @ExampleObject(name = "invalidStatus", value = """
+                            {"code": "INVALID_CAMPAIGN_STATUS", "message": "El estado debe ser PAUSED o ACTIVE."}"""),
+                    @ExampleObject(name = "invalidId", value = INVALID_ID_EXAMPLE)}))
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token",
+            content = @Content(examples = @ExampleObject(value = UNAUTHORIZED_EXAMPLE)))
+    @ApiResponse(responseCode = "403", description = "Token without ROLE_BUSINESS_OWNER or campaign of another business",
+            content = @Content(examples = @ExampleObject(value = FORBIDDEN_EXAMPLE)))
+    @ApiResponse(responseCode = "404", description = "Campaign does not exist",
+            content = @Content(examples = @ExampleObject(value = NOT_FOUND_EXAMPLE)))
+    @ApiResponse(responseCode = "409", description = "The validity of the campaign already ended",
+            content = @Content(examples = @ExampleObject(value = """
+                    {"code": "CAMPAIGN_ALREADY_ENDED", "message": "La campaña terminó el 2026-11-15. Ya no se puede pausar ni reactivar."}""")))
+    @PatchMapping(value = "/{campaignId}/status", consumes = APPLICATION_JSON_VALUE)
+    public CampaignResponse changeStatus(@AuthenticationPrincipal Jwt jwt,
+            @Parameter(description = "Campaign id", example = "77") @PathVariable Long campaignId,
+            @Valid @RequestBody ChangeCampaignStatusRequest request) {
+        var businessId = AuthenticatedUser.from(jwt).requireBusinessId();
+        var campaign = changeCampaignStatus.changeStatus(request.toCommand(campaignId, businessId));
         return CampaignResponseAssembler.toResponse(campaign);
     }
 

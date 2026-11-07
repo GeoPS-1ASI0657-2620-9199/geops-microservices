@@ -63,3 +63,8 @@ management:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+
+---
+geops:
+  notifications:
+    unsubscribe-secret: ${NOTIFICATION_UNSUBSCRIBE_SECRET}
