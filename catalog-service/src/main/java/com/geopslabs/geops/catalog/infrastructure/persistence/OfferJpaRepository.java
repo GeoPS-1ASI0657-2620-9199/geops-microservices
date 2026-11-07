@@ -94,11 +94,16 @@ public interface OfferJpaRepository extends JpaRepository<OfferJpaEntity, Long> 
             WITH expired AS (
                 UPDATE offers SET status = :expiredStatus
                 WHERE status = :offerStatus AND valid_to < :today
-                RETURNING location
+                RETURNING id, campaign_id, business_id, valid_to, location
             )
-            SELECT ST_Y(location::geometry) AS "latitude", ST_X(location::geometry) AS "longitude"
+            SELECT id                       AS "offerId",
+                   campaign_id              AS "campaignId",
+                   business_id              AS "businessId",
+                   valid_to                 AS "validTo",
+                   ST_Y(location::geometry) AS "latitude",
+                   ST_X(location::geometry) AS "longitude"
             FROM expired
-            WHERE location IS NOT NULL
+            ORDER BY id
             """;
 
     List<OfferJpaEntity> findByCampaignIdOrderByIdAsc(Long campaignId);
@@ -139,9 +144,9 @@ public interface OfferJpaRepository extends JpaRepository<OfferJpaEntity, Long> 
     /** A data-modifying CTE: PostgreSQL runs the UPDATE and answers its rows like a query. */
     @Transactional
     @Query(value = EXPIRE_QUERY, nativeQuery = true)
-    List<LocationRow> expirePublishedBefore(@Param("today") LocalDate today,
-                                            @Param("offerStatus") String offerStatus,
-                                            @Param("expiredStatus") String expiredStatus);
+    List<ExpiredOfferRow> expirePublishedBefore(@Param("today") LocalDate today,
+                                                @Param("offerStatus") String offerStatus,
+                                                @Param("expiredStatus") String expiredStatus);
 
     List<OfferJpaEntity> findByGeocodingStatusOrderByIdAsc(com.geopslabs.geops.catalog.domain.models.GeocodingStatus status);
 
@@ -206,5 +211,15 @@ public interface OfferJpaRepository extends JpaRepository<OfferJpaEntity, Long> 
         Double getLatitude();
 
         Double getLongitude();
+    }
+
+    interface ExpiredOfferRow extends LocationRow {
+        Long getOfferId();
+
+        Long getCampaignId();
+
+        Long getBusinessId();
+
+        LocalDate getValidTo();
     }
 }

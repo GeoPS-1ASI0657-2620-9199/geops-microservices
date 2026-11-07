@@ -28,6 +28,10 @@ public class MutableClock extends Clock {
         now = now.plus(duration);
     }
 
+    public void moveTo(Instant instant) {
+        now = instant;
+    }
+
     @Override
     public ZoneId getZone() {
         return zone;

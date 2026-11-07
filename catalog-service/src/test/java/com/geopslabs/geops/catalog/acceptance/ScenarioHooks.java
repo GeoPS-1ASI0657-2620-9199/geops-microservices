@@ -12,6 +12,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
  */
 public class ScenarioHooks {
     private static final String[] CLEAN_UP = {
+            "DELETE FROM outbox_events",
             "DELETE FROM standing_changes",
             "DELETE FROM processed_events",
             "DELETE FROM moderation_actions",
