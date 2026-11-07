@@ -40,4 +40,10 @@ public class MerchantStandingJpaEntity {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @Column(name = "redeemed_reservations", nullable = false)
+    private int redeemedReservations;
+
+    @Column(name = "consumer_favor_reports", nullable = false)
+    private int consumerFavorReports;
 }
