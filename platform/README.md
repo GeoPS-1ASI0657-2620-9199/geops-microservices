@@ -44,3 +44,15 @@ cp .env.admin.example .env.admin && ./postgres/seed-admin.sh
 
 En una base ya creada (la VM), el retiro de `CONNECT` público se aplica una vez con
 `postgres/revoke-public-connect.sql`. En la VM: `./scripts/swap-2g.sh` antes del primer despliegue.
+
+## Proveedores de notificaciones
+
+Correo y push se configuran solo con variables de `.env`; el código no cambia entre local y la VM.
+
+| Canal | Local | VM |
+|---|---|---|
+| Correo | Mailpit (`SMTP_HOST` vacío); bandeja en `http://localhost:8025` | Brevo (plan gratuito): `SMTP_HOST=smtp-relay.brevo.com`, `SMTP_PORT=587`, `SMTP_AUTH=true`, `SMTP_STARTTLS=true`, `SMTP_USERNAME` y `SMTP_PASSWORD` de la clave SMTP, `NOTIFICATION_EMAIL_FROM` con un remitente verificado en Brevo |
+| Push web | Apagado si `FCM_CREDENTIALS_PATH` está vacío | Firebase Cloud Messaging (plan Spark): la cuenta de servicio en `platform/keys/fcm-service-account.json` y `FCM_CREDENTIALS_PATH=/run/keys/fcm-service-account.json` |
+
+La clave SMTP y la cuenta de servicio nunca se suben a Git: `.env` y `platform/keys/` están ignorados.
+La configuración pública de Firebase y la clave VAPID van en los `environment*.ts` de la web.
