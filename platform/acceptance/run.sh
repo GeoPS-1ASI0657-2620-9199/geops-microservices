@@ -1,8 +1,8 @@
 #!/bin/bash
-# Pasos de US16 y US17 contra la plataforma levantada con Docker Compose, en local (C2-01).
+# Pasos de US16, US17 y US33 contra la plataforma levantada con Docker Compose, en local (C2-01).
 # Uso, desde platform/:
 #   docker compose --profile app --profile messaging up -d --build
-#   ./acceptance/run.sh [us16|us17|all]
+#   ./acceptance/run.sh [us16|us17|us33|all]
 # Variables opcionales:
 #   COMPOSE_ARGS  archivos de compose (por defecto "-f docker-compose.yml")
 #   GATEWAY_URL   puerta de entrada (por defecto http://localhost:8080)
@@ -177,11 +177,130 @@ us17() {
   "${COMPOSE[@]}" up -d --no-deps --scale catalog-service=1 catalog-service > /dev/null 2>&1
 }
 
+# Datos de la prueba de US33. Las cuentas son fijas para poder repetir la prueba: si ya existen,
+# el registro responde 409 y el login sirve igual.
+US33_TOPIC="reservation.events"
+US33_OWNER_EMAIL="us33.comercio@ejemplo.pe"
+US33_OWNER_PASSWORD="Us33#Comercio2026"
+US33_CONSUMER_EMAIL="us33.consumidor@ejemplo.pe"
+US33_CONSUMER_PASSWORD="Us33#Consumidor2026"
+# Git Bash en Windows reescribe las rutas que empiezan con / al llamar a docker; se desactiva.
+export MSYS_NO_PATHCONV=1
+KAFKA_BIN=/opt/kafka/bin
+
+json_field() { sed -n "s/.*\"$1\" *: *\"\{0,1\}\([^\",}]*\)\"\{0,1\}.*/\1/p" | head -1; }
+# método ruta token cuerpo -> imprime el cuerpo y, en otra línea, el código HTTP
+http_json() {
+  curl -s -w '\n%{http_code}' -X "$1" "${GATEWAY_URL}$2" -H 'Content-Type: application/json' \
+    ${3:+-H "Authorization: Bearer $3"} ${4:+-d "$4"}
+}
+login_token() {
+  http_json POST /api/v1/auth/login "" "{\"email\":\"$1\",\"password\":\"$2\"}" | head -1 | json_field accessToken
+}
+# grupo tópico -> suma del atraso de todas las particiones
+topic_lag() {
+  "${COMPOSE[@]}" exec -T kafka ${KAFKA_BIN}/kafka-consumer-groups.sh --bootstrap-server kafka:9092 \
+    --describe --group "$1" 2> /dev/null | awk -v t="$2" '$2 == t && $6 ~ /^[0-9]+$/ { s += $6 } END { print s + 0 }'
+}
+# tópico patrón -> 0 si algún registro lo contiene
+topic_has() {
+  "${COMPOSE[@]}" exec -T kafka ${KAFKA_BIN}/kafka-console-consumer.sh --bootstrap-server kafka:9092 \
+    --topic "$1" --from-beginning --timeout-ms 8000 2> /dev/null | grep -Eq "$2"
+}
+# segundos comando... -> 0 si el comando pasa antes del plazo
+wait_until() {
+  local limit=$1; shift
+  for _ in $(seq 1 "$limit"); do "$@" && return 0; sleep 1; done
+  return 1
+}
+redeemed_once() {
+  [ "$(psql_db engagement_db "SELECT count(*) FROM redeemed_reservations WHERE reservation_id = $1" | tr -d '[:space:]')" = "1" ]
+}
+lag_is_zero() { [ "$(topic_lag "$1" "$US33_TOPIC")" = "0" ]; }
+
+# Deja un canje listo: crea (o reutiliza) comercio y consumidor, publica una oferta y reserva.
+# Deja en variables globales US33_OWNER_TOKEN, US33_RESERVATION_ID y US33_CODE.
+us33_prepare_reservation() {
+  local start end body offer_id business_id reservation
+  if [ -z "${US33_OWNER_TOKEN:-}" ]; then
+    US33_OWNER_TOKEN=$(login_token "$US33_OWNER_EMAIL" "$US33_OWNER_PASSWORD")
+    if [ -z "$US33_OWNER_TOKEN" ]; then
+      # Primera vez: se registra el comercio con el primer RUC del padron de muestra que siga libre.
+      local ruc status
+      for ruc in $(cut -d'|' -f1 ../identity-service/src/main/resources/sunat/padron-muestra.txt | grep -E '^[0-9]{11}$'); do
+        status=$(http_json POST /api/v1/auth/register "" "{\"role\":\"BUSINESS_OWNER\",\"fullName\":\"Comercio US33\",\"email\":\"${US33_OWNER_EMAIL}\",\"phone\":\"987000033\",\"password\":\"${US33_OWNER_PASSWORD}\",\"businessProfile\":{\"businessName\":\"Bodega US33\",\"businessType\":\"Bodega\",\"ruc\":\"${ruc}\",\"address\":\"Jr. Huanuco 1250, La Victoria\",\"latitude\":-12.0681,\"longitude\":-77.035,\"openingHours\":\"Lun-Sab 07:00-22:00\"}}" | tail -1)
+        [ "$status" = "201" ] && break
+      done
+    fi
+    http_json POST /api/v1/auth/register "" "{\"role\":\"CONSUMER\",\"fullName\":\"Consumidor US33\",\"email\":\"${US33_CONSUMER_EMAIL}\",\"phone\":\"987000034\",\"password\":\"${US33_CONSUMER_PASSWORD}\"}" > /dev/null
+    US33_OWNER_TOKEN=$(login_token "$US33_OWNER_EMAIL" "$US33_OWNER_PASSWORD")
+    US33_CONSUMER_TOKEN=$(login_token "$US33_CONSUMER_EMAIL" "$US33_CONSUMER_PASSWORD")
+  fi
+  [ -n "$US33_OWNER_TOKEN" ] && [ -n "$US33_CONSUMER_TOKEN" ] || return 1
+  start=$(date -u +%Y-%m-%d); end=$(date -u -d '+30 days' +%Y-%m-%d)
+  body=$(http_json POST /api/v1/campaigns "$US33_OWNER_TOKEN" "{\"businessName\":\"Bodega US33\",\"name\":\"Prueba US33 $(date +%s)\",\"description\":\"Oferta para la prueba de eventos\",\"period\":{\"start\":\"${start}\",\"end\":\"${end}\"},\"storeLocation\":{\"address\":\"Jr. Huanuco 1250, La Victoria\",\"latitude\":-12.067,\"longitude\":-77.024},\"zone\":{\"type\":\"RADIUS\",\"center\":{\"latitude\":-12.067,\"longitude\":-77.024},\"radiusMeters\":800},\"offers\":[{\"title\":\"Almuerzo US33\",\"conditions\":\"Solo para la prueba.\",\"price\":15,\"validTo\":\"${end}\",\"category\":\"Gastronomia\"}]}")
+  business_id=$(printf '%s' "$body" | json_field businessId)
+  offer_id=$(psql_db catalog_db "SELECT id FROM offers WHERE business_id = ${business_id:-0} ORDER BY id DESC LIMIT 1" | tr -d '[:space:]')
+  [ -n "$offer_id" ] || return 1
+  reservation=$(http_json POST /api/v1/reservations "$US33_CONSUMER_TOKEN" "{\"offerId\":${offer_id}}" | head -1)
+  US33_RESERVATION_ID=$(printf '%s' "$reservation" | json_field reservationId)
+  US33_CODE=$(printf '%s' "$reservation" | json_field code)
+  [ -n "$US33_RESERVATION_ID" ] && [ -n "$US33_CODE" ]
+}
+us33_redeem() {
+  http_json POST /api/v1/reservations/redeem "$US33_OWNER_TOKEN" "{\"code\":\"${US33_CODE}\"}" | tail -1
+}
+
+us33() {
+  echo "Feature: US33 Communicate the services asynchronously"
+  US33_OWNER_TOKEN=""
+  local code lag marker
+
+  echo " Scenario: The redemption completes while the consumer service is down"
+  step "Background: a business owner has an ACTIVE reservation code"
+  if us33_prepare_reservation; then ok "reservation ${US33_RESERVATION_ID}"; else ko; return; fi
+  "${COMPOSE[@]}" stop engagement-service > /dev/null 2>&1
+  step "engagement-service is stopped"
+  [ -z "$("${COMPOSE[@]}" ps -q --status running engagement-service)" ] && ok || ko
+  code=$(us33_redeem)
+  step "The business owner redeems the code through the gateway"
+  [ "$code" = "200" ] && ok "HTTP $code" || ko "HTTP $code"
+  step "The ReservationRedeemed event is in topic ${US33_TOPIC}"
+  wait_until 30 topic_has "$US33_TOPIC" "\"aggregateId\" *: *${US33_RESERVATION_ID}[,}]" && ok || ko
+  step "The consumer group engagement-service has a lag of at least 1"
+  lag=$(topic_lag engagement-service "$US33_TOPIC")
+  [ "$lag" -ge 1 ] && ok "lag $lag" || ko "lag $lag"
+
+  echo " Scenario: The consumer processes the pending events when it comes back"
+  step "engagement-service starts again"
+  "${COMPOSE[@]}" start engagement-service > /dev/null 2>&1 && ok || ko
+  step "Within 60 seconds the reservation is in redeemed_reservations once"
+  wait_until 60 redeemed_once "$US33_RESERVATION_ID" && ok || ko
+  step "The consumer group engagement-service has a lag of 0"
+  wait_until 30 lag_is_zero engagement-service && ok || ko "lag $(topic_lag engagement-service "$US33_TOPIC")"
+
+  echo " Scenario: An event that cannot be processed is kept for review"
+  marker="us33-unreadable-$(date +%s)"
+  printf '%s\n' "$marker" | "${COMPOSE[@]}" exec -T kafka ${KAFKA_BIN}/kafka-console-producer.sh \
+    --bootstrap-server kafka:9092 --topic "$US33_TOPIC" > /dev/null 2>&1
+  step "Within 10 seconds the record is in ${US33_TOPIC}.DLT"
+  wait_until 10 topic_has "${US33_TOPIC}.DLT" "$marker" && ok || ko
+  step "The logs of engagement-service show event.dead-lettered with its offset"
+  "${COMPOSE[@]}" logs --no-log-prefix engagement-service 2> /dev/null | grep 'event.dead-lettered' | grep -q 'offset=[0-9]' && ok || ko
+  step "The next valid event is still processed"
+  if us33_prepare_reservation && [ "$(us33_redeem)" = "200" ] && wait_until 60 redeemed_once "$US33_RESERVATION_ID"; then
+    ok "reservation ${US33_RESERVATION_ID}"
+  else
+    ko
+  fi
+}
+
 case "${1:-all}" in
   us16) us16 ;;
   us17) us17 ;;
-  all) us16; us17 ;;
-  *) echo "Uso: $0 [us16|us17|all]" >&2; exit 2 ;;
+  us33) us33 ;;
+  all) us16; us17; us33 ;;
+  *) echo "Uso: $0 [us16|us17|us33|all]" >&2; exit 2 ;;
 esac
 
 echo "== ${passed} passed, ${failed} failed"
