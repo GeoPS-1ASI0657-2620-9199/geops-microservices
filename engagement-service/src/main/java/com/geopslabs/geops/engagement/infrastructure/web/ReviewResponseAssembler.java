@@ -11,6 +11,6 @@ public final class ReviewResponseAssembler {
 
     public static ReviewResponse toResponse(Review review) {
         return new ReviewResponse(review.getId(), review.getBusinessId(), review.getRating().stars(), review.getText(),
-                review.getVerifiedRedemption(), review.getCreatedAt().toInstant(ZoneOffset.UTC));
+                review.getVerifiedRedemption(), review.getCreatedAt().toInstant(ZoneOffset.UTC), review.getReply());
     }
 }
