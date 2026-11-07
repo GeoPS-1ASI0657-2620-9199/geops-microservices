@@ -1,0 +1,15 @@
+{
+  "eventId": "0b7c9d1e-4f3a-4c55-8a10-3e2f9d8b6a01",
+  "eventType": "UserRegistered",
+  "version": 1,
+  "occurredAt": "2026-10-27T14:00:00Z",
+  "aggregateId": 2001,
+  "payload": {
+    "userId": 2001,
+    "email": "lucia.fernandez@ejemplo.pe",
+    "role": "CONSUMER",
+    "businessId": null,
+    "emailConfirmed": false,
+    "registeredAt": "2026-10-27T14:00:00Z"
+  }
+}

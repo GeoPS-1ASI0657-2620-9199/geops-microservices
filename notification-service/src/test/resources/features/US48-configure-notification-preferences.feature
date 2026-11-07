@@ -54,3 +54,17 @@ Feature: Configure notification preferences
       | with a token signed with another key | 401    | UNAUTHORIZED |
       | with a business owner token          | 403    | FORBIDDEN    |
       | with a token without roles           | 403    | FORBIDDEN    |
+
+
+  Scenario: The consumer reads the current preferences
+    Given consumer 2001 has the recipient copy "consumer@example.test" with a confirmed email
+    When consumer 2001 sets push to false, email to true and a daily limit of 2
+    And consumer 2001 reads notification preferences
+    Then the response has status 200
+
+  Scenario: Unsubscribing one email type keeps the account and channel
+    Given consumer 2001 has the recipient copy "consumer@example.test" with a confirmed email
+    When consumer 2001 sets push to false, email to true and a daily limit of 2
+    And consumer 2001 confirms the signed nearby email unsubscribe link
+    Then the response has status 200
+    And consumer 2001 stops nearby emails and keeps the email channel enabled
