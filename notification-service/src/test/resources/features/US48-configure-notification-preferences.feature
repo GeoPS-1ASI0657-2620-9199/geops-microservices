@@ -68,3 +68,15 @@ Feature: Configure notification preferences
     And consumer 2001 confirms the signed nearby email unsubscribe link
     Then the response has status 200
     And consumer 2001 stops nearby emails and keeps the email channel enabled
+
+
+  Scenario: Future notices respect disabled channels
+    Given consumer 2001 has a confirmed email with email on and a limit of 3
+    And consumer 2001 turned both offer channels off
+    When Catalog publishes 1 nearby offers in the same window
+    Then consumer 2001 has no offer notices
+
+  Scenario: The daily limit applies across offer channels
+    Given consumer 2001 has a confirmed email with email on and a limit of 2
+    When Catalog publishes 3 nearby offers in the same window
+    Then consumer 2001 has 2 pending notices and 1 skipped by the limit

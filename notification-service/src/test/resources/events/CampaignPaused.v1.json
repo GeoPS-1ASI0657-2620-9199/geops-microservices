@@ -1,0 +1,16 @@
+{
+  "eventId": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+  "eventType": "CampaignPaused",
+  "version": 1,
+  "occurredAt": "2026-10-28T10:00:00Z",
+  "aggregateId": 77,
+  "payload": {
+    "campaignId": 77,
+    "businessId": 84,
+    "offerIds": [
+      1052,
+      1053
+    ],
+    "pausedAt": "2026-10-28T10:00:00Z"
+  }
+}
