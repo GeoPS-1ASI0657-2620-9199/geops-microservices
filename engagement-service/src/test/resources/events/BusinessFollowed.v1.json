@@ -1,0 +1,12 @@
+{
+  "eventId": "4d3c2b1a-0f9e-4d8c-8b7a-6f5e4d3c2b1a",
+  "eventType": "BusinessFollowed",
+  "version": 1,
+  "occurredAt": "2026-10-27T16:00:00Z",
+  "aggregateId": 2001,
+  "payload": {
+    "consumerId": 2001,
+    "businessId": 84,
+    "followedAt": "2026-10-27T16:00:00Z"
+  }
+}

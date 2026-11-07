@@ -16,7 +16,7 @@ import java.time.ZoneOffset;
 
 public class SnapshotSteps {
     private static final String CLEAN_TABLES = """
-            TRUNCATE TABLE review_replies, reviews, saved_offers, saved_businesses, follows, redeemed_reservations,
+            TRUNCATE TABLE outbox_events, review_replies, reviews, saved_offers, saved_businesses, follows, redeemed_reservations,
                 offer_snapshots, business_snapshots RESTART IDENTITY CASCADE""";
     private static final LocalDateTime REDEEMED_AT =
             LocalDateTime.ofInstant(AcceptanceTestConfiguration.ACCEPTANCE_NOW, ZoneOffset.UTC).minusDays(1);
