@@ -2,6 +2,7 @@ package com.geopslabs.geops.catalog.infrastructure.persistence;
 
 import com.geopslabs.geops.catalog.domain.models.CampaignStatus;
 import com.geopslabs.geops.catalog.domain.models.CampaignZone;
+import com.geopslabs.geops.catalog.domain.models.ExpiredOffer;
 import com.geopslabs.geops.catalog.domain.models.GeoCell;
 import com.geopslabs.geops.catalog.domain.models.GeoPoint;
 import com.geopslabs.geops.catalog.domain.models.GeocodingStatus;
@@ -87,10 +88,11 @@ public class OfferJpaAdapter implements OfferRepositoryPort {
     }
 
     @Override
-    public List<GeoPoint> expirePublishedBefore(LocalDate today) {
+    public List<ExpiredOffer> expirePublishedBefore(LocalDate today) {
         return repository.expirePublishedBefore(today, OfferStatus.PUBLISHED.name(), OfferStatus.EXPIRED.name())
                 .stream()
-                .map(OfferJpaAdapter::toPoint)
+                .map(row -> new ExpiredOffer(row.getOfferId(), row.getCampaignId(), row.getBusinessId(),
+                        row.getValidTo(), row.getLatitude() == null ? null : toPoint(row)))
                 .toList();
     }
 

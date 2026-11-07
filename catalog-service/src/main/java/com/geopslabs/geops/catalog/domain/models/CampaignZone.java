@@ -23,14 +23,14 @@ public record CampaignZone(ZoneType type, GeoPoint center, Integer radiusMeters,
     }
 
     public boolean covers(GeoPoint point) {
-        return isUnbounded() || center.distanceTo(point) <= reachMeters();
+        return reachesEverywhere() || center.distanceTo(point) <= reachMeters();
     }
 
-    private boolean isUnbounded() {
+    public boolean reachesEverywhere() {
         return center == null || (type == ZoneType.RADIUS && radiusMeters == null);
     }
 
-    private int reachMeters() {
+    public int reachMeters() {
         return type == ZoneType.DISTRICT ? DISTRICT_COVERAGE_METERS : radiusMeters;
     }
 }

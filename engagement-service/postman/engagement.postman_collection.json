@@ -57,6 +57,54 @@
               }
             }
           ]
+        },
+        {
+          "name": "Log in as business owner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{identityUrl}}/api/v1/auth/login",
+              "host": [
+                "{{identityUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{businessEmail}}\",\"password\":\"{{businessPassword}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(200);",
+                  "pm.collectionVariables.set(\"businessToken\", pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -901,6 +949,106 @@
       ]
     },
     {
+      "name": "US49 Reply to a review",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/reviews/{{reviewId}}/replies",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{businessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"text\":\"Gracias por venir.\"}"
+        }
+      }
+    },
+    {
+      "name": "US13 Follow businesses",
+      "item": [
+        {
+          "name": "POST follows",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/follows",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"businessId\": {{businessId}}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "GET follows",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/follows",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE follows/84",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/follows/84",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "GET saved-businesses",
       "request": {
         "method": "GET",
@@ -1000,6 +1148,22 @@
     {
       "key": "savedOfferId",
       "value": ""
+    },
+    {
+      "key": "businessEmail",
+      "value": ""
+    },
+    {
+      "key": "businessPassword",
+      "value": ""
+    },
+    {
+      "key": "businessToken",
+      "value": ""
+    },
+    {
+      "key": "reviewId",
+      "value": "3"
     }
   ]
 }

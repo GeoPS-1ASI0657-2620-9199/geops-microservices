@@ -64,4 +64,85 @@ class MerchantStandingTest {
         assertThat(provisional.isNewerThan(MONDAY)).isFalse();
         assertThat(provisional.applyRucVerification(true, null, TUESDAY).isNewerThan(MONDAY)).isTrue();
     }
+
+    @Test
+    void withoutCasesTheIndexIsOneHundred() {
+        assertThat(MerchantStanding.complianceIndexOf(0, 0)).isEqualByComparingTo("100.00");
+    }
+
+    @Test
+    void nineRedemptionsAndOneReportInFavorOfTheConsumerKeepTheSeal() {
+        var standing = verified().applyCompliance(new ComplianceChange(0, 9, 1));
+
+        assertThat(standing.getComplianceIndex()).isEqualByComparingTo("90.00");
+        assertThat(standing.hasVerifiedSeal()).isTrue();
+    }
+
+    @Test
+    void eightRedemptionsAndOneReportInFavorOfTheConsumerLoseTheSeal() {
+        var standing = verified().applyCompliance(new ComplianceChange(0, 8, 1));
+
+        assertThat(standing.getComplianceIndex()).isEqualByComparingTo("88.89");
+        assertThat(standing.hasVerifiedSeal()).isFalse();
+    }
+
+    @Test
+    void oneMoreRedemptionRestoresTheSeal() {
+        var standing = verified().applyCompliance(new ComplianceChange(0, 8, 1))
+                .applyCompliance(ComplianceChange.forRedemption());
+
+        assertThat(standing.getRedeemedReservations()).isEqualTo(9);
+        assertThat(standing.getConsumerFavorReports()).isEqualTo(1);
+        assertThat(standing.hasVerifiedSeal()).isTrue();
+    }
+
+    @Test
+    void openReportsNeverGoBelowZero() {
+        var standing = verified().applyCompliance(ComplianceChange.forReportAnswered());
+
+        assertThat(standing.getOpenReports()).isZero();
+    }
+
+    @Test
+    void aBusinessWithoutAVerifiedRucNeverHasTheSeal() {
+        var standing = MerchantStanding.provisional(84L, "Restaurante Don Pepe")
+                .applyCompliance(new ComplianceChange(0, 10, 0));
+
+        assertThat(standing.getComplianceIndex()).isEqualByComparingTo("100.00");
+        assertThat(standing.hasVerifiedSeal()).isFalse();
+    }
+
+    @Test
+    void complianceKeepsTheInstantOfTheLastRucAnswer() {
+        var standing = verified().applyCompliance(ComplianceChange.forReportOpened());
+
+        assertThat(standing.getUpdatedAt()).isEqualTo(MONDAY);
+        assertThat(standing.isNewerThan(TUESDAY)).isFalse();
+    }
+
+    @Test
+    void aRucAnswerKeepsTheComplianceCounters() {
+        var standing = verified().applyCompliance(new ComplianceChange(1, 8, 1))
+                .applyRucVerification(true, null, TUESDAY);
+
+        assertThat(standing.getRedeemedReservations()).isEqualTo(8);
+        assertThat(standing.getConsumerFavorReports()).isEqualTo(1);
+        assertThat(standing.getOpenReports()).isEqualTo(1);
+        assertThat(standing.getComplianceIndex()).isEqualByComparingTo("88.89");
+    }
+
+    @Test
+    void theRankingChangesWithTheOpenReportsOrTheSeal() {
+        var standing = verified();
+
+        assertThat(standing.applyCompliance(ComplianceChange.forReportOpened()).ranksDifferentlyFrom(standing))
+                .isTrue();
+        assertThat(standing.applyCompliance(new ComplianceChange(0, 8, 1)).ranksDifferentlyFrom(standing)).isTrue();
+        assertThat(standing.applyCompliance(ComplianceChange.forRedemption()).ranksDifferentlyFrom(standing))
+                .isFalse();
+    }
+
+    private static MerchantStanding verified() {
+        return MerchantStanding.fromRucVerification(84L, "Restaurante Don Pepe", true, MONDAY);
+    }
 }

@@ -68,3 +68,17 @@ Con la infraestructura de `platform/` levantada:
 El servicio escucha en `http://localhost:8084`. La colección
 `postman/engagement.postman_collection.json` tiene un caso correcto y uno de error por endpoint;
 la petición de login de Identity llena `token` con `consumerEmail` y `consumerPassword`.
+
+
+## Seguimiento de comercios (US13)
+
+`POST /api/v1/follows` recibe `businessId` y devuelve 201 al crear o 200 al reutilizar el seguimiento.
+`GET /api/v1/follows` devuelve nombres y ofertas publicadas vigentes, calculadas con el d?a de Lima.
+`DELETE /api/v1/follows/{businessId}` devuelve 204, incluso si ya se hab?a retirado el seguimiento.
+Las tres operaciones exigen `ROLE_CONSUMER` y usan exclusivamente copias de la base del servicio.
+
+Cada alta o baja efectiva escribe `BusinessFollowed` o `BusinessUnfollowed` en la misma transacci?n;
+un pedido repetido no crea otro evento. El relay de `engagement.events` entrega la bandeja de salida.
+`US13-follow-business.feature` cubre seguimiento, baja, listado vigente y repetici?n. Las historias
+US12, US13 y US49 cuentan con archivos de aceptaci?n; los contratos y escenarios se ejecutan en CI.
+La carpeta Postman ?US13 Follow businesses? usa `businessId` como variable de colecci?n.

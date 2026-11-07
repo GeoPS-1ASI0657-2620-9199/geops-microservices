@@ -42,6 +42,24 @@ public class HttpScenario {
         return last;
     }
 
+    public HttpResult get(String path, String token) {
+        var request = restClient.get().uri(path);
+        if (token != null) request.header(HttpHeaders.AUTHORIZATION, BEARER + token);
+        return remember(request);
+    }
+
+    public HttpResult post(String path, String token, String jsonBody) {
+        var request = restClient.post().uri(path).contentType(MediaType.APPLICATION_JSON).body(jsonBody);
+        if (token != null) request.header(HttpHeaders.AUTHORIZATION, BEARER + token);
+        return remember(request);
+    }
+
+    private HttpResult remember(RestClient.RequestHeadersSpec<?> request) {
+        last = request.exchange((ignored, response) -> new HttpResult(response.getStatusCode().value(),
+                StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8)));
+        return last;
+    }
+
     public HttpResult last() {
         return last;
     }
