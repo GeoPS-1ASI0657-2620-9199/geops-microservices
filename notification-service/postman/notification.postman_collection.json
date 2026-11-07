@@ -478,6 +478,63 @@
           "type": "noauth"
         }
       }
+    },
+    {
+      "name": "POST push-subscriptions",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/push-subscriptions",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"fcmToken\": \"{{fcmToken}}\", \"userAgent\": \"Postman\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "pm.collectionVariables.set(\"subscriptionId\", pm.response.json().subscriptionId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "DELETE push-subscriptions/{{subscriptionId}}",
+      "request": {
+        "method": "DELETE",
+        "url": "{{baseUrl}}/api/v1/push-subscriptions/{{subscriptionId}}",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
     }
   ],
   "variable": [
@@ -507,6 +564,18 @@
     },
     {
       "key": "futureCapturedAt",
+      "value": ""
+    },
+    {
+      "key": "fcmToken",
+      "value": ""
+    },
+    {
+      "key": "subscriptionId",
+      "value": ""
+    },
+    {
+      "key": "unsubscribeToken",
       "value": ""
     }
   ]

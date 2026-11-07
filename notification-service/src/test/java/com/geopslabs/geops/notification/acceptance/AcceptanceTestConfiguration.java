@@ -20,4 +20,6 @@ public class AcceptanceTestConfiguration {
     @Bean
     @Primary
     public RecordingEmailSender recordingEmailSender() { return new RecordingEmailSender(); }
+    @Bean
+    public RecordingPushChannel recordingPushChannel() { return new RecordingPushChannel(); }
 }
