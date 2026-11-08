@@ -138,8 +138,15 @@ services:
   catalog-service:
     <<: *service
     build: ../catalog-service
+    # Catalog carga más clases que los demás (JPA espacial, Redis, Kafka, Resilience4j, OpenAPI): con 128 MB
+    # de metaspace la VM terminó con OutOfMemoryError: Metaspace y el servicio dejó de responder (504 en el
+    # gateway). Metaspace a 192 MB y 64 MB más de contenedor; el heap baja al 45 % para que la suma no cambie.
+    mem_limit: 512m
     environment:
       <<: *service-env
+      JAVA_TOOL_OPTIONS: >-
+        -XX:MaxRAMPercentage=45 -XX:+UseSerialGC -Xss512k -XX:MaxMetaspaceSize=192m
+        -XX:ReservedCodeCacheSize=64m -XX:MaxDirectMemorySize=32m
       SERVER_PORT: 8082
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/catalog_db
       SPRING_DATASOURCE_USERNAME: catalog_user
