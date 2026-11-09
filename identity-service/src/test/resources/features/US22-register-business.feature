@@ -19,3 +19,13 @@ Feature: Register business
       | Jr. Huánuco 1250, La Victoria  | 95.0     | -77.0350  |
       | Jr. Huánuco 1250, La Victoria  | -12.0681 | -200.0    |
       |                                | -12.0681 | -77.0350  |
+
+  Scenario Outline: A RUC without a valid type prefix or check digit is rejected
+    When they register the business "Bodega Doña Rosa" with RUC "<ruc>", address "Jr. Huánuco 1250, La Victoria", latitude -12.0681 and longitude -77.0350
+    Then the response has status 400
+    And the field "code" is "INVALID_RUC"
+
+    Examples:
+      | ruc         |
+      | 10456789018 |
+      | 30456789019 |

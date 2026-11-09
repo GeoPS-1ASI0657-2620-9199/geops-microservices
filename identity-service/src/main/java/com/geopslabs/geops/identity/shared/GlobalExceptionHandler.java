@@ -53,6 +53,21 @@ public class GlobalExceptionHandler {
         return respondTo(HttpStatus.CONFLICT, exception);
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleForbidden(ForbiddenException exception) {
+        return respondTo(HttpStatus.FORBIDDEN, exception);
+    }
+
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotFound(NotFoundException exception) {
+        return respondTo(HttpStatus.NOT_FOUND, exception);
+    }
+
+    @ExceptionHandler(UnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleUnavailable(UnavailableException exception) {
+        return respondTo(HttpStatus.SERVICE_UNAVAILABLE, exception);
+    }
+
     @ExceptionHandler(UnauthenticatedException.class)
     public ResponseEntity<ErrorResponse> handleUnauthenticated(UnauthenticatedException exception) {
         return respondTo(HttpStatus.UNAUTHORIZED, exception);

@@ -11,5 +11,5 @@ public record SavedOfferResponse(
         String title,
         LocalDate validTo,
         boolean expired,
-        Instant savedAt) {
+        Instant savedAt, String status) {
 }

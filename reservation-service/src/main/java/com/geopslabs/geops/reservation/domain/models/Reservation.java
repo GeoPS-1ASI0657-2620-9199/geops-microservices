@@ -1,6 +1,15 @@
 package com.geopslabs.geops.reservation.domain.models;
 
+import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationAccessDeniedException;
+import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationAlreadyRedeemedException;
+import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationExpiredException;
+import com.geopslabs.geops.reservation.domain.models.exceptions.ReportAlreadyExistsException;
+import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationNotReportableException;
+import com.geopslabs.geops.reservation.domain.models.exceptions.ReservationReportedException;
+import com.geopslabs.geops.reservation.shared.domain.DomainException;
+
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 public class Reservation {
     private final Long id;
@@ -42,6 +51,68 @@ public class Reservation {
 
     public boolean isOfBusiness(Long candidateBusinessId) {
         return businessId.equals(candidateBusinessId);
+    }
+
+    /**
+     * The rules of the conditional update, in the order the rejection is explained: another business,
+     * already redeemed, reported, past its deadline. The deadline is exclusive, as in {@code expires_at > now}.
+     */
+    public Optional<RedeemRejection> rejectionFor(Long candidateBusinessId, LocalDateTime now) {
+        if (!isOfBusiness(candidateBusinessId)) {
+            return Optional.of(RedeemRejection.OTHER_BUSINESS);
+        }
+        if (status == ReservationStatus.REDEEMED) {
+            return Optional.of(RedeemRejection.ALREADY_REDEEMED);
+        }
+        if (status == ReservationStatus.REPORTED) {
+            return Optional.of(RedeemRejection.REPORTED);
+        }
+        if (status == ReservationStatus.EXPIRED || !expiresAt.isAfter(now)) {
+            return Optional.of(RedeemRejection.EXPIRED);
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Returns the redeemed reservation or throws the exception of the first rule it breaks. The stored
+     * transition is the conditional update of the repository; this method states the same rules.
+     */
+    public Reservation redeem(Long candidateBusinessId, LocalDateTime now) {
+        var rejection = rejectionFor(candidateBusinessId, now);
+        if (rejection.isPresent()) {
+            throw rejectionException(rejection.get());
+        }
+        return new Reservation(id, code, consumerId, offerId, businessId, offerTitle, reservedAt, expiresAt, now,
+                ReservationStatus.REDEEMED);
+    }
+
+    /**
+     * The consumer reports that the business did not honor the offer. Only an ACTIVE reservation before its deadline
+     * can be reported; a reservation that is already REPORTED has its report, one that was redeemed or expired is
+     * past the point of reporting.
+     */
+    public Reservation report(LocalDateTime now) {
+        return switch (status) {
+            case REPORTED -> throw new ReportAlreadyExistsException(id);
+            case REDEEMED, EXPIRED -> throw new ReservationNotReportableException(id);
+            case ACTIVE -> {
+                if (!expiresAt.isAfter(now)) {
+                    throw new ReservationExpiredException(id);
+                }
+                yield new Reservation(id, code, consumerId, offerId, businessId, offerTitle, reservedAt, expiresAt,
+                        redeemedAt, ReservationStatus.REPORTED);
+            }
+        };
+    }
+
+    public DomainException rejectionException(RedeemRejection rejection) {
+        return switch (rejection) {
+            case OTHER_BUSINESS -> ReservationAccessDeniedException.otherBusiness();
+            case ALREADY_REDEEMED -> new ReservationAlreadyRedeemedException(id, redeemedAt);
+            case REPORTED -> new ReservationReportedException(id);
+            case EXPIRED -> new ReservationExpiredException(id);
+            case NOT_FOUND -> throw new IllegalArgumentException("A loaded reservation always exists");
+        };
     }
 
     public Long getId() {

@@ -10,7 +10,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @CucumberContextConfiguration
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = {"geops.messaging.enabled=false", "geops.notifications.email-window=2m"})
 @Import(AcceptanceTestConfiguration.class)
 public class CucumberSpringConfiguration {
     private static final DockerImageName POSTGIS_IMAGE =

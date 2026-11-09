@@ -48,7 +48,7 @@ public class SavedOfferCommandService implements SaveOfferUseCase, RemoveSavedOf
     @Override
     public SaveOfferResult save(SaveOfferCommand command) {
         var offer = offerSnapshotRepository.findById(command.offerId()).orElseThrow(OfferNotFoundException::new);
-        if (offer.isExpired(LocalDate.now(clock.withZone(OFFER_ZONE)))) {
+        if (!offer.isAvailable(LocalDate.now(clock.withZone(OFFER_ZONE)))) {
             throw new OfferNotAvailableException();
         }
         var existing = savedOfferRepository.findByConsumerIdAndOfferId(command.consumerId(), command.offerId());

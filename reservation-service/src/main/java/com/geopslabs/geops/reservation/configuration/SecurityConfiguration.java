@@ -19,9 +19,14 @@ public class SecurityConfiguration {
     private static final String ROLES_CLAIM = "roles";
     private static final String NO_PREFIX = "";
     private static final String RESERVATIONS = "/api/v1/reservations";
+    private static final String REDEEM = "/api/v1/reservations/redeem";
     private static final String RESERVATION_BY_CODE = "/api/v1/reservations/code/**";
     private static final String RESERVATION_BY_ID = "/api/v1/reservations/*";
     private static final String ANY_RESERVATION_PATH = "/api/v1/reservations/**";
+    private static final String REPORT_OF_RESERVATION = "/api/v1/reservations/*/reports";
+    private static final String REPORT_ANSWER = "/api/v1/reports/*/responses";
+    private static final String REPORT_STATUS = "/api/v1/reports/*/status";
+    private static final String ANY_REPORT_PATH = "/api/v1/reports/**";
     private static final String[] PUBLIC_PATHS = {
             "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/health", "/actuator/health/**", "/error"
     };
@@ -47,6 +52,11 @@ public class SecurityConfiguration {
             AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry requests) {
         requests
                 .requestMatchers(PUBLIC_PATHS).permitAll()
+                .requestMatchers(HttpMethod.POST, REDEEM).hasAuthority(ROLE_BUSINESS_OWNER)
+                .requestMatchers(HttpMethod.POST, REPORT_OF_RESERVATION).hasAuthority(ROLE_CONSUMER)
+                .requestMatchers(HttpMethod.POST, REPORT_ANSWER).hasAuthority(ROLE_BUSINESS_OWNER)
+                .requestMatchers(HttpMethod.PATCH, REPORT_STATUS).hasAuthority(ROLE_BUSINESS_OWNER)
+                .requestMatchers(HttpMethod.GET, "/api/v1/reports", ANY_REPORT_PATH).authenticated()
                 .requestMatchers(HttpMethod.POST, RESERVATIONS).hasAuthority(ROLE_CONSUMER)
                 .requestMatchers(HttpMethod.GET, RESERVATIONS).hasAuthority(ROLE_CONSUMER)
                 .requestMatchers(HttpMethod.GET, RESERVATION_BY_CODE).hasAuthority(ROLE_BUSINESS_OWNER)

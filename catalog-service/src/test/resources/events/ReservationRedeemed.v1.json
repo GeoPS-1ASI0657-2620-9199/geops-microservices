@@ -1,0 +1,14 @@
+{
+  "eventId": "5b1f8f0e-8a8f-4c62-9a63-0f5a2e1c7d11",
+  "eventType": "ReservationRedeemed",
+  "version": 1,
+  "occurredAt": "2026-10-20T17:42:10Z",
+  "aggregateId": 5012,
+  "payload": {
+    "reservationId": 5012,
+    "consumerId": 2001,
+    "businessId": 84,
+    "offerId": 1052,
+    "redeemedAt": "2026-10-20T17:42:10Z"
+  }
+}

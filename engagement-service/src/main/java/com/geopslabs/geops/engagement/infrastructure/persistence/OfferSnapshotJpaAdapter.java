@@ -23,6 +23,12 @@ public class OfferSnapshotJpaAdapter implements OfferSnapshotRepositoryPort {
     }
 
     @Override
+    public java.util.List<OfferSnapshot> findAvailableByBusinessIds(java.util.Collection<Long> ids, java.time.LocalDate today) {
+        if (ids.isEmpty()) return java.util.List.of();
+        return repository.findAvailable(ids, today).stream().map(SnapshotPersistenceMapper::toDomain).toList();
+    }
+
+    @Override
     public void upsert(OfferSnapshot offer) {
         repository.upsert(offer.offerId(), offer.businessId(), offer.title(), offer.validTo(), offer.status(),
                 clock.instant());

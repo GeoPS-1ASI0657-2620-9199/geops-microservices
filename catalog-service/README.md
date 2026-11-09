@@ -9,19 +9,32 @@ ofertas y consulta sus campañas y las ofertas de cada una.
 
 | Operación | Acceso | Descripción |
 |---|---|---|
-| `GET /api/v1/offers/nearby` | Pública | Lista las ofertas vigentes a `radiusMinutes` (5 a 20) minutos a pie de `lat` y `lng` cuya campaña cubre ese punto, con su distancia en metros y en minutos, ordenadas por tramos de 100 m y, dentro de cada tramo, primero los comercios sin reportes abiertos y luego los verificados. Paginada por `page` y `size` (hasta 20) |
+| `GET /api/v1/offers/nearby` | Pública | Con `category` opcional (lista cerrada, se aplica antes de paginar). Lista las ofertas vigentes a `radiusMinutes` (5 a 20) minutos a pie de `lat` y `lng` cuya campaña cubre ese punto, con su distancia en metros y en minutos, ordenadas por tramos de 100 m y, dentro de cada tramo, primero los comercios sin reportes abiertos y luego los verificados. Paginada por `page` y `size` (hasta 20) |
+| `GET /api/v1/offers/categories` | Pública | Lista cerrada de las 11 categorías (E2-06); `nearby` y `POST /api/v1/campaigns` solo aceptan estas |
+| `GET /api/v1/offers/nearby/public-sources` | Pública | Mismos parámetros que `nearby`: ofertas de fuente pública ya geocodificadas, por distancia, con `sourceName` y sin sello (E2-08) |
+| `POST /api/v1/admin/public-offers` | `ROLE_ADMIN` | Carga de 1 a 200 ofertas de fuente pública; quedan `PENDING` y sin coordenadas (E2-09) |
+| `POST /api/v1/admin/geocoding-runs` | `ROLE_ADMIN` | Inicia la conversión a coordenadas y responde `202` con `runId`; la corrida sigue en segundo plano, una petición por segundo a Nominatim. Otra corrida en curso: `409 GEOCODING_RUN_IN_PROGRESS` |
+| `GET /api/v1/admin/geocoding-summary` | `ROLE_ADMIN` | Ofertas de fuente pública por `geocoding_status` y `lastRun`: `RUNNING`, `FINISHED` con su informe, `SKIPPED` (otra réplica tenía el bloqueo) o `FAILED` |
 | `GET /api/v1/offers/{offerId}` | Pública | Detalle de US04: precio, vigencia, condiciones, dirección, coordenadas, categoría, fuente, nombre y sello del comercio, y `available` |
 | `GET /internal/v1/offers/{offerId}/availability` | Interna, sin token | Para reservation-service: `offerId`, `businessId`, `title`, `validTo` y `available` |
 | `POST /api/v1/campaigns` | `ROLE_BUSINESS_OWNER` | Publica una campaña con zona por radio o por distrito y sus ofertas para el comercio del token; responde `201` con la campaña, su zona y sus ofertas |
 | `GET /api/v1/campaigns` | `ROLE_BUSINESS_OWNER` | Lista las campañas del comercio del token, de la más antigua a la más reciente |
 | `GET /api/v1/campaigns/{campaignId}` | `ROLE_BUSINESS_OWNER` dueño de la campaña | Devuelve la campaña con su periodo, zona, estado y presupuesto |
 | `GET /api/v1/campaigns/{campaignId}/offers` | `ROLE_BUSINESS_OWNER` dueño de la campaña | Lista las ofertas de la campaña |
+| `PATCH /api/v1/campaigns/{campaignId}/status` | `ROLE_BUSINESS_OWNER` dueño de la campaña | Con `{"status": "PAUSED"}` o `{"status": "ACTIVE"}` pausa o reactiva la campaña y responde la campaña con su nuevo estado (US10) |
 
 Una oferta está disponible (`available`) mientras está `PUBLISHED` y hoy, en hora de Lima, no es
 posterior a su `validTo`; es la misma regla que aplica reservation-service. Para reservar, además,
 tiene que ser de un comercio afiliado: una oferta de fuente pública responde `available: false` y
 sin `businessId`. Una oferta retirada (`REMOVED`) responde 404 en el detalle y `available: false`
-en la disponibilidad.
+en la disponibilidad. Mientras su campaña está pausada, la oferta responde `available: false` en el
+detalle y en la disponibilidad, y la búsqueda `nearby` no la muestra.
+
+Pausar o reactivar (US10) guarda el estado y su evento en una transacción: `CampaignPaused` con los
+`offerIds` de la campaña al pausar, y un `OfferPublished` con `reactivated: true` por cada oferta
+vigente al reactivar. Justo después de confirmar, y antes de responder, se borran las celdas en caché
+de sus ofertas, así que la siguiente búsqueda ya refleja el cambio. Pedir el estado que la campaña ya
+tiene no escribe nada. Una campaña cuya vigencia terminó ya no se pausa ni se reactiva.
 
 Al publicar una campaña, todo se valida antes de guardar: el periodo (fin desde hoy en Lima y no
 antes del inicio), la zona (por radio, centro y radio de 400 a 5 000 m; por distrito, nombre y
@@ -47,6 +60,8 @@ Los errores responden `{"code": "...", "message": "..."}`. Los ejemplos de cada 
 |---|---|---|
 | `INVALID_REQUEST` | 400 | El id no es un número, o falta un campo obligatorio de la campaña o no tiene ofertas |
 | `CAMPAIGN_ALREADY_ENDED` | 400 | La campaña termina antes de hoy en Lima |
+| `CAMPAIGN_ALREADY_ENDED` | 409 | Pausar o reactivar una campaña cuya vigencia ya terminó |
+| `INVALID_CAMPAIGN_STATUS` | 400 | `PATCH .../status` con un estado distinto de `PAUSED` o `ACTIVE` |
 | `INVALID_CAMPAIGN_PERIOD` | 400 | La campaña termina antes de empezar |
 | `INVALID_CAMPAIGN_ZONE` | 400 | Zona por radio sin centro o con radio fuera de 400 a 5 000 m, o zona por distrito sin nombre o sin centro |
 | `OFFER_VALIDITY_OUTSIDE_CAMPAIGN` | 400 | La vigencia de una oferta queda fuera del periodo de la campaña |
@@ -58,6 +73,68 @@ Los errores responden `{"code": "...", "message": "..."}`. Los ejemplos de cada 
 | `MISSING_PARAMETER`, `INVALID_PARAMETER` | 400 | `nearby` sin `lat`, `lng` o `radiusMinutes`, o con un valor que no es número |
 | `INVALID_PAGE` | 400 | `nearby` con `page` negativo o `size` fuera de 1 a 20 |
 
+## Eventos (US33)
+
+Catalog publica en el tópico `catalog.events` por bandeja de salida: el `Service` guarda el evento en
+`outbox_events` en la misma transacción que el cambio, y un relay lo envía a Kafka cada segundo en el
+orden de `seq`, con el `campaignId` como clave para que los eventos de una campaña lleguen en orden.
+Si Kafka no responde, la publicación de la campaña igual responde `201` y las filas esperan; una fila
+pasa a `FAILED` después de `OUTBOX_MAX_ATTEMPTS` intentos (10) con Kafka respondiendo. La entrega es
+al menos una vez: quien consume descarta repetidos por `eventId`.
+
+| Evento | Cuándo | Contrato |
+|---|---|---|
+| `OfferPublished` | Una por oferta al publicar una campaña; `reactivated: false` | `platform/messaging/events/OfferPublished.v1.json` |
+| `OfferExpired` | El Programador de Vencimientos marca `EXPIRED` una oferta de campaña | `platform/messaging/events/OfferExpired.v1.json` |
+| `CampaignPaused` | El dueño pausa una campaña, con los `offerIds` de la campaña | `platform/messaging/events/CampaignPaused.v1.json` |
+| `OfferPublished` | Una por oferta vigente al reactivar una campaña; `reactivated: true` | `platform/messaging/events/OfferPublished.v1.json` |
+
+La migración `V5` carga un `OfferPublished` por cada oferta ya publicada y vigente de una campaña
+activa, para que Engagement y Notification arranquen con las ofertas que existían antes del relay.
+
+## Ranking por reportes (US44)
+
+Catalog escucha `reservation.events` con el grupo `catalog-service` y confirmación manual. Cada
+evento cambia la copia local de la reputación del comercio (`merchant_standings`) en una sola
+transacción con `processed_events`, así que un evento repetido cuenta una vez:
+
+| Evento | `open_reports` | `redeemed_reservations` | `consumer_favor_reports` |
+|---|---|---|---|
+| `ReservationRedeemed` | igual | +1 | igual |
+| `ReportOpened` | +1 | igual | igual |
+| `ReportAnswered` | -1 (pasa a revisión) | igual | igual |
+| `ReportResolved` desde `OPEN` | -1 | igual | +1 si `resolution = CONSUMER_FAVOR` |
+| `ReportResolved` desde `IN_REVIEW` | igual | igual | +1 si `resolution = CONSUMER_FAVOR` |
+
+`open_reports` nunca baja de cero. El índice de cumplimiento es
+`100 × redeemed_reservations / (redeemed_reservations + consumer_favor_reports)`, 100,00 sin casos y
+con dos decimales; el sello sigue pidiendo RUC verificado e índice de al menos 90,00. Si el sello
+cambia, `standing_changes` guarda `COMPLIANCE_BELOW_THRESHOLD` o `COMPLIANCE_RESTORED`. Si cambian los
+reportes abiertos o el sello, se borran las celdas del comercio antes de confirmar el evento, y la
+siguiente búsqueda ya lo ordena con su nueva posición: dentro de cada tramo de 100 m van primero los
+comercios sin reportes abiertos. `updated_at` sigue siendo el instante de la última respuesta de
+Identity sobre el RUC: los contadores solo suman y no dependen del orden.
+
+Los demás tipos de evento se confirman y se ignoran. Un evento sin `businessId`, un `ReportResolved`
+sin `previousStatus` o `resolution`, o una versión mayor que 1 va a `reservation.events.DLT`.
+
+## Conversión a coordenadas (US07)
+
+`POST /api/v1/admin/geocoding-runs` no espera a que termine la corrida: responde `202` con
+`{"runId", "status": "RUNNING", "startedAt"}` y la corrida avanza en segundo plano. El avance y el
+informe (`processed`, `geocoded`, `manualReview`, `stillPending`, `stoppedByProvider`) se leen en
+`GET /api/v1/admin/geocoding-summary`, en `lastRun`. `lastRun` vive en la memoria de la réplica que
+recibió la llamada; los conteos por estado salen de la base y valen para cualquier réplica. Una
+tarea cada 30 minutos lanza la corrida si quedan ofertas `PENDING`.
+
+## Métricas
+
+Actuator escucha en un puerto de gestión aparte (`MANAGEMENT_PORT`, 9082 por defecto), que el
+compose no publica y el gateway no enruta; en el puerto del servicio no hay `/actuator`. Desde la
+red del compose:
+`docker compose exec catalog-service curl -s localhost:9082/actuator/metrics/catalog.cell.cache.hits`.
+El healthcheck del compose usa `localhost:9082/actuator/health`.
+
 ## Base de datos
 
 `catalog_db` con PostGIS. El esquema solo cambia con migraciones de Flyway en
@@ -67,7 +144,11 @@ Los errores responden `{"code": "...", "message": "..."}`. Los ejemplos de cada 
 |---|---|---|
 | V1 | `V1__baseline.sql` | Tablas del diagrama de base de datos del informe, sin `offers.location` ni su índice espacial |
 | V2 | `V2__add_offer_location_and_spatial_index.sql` | `offers.location` e `ix_offers_location` (US01) |
-| V3 en adelante | — | Siguientes cambios de Catalog |
+| V3 | `V3__normalize_offer_categories.sql` | Categorías de la lista cerrada (E2-06) |
+| V4 | `V4__outbox_relay_columns.sql` | `status`, `attempts`, `last_error` y `seq` de `outbox_events` para el relay (US33) |
+| V5 | `V5__backfill_offer_published_events.sql` | `OfferPublished` de las ofertas vigentes publicadas antes del relay (US33) |
+| V6 | `V6__merchant_standing_compliance_counters.sql` | `redeemed_reservations` y `consumer_favor_reports` de `merchant_standings` (US44) |
+| V7 en adelante | — | Siguientes cambios de Catalog |
 
 Reglas:
 
@@ -103,6 +184,9 @@ PostgreSQL con PostGIS en Testcontainers, con tokens firmados con una clave de p
 | US05 Crear una campaña publicitaria (GEO-30) | `US05-create-advertising-campaign.feature` | 6 |
 | US06 Segmentar campañas por ubicación (GEO-31) | `US06-segment-campaign-by-location.feature` | 5 |
 | Migraciones versionadas (GEO-9, GEO-51) | `schema-migrations.feature` | 3 |
+| US33 Publicar los eventos de Catalog (GEO-34) | `outbox-relay.feature` | 2 |
+| US10 Pausar y reactivar una campaña (GEO-32) | `US10-pause-and-reactivate-campaign.feature` | 8 |
+| US44 Ordenar comercios por sus reportes (GEO-201) | `US44-rank-business-by-reports.feature` | 5 |
 
 ## Ejecución local
 
@@ -121,7 +205,11 @@ endpoint; las dos peticiones de login de Identity llenan `token` y `businessToke
 «List my campaigns» llena `campaignId`. La carpeta `US05` publica una campaña con el token del
 negocio (las fechas se calculan desde hoy en un script previo) y prueba un periodo vencido, un
 token de consumidor y la falta de token. La carpeta `US06` publica una campaña con zona por distrito
-en Miraflores, la busca desde dentro y desde fuera de la zona y prueba un distrito sin nombre. La carpeta `Internal` solo responde con `baseUrl` en el puerto
+en Miraflores, la busca desde dentro y desde fuera de la zona y prueba un distrito sin nombre.
+La carpeta `US10` pausa y reactiva `campaignId`: guarda la primera oferta de esa campaña en
+`pausedOfferId`, comprueba que no está disponible mientras la campaña está pausada y que vuelve a
+estarlo al reactivarla, y deja la campaña `ACTIVE`. El `409` de una campaña vencida necesita una
+fecha de fin pasada y lo cubren los escenarios de aceptación. La carpeta `Internal` solo responde con `baseUrl` en el puerto
 del servicio; su última petición comprueba que el gateway no publica `/internal`.
 
 Hasta que llegue la creación de campañas (US05) no hay endpoint que cree datos. Para correr la

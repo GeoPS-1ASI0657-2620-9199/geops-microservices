@@ -8,6 +8,9 @@ import org.springframework.core.NestedExceptionUtils;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,6 +40,23 @@ public class ReservationJpaAdapter implements ReservationRepositoryPort {
     }
 
     @Override
+    public Optional<Reservation> findByIdForUpdate(Long id) {
+        return repository.findByIdForUpdate(id).map(ReservationPersistenceMapper::toDomain);
+    }
+
+    @Override
+    public List<Reservation> findAllByIds(Collection<Long> ids) {
+        return ids.isEmpty() ? List.of()
+                : repository.findByIdIn(ids).stream().map(ReservationPersistenceMapper::toDomain).toList();
+    }
+
+    @Override
+    public int expireActiveUntil(LocalDateTime now) {
+        return repository.expireActiveUntil(now.toInstant(ZoneOffset.UTC), ReservationStatus.ACTIVE,
+                ReservationStatus.EXPIRED);
+    }
+
+    @Override
     public Optional<Reservation> findByCode(String code) {
         return repository.findByCode(code).map(ReservationPersistenceMapper::toDomain);
     }
@@ -58,6 +78,12 @@ public class ReservationJpaAdapter implements ReservationRepositoryPort {
     @Override
     public boolean existsByCode(String code) {
         return repository.existsByCode(code);
+    }
+
+    @Override
+    public int redeemIfActive(String code, Long businessId, LocalDateTime now) {
+        return repository.redeemIfActive(code, businessId, now.toInstant(ZoneOffset.UTC), ReservationStatus.ACTIVE,
+                ReservationStatus.REDEEMED);
     }
 
     private static RuntimeException translate(DataIntegrityViolationException exception, Reservation reservation) {

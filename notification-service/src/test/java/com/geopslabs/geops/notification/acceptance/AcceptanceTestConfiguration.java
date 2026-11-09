@@ -14,7 +14,12 @@ public class AcceptanceTestConfiguration {
 
     @Bean
     @Primary
-    public Clock acceptanceClock() {
-        return Clock.fixed(ACCEPTANCE_NOW, ZoneOffset.UTC);
+    public MutableClock acceptanceClock() {
+        return new MutableClock();
     }
+    @Bean
+    @Primary
+    public RecordingEmailSender recordingEmailSender() { return new RecordingEmailSender(); }
+    @Bean
+    public RecordingPushChannel recordingPushChannel() { return new RecordingPushChannel(); }
 }

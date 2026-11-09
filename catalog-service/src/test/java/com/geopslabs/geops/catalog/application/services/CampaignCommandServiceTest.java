@@ -2,17 +2,21 @@ package com.geopslabs.geops.catalog.application.services;
 
 import com.geopslabs.geops.catalog.application.usecases.CreateCampaignCommand;
 import com.geopslabs.geops.catalog.application.usecases.CreateOfferCommand;
+import com.geopslabs.geops.catalog.domain.events.DomainEvent;
+import com.geopslabs.geops.catalog.domain.events.OfferPublished;
 import com.geopslabs.geops.catalog.domain.models.Campaign;
 import com.geopslabs.geops.catalog.domain.models.GeoPoint;
 import com.geopslabs.geops.catalog.domain.models.MerchantStanding;
 import com.geopslabs.geops.catalog.domain.models.Offer;
 import com.geopslabs.geops.catalog.domain.models.ZoneType;
+import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidCategoryException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.CampaignAlreadyEndedException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidCampaignZoneException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.OfferValidityOutsideCampaignException;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.MerchantStandingRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.OfferRepositoryPort;
+import com.geopslabs.geops.catalog.domain.ports.OutboxPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -42,6 +47,7 @@ class CampaignCommandServiceTest {
     private static final Long BUSINESS_ID = 84L;
     private static final Long CAMPAIGN_ID = 31L;
     private static final String BUSINESS_NAME = "Restaurante Don Pepe";
+    private static final String KNOWN_NAME = "Don Pepe Miraflores";
     private static final String ADDRESS = "Av. Larco 345, Miraflores";
     private static final GeoPoint STORE = new GeoPoint(-12.1211, -77.0297);
     private static final int RADIUS_METERS = 800;
@@ -60,12 +66,18 @@ class CampaignCommandServiceTest {
     @Mock
     private MerchantStandingRepositoryPort merchantStandingRepository;
 
+    @Mock
+    private OutboxPort outbox;
+
+    @Mock
+    private CellInvalidator cellInvalidator;
+
     private CampaignCommandService service;
 
     @BeforeEach
     void setUp() {
-        service = new CampaignCommandService(campaignRepository, offerRepository, merchantStandingRepository,
-                Clock.fixed(NOW, ZoneId.of("America/Lima")));
+        service = new CampaignCommandService(campaignRepository, offerRepository, merchantStandingRepository, outbox,
+                cellInvalidator, Clock.fixed(NOW, ZoneId.of("America/Lima")));
     }
 
     @Test
@@ -88,7 +100,7 @@ class CampaignCommandServiceTest {
     void existingStandingIsKept() {
         stubSaves();
         when(merchantStandingRepository.findByBusinessId(BUSINESS_ID))
-                .thenReturn(Optional.of(MerchantStanding.provisional(BUSINESS_ID, BUSINESS_NAME, null)));
+                .thenReturn(Optional.of(MerchantStanding.provisional(BUSINESS_ID, BUSINESS_NAME)));
 
         service.publish(command(START, END, BUDGET, ZoneType.RADIUS, OFFER_VALID_TO));
 
@@ -108,6 +120,74 @@ class CampaignCommandServiceTest {
             assertThat(offer.getAddress()).isEqualTo(ADDRESS);
             assertThat(offer.getLocation()).isEqualTo(STORE);
         });
+    }
+
+    @Test
+    void everyOfferIsAnnouncedWithOneOfferPublishedInTheOutbox() {
+        stubSaves();
+        var twoOffers = new CreateCampaignCommand(BUSINESS_ID, BUSINESS_NAME, "Almuerzos de octubre",
+                "Menú ejecutivo", START, END, BUDGET, ADDRESS, STORE, ZoneType.RADIUS, STORE, RADIUS_METERS, null,
+                List.of(offer(OFFER_VALID_TO), offer(END)));
+
+        service.publish(twoOffers);
+
+        var events = ArgumentCaptor.forClass(DomainEvent.class);
+        verify(outbox, times(2)).append(events.capture());
+        assertThat(events.getAllValues()).allSatisfy(event -> {
+            var published = (OfferPublished) event;
+            assertThat(published.aggregateId()).isEqualTo(CAMPAIGN_ID);
+            assertThat(published.occurredAt()).isEqualTo(NOW);
+            assertThat(published.payload().businessName()).isEqualTo(BUSINESS_NAME);
+            assertThat(published.payload().reactivated()).isFalse();
+            assertThat(published.payload().zone().reachMeters()).isEqualTo(RADIUS_METERS);
+            assertThat(published.payload().location().latitude()).isEqualTo(STORE.latitude());
+        });
+        assertThat(events.getAllValues()).extracting(DomainEvent::eventId).doesNotHaveDuplicates();
+    }
+
+    @Test
+    void theBusinessNameOfTheEventIsTheOneCatalogAlreadyKnows() {
+        stubSaves();
+        when(merchantStandingRepository.findByBusinessId(BUSINESS_ID))
+                .thenReturn(Optional.of(MerchantStanding.provisional(BUSINESS_ID, KNOWN_NAME)));
+
+        service.publish(command(START, END, BUDGET, ZoneType.RADIUS, OFFER_VALID_TO));
+
+        var event = ArgumentCaptor.forClass(DomainEvent.class);
+        verify(outbox).append(event.capture());
+        assertThat(((OfferPublished) event.getValue()).payload().businessName()).isEqualTo(KNOWN_NAME);
+    }
+
+    @Test
+    void nothingIsSavedWhenAnOfferHasACategoryOutsideTheList() {
+        var toys = new CreateCampaignCommand(BUSINESS_ID, BUSINESS_NAME, "Juguetes", "Juguetes", START, END, BUDGET,
+                ADDRESS, STORE, ZoneType.RADIUS, STORE, RADIUS_METERS, null,
+                List.of(new CreateOfferCommand("Carritos 2x1", "Hasta agotar stock", new BigDecimal("15.00"),
+                        OFFER_VALID_TO, "Juguetería", null)));
+
+        assertThatThrownBy(() -> service.publish(toys)).isInstanceOf(InvalidCategoryException.class);
+        verifyNoInteractions(merchantStandingRepository, campaignRepository, offerRepository, outbox);
+    }
+
+    @Test
+    void theCategoryIsSavedWithItsCanonicalLabel() {
+        stubSaves();
+        var lowerCase = new CreateCampaignCommand(BUSINESS_ID, BUSINESS_NAME, "Menú", "Menú", START, END, BUDGET,
+                ADDRESS, STORE, ZoneType.RADIUS, STORE, RADIUS_METERS, null,
+                List.of(new CreateOfferCommand("Menú", "Lunes a viernes", new BigDecimal("15.00"), OFFER_VALID_TO,
+                        "gastronomia", null)));
+
+        assertThat(service.publish(lowerCase).offers()).singleElement()
+                .extracting(offer -> offer.getCategory()).isEqualTo("Gastronomía");
+    }
+
+    @Test
+    void publishingEvictsTheCellsOfTheNewOffers() {
+        stubSaves();
+
+        service.publish(command(START, END, BUDGET, ZoneType.RADIUS, OFFER_VALID_TO));
+
+        verify(cellInvalidator).evictCellsOf(List.of(STORE));
     }
 
     @Test

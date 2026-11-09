@@ -21,12 +21,39 @@ public class NotificationFactoryService {
                     "%s tiene una oferta cerca de donde estuviste: %s.", List.of(BUSINESS_NAME, OFFER_TITLE)),
             NotificationType.FOLLOWED_BUSINESS_OFFER, new Template("Nueva oferta de un comercio que sigues",
                     "%s publicó una oferta: %s.", List.of(BUSINESS_NAME, OFFER_TITLE)),
+            NotificationType.REPORT_RESOLVED, new Template("Se cerr? tu reporte",
+                    "Tu reporte de la reserva %s se cerr?.", List.of(RESERVATION_CODE)),
             NotificationType.REPORT_RECEIVED, new Template("Recibiste un reporte",
                     "Un consumidor reportó la reserva %s. Responde dentro del plazo.", List.of(RESERVATION_CODE)),
             NotificationType.REPORT_ANSWERED, new Template("Respondieron tu reporte",
                     "%s respondió tu reporte de la reserva %s.", List.of(BUSINESS_NAME, RESERVATION_CODE)),
             NotificationType.VERIFICATION_RESULT, new Template("Resultado de la verificación de tu negocio",
                     "La verificación de tu RUC terminó: %s.", List.of(VERIFICATION_RESULT)));
+
+    public static Notification offer(Long consumerId, NotificationType type,
+                                     com.geopslabs.geops.notification.domain.models.OfferPublishedEvent offer,
+                                     Integer meters, Channel channel,
+                                     com.geopslabs.geops.notification.domain.models.DeliveryStatus status, java.time.Instant now) {
+        var title = type == NotificationType.FOLLOWED_BUSINESS_OFFER ? "Nueva oferta de un comercio que sigues" : "Oferta cerca de ti";
+        var validTo = java.time.format.DateTimeFormatter.ofPattern("dd/MM").format(offer.validTo());
+        var message = meters == null ? "%s: %s, válida hasta el %s.".formatted(offer.businessName(), offer.title(), validTo)
+                : "%s: %s, a %d m, válida hasta el %s.".formatted(offer.businessName(), offer.title(), meters, validTo);
+        return new Notification(null, consumerId, type, channel, title, message, offer.offerId().toString(), status, java.time.LocalDateTime.ofInstant(now, java.time.ZoneOffset.UTC));
+    }
+
+    public static Notification report(Long recipientId,
+                                      com.geopslabs.geops.notification.domain.models.ReportNoticeEvent event,
+                                      NotificationType type, java.time.Instant now) {
+        var message = switch (type) {
+            case REPORT_RECEIVED -> "Un consumidor report? la reserva %s (%s). Responde dentro del plazo.".formatted(event.reservationCode(), event.offerTitle());
+            case REPORT_ANSWERED -> "El comercio respondi? tu reporte de la reserva %s (%s).".formatted(event.reservationCode(), event.offerTitle());
+            case REPORT_RESOLVED -> "El reporte de la reserva %s (%s) se cerr? a favor del %s.".formatted(event.reservationCode(), event.offerTitle(), "CONSUMER_FAVOR".equals(event.resolution()) ? "cliente" : "comercio");
+            default -> throw new IllegalArgumentException("Unsupported report notification type");
+        };
+        return new Notification(null, recipientId, type, Channel.EMAIL, "Novedades de tu reporte", message,
+                "report-" + event.reportId(), com.geopslabs.geops.notification.domain.models.DeliveryStatus.PENDING,
+                java.time.LocalDateTime.ofInstant(now, java.time.ZoneOffset.UTC));
+    }
 
     public Notification create(NotificationType type, Map<String, String> data) {
         var template = TEMPLATES.get(type);

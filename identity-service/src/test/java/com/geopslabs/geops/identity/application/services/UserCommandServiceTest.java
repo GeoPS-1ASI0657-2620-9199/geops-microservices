@@ -2,6 +2,7 @@ package com.geopslabs.geops.identity.application.services;
 
 import com.geopslabs.geops.identity.application.usecases.BusinessProfileData;
 import com.geopslabs.geops.identity.application.usecases.RegisterUserCommand;
+import com.geopslabs.geops.identity.domain.events.UserRegistered;
 import com.geopslabs.geops.identity.domain.models.AccountStatus;
 import com.geopslabs.geops.identity.domain.models.BusinessProfile;
 import com.geopslabs.geops.identity.domain.models.BusinessProfileNotAllowedException;
@@ -19,6 +20,7 @@ import com.geopslabs.geops.identity.domain.models.User;
 import com.geopslabs.geops.identity.domain.models.VerificationStatus;
 import com.geopslabs.geops.identity.domain.ports.BusinessProfileRepositoryPort;
 import com.geopslabs.geops.identity.domain.ports.ConsumerProfileRepositoryPort;
+import com.geopslabs.geops.identity.domain.ports.OutboxPort;
 import com.geopslabs.geops.identity.domain.ports.PasswordHasherPort;
 import com.geopslabs.geops.identity.domain.ports.UserRepositoryPort;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,7 +30,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -39,6 +44,8 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserCommandServiceTest {
+    private static final Instant REGISTERED_AT = Instant.parse("2026-10-27T14:00:00Z");
+    private static final UUID EVENT_ID = UUID.fromString("0b7c9d1e-4f3a-4c55-8a10-3e2f9d8b6a01");
     private static final Long USER_ID = 41L;
     private static final Long PROFILE_ID = 15L;
     private static final int NO_FAILED_ATTEMPTS = 0;
@@ -68,13 +75,15 @@ class UserCommandServiceTest {
     private BusinessProfileRepositoryPort businessProfileRepository;
     @Mock
     private PasswordHasherPort passwordHasher;
+    @Mock
+    private OutboxPort outbox;
 
     private UserCommandService service;
 
     @BeforeEach
     void setUp() {
         service = new UserCommandService(userRepository, consumerProfileRepository, businessProfileRepository,
-                passwordHasher);
+                passwordHasher, outbox, Clock.fixed(REGISTERED_AT, ZoneOffset.UTC), () -> EVENT_ID);
     }
 
     @Test
@@ -86,6 +95,35 @@ class UserCommandServiceTest {
         assertThat(registered.userId()).isEqualTo(USER_ID);
         assertThat(registered.role()).isEqualTo(Role.CONSUMER);
         assertThat(registered.consumerProfileId()).isEqualTo(PROFILE_ID);
+    }
+
+    @Test
+    void aConsumerRegistrationWritesUserRegisteredWithoutABusinessProfile() {
+        givenSavesSucceed();
+        var event = ArgumentCaptor.forClass(UserRegistered.class);
+
+        service.register(command(Role.CONSUMER, EMAIL));
+
+        verify(outbox).append(event.capture());
+        assertThat(event.getValue().eventId()).isEqualTo(EVENT_ID);
+        assertThat(event.getValue().occurredAt()).isEqualTo(REGISTERED_AT);
+        assertThat(event.getValue().payload().userId()).isEqualTo(USER_ID);
+        assertThat(event.getValue().payload().email()).isEqualTo(EMAIL);
+        assertThat(event.getValue().payload().role()).isEqualTo("CONSUMER");
+        assertThat(event.getValue().payload().businessId()).isNull();
+        assertThat(event.getValue().payload().emailConfirmed()).isFalse();
+    }
+
+    @Test
+    void aBusinessOwnerRegistrationWritesUserRegisteredWithTheProfileId() {
+        givenBusinessSavesSucceed();
+        var event = ArgumentCaptor.forClass(UserRegistered.class);
+
+        service.register(businessCommand(business(RUC, ADDRESS, LATITUDE)));
+
+        verify(outbox).append(event.capture());
+        assertThat(event.getValue().payload().role()).isEqualTo("BUSINESS_OWNER");
+        assertThat(event.getValue().payload().businessId()).isEqualTo(BUSINESS_PROFILE_ID);
     }
 
     @Test

@@ -7,6 +7,7 @@ import com.geopslabs.geops.identity.infrastructure.persistence.UserJpaRepository
 import io.cucumber.java.Before;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Then;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -15,17 +16,21 @@ public class CommonSteps {
     private final UserJpaRepository users;
     private final ConsumerProfileJpaRepository consumerProfiles;
     private final BusinessProfileJpaRepository businessProfiles;
+    private final JdbcTemplate jdbc;
 
     public CommonSteps(HttpScenario http, UserJpaRepository users, ConsumerProfileJpaRepository consumerProfiles,
-                       BusinessProfileJpaRepository businessProfiles) {
+                       BusinessProfileJpaRepository businessProfiles, JdbcTemplate jdbc) {
         this.http = http;
         this.users = users;
         this.consumerProfiles = consumerProfiles;
         this.businessProfiles = businessProfiles;
+        this.jdbc = jdbc;
     }
 
     @Before
     public void startWithEmptyAccounts() {
+        jdbc.update("DELETE FROM outbox_events");
+        jdbc.update("DELETE FROM ruc_verifications");
         consumerProfiles.deleteAll();
         businessProfiles.deleteAll();
         users.deleteAll();
