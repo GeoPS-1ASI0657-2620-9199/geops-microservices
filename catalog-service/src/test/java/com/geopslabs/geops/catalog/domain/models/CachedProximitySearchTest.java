@@ -130,7 +130,7 @@ class CachedProximitySearchTest {
 
     private static NearbyOfferCandidate candidate(Long id, int metersNorth, LocalDate validTo, String category) {
         var location = new GeoPoint(ORIGIN.latitude() + metersNorth / METERS_PER_DEGREE, ORIGIN.longitude());
-        return new NearbyOfferCandidate(id, "Oferta " + id, BigDecimal.TEN, validTo, category, "Av. Larco 345",
+        return new NearbyOfferCandidate(id, "Oferta " + id, BigDecimal.TEN, null, validTo, category, "Av. Larco 345",
                 null, location, 84L, "Comercio", false, 0, new CampaignZone(ZoneType.RADIUS, null, null, null));
     }
 }

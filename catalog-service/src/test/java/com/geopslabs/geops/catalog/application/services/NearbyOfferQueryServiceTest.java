@@ -122,7 +122,7 @@ class NearbyOfferQueryServiceTest {
 
     private static List<RankedOffer> ranked(int count) {
         return LongStream.rangeClosed(1, count)
-                .mapToObj(id -> RankedOffer.of(new NearbyOfferCandidate(id, "Oferta " + id, BigDecimal.TEN,
+                .mapToObj(id -> RankedOffer.of(new NearbyOfferCandidate(id, "Oferta " + id, BigDecimal.TEN, null,
                         LocalDate.of(2026, 10, 15), "Gastronomía", "Av. Larco 345, Miraflores", null, ORIGIN, 84L, "Comercio", false, 0,
                         CampaignZone.radius(ORIGIN, CampaignZone.MAX_RADIUS_METERS)), id * 10.0))
                 .toList();

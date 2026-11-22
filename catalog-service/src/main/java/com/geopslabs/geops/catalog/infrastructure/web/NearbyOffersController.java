@@ -44,7 +44,7 @@ public class NearbyOffersController {
                       "businessName": "Restaurante Don Pepe", "verifiedSeal": true, "distanceMeters": 350,
                       "walkMinutes": 5, "category": "Gastronomía", "address": "Av. Larco 345, Miraflores",
                       "imageUrl": "https://images.geops.pe/offers/1052.jpg", "latitude": -12.1211,
-                      "longitude": -77.0297, "price": 15.00, "validTo": "2026-10-15"}],
+                      "longitude": -77.0297, "price": 15.00, "regularPrice": 30.00, "validTo": "2026-10-15"}],
                      "page": 0, "totalElements": 1, "totalPages": 1}""")))
     @ApiResponse(responseCode = "400",
             description = "Radius out of range, unknown category, invalid coordinates, missing or invalid parameter, "

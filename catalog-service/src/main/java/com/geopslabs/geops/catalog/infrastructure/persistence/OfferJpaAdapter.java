@@ -127,7 +127,8 @@ public class OfferJpaAdapter implements OfferRepositoryPort {
     }
 
     private static NearbyOfferCandidate toCandidate(NearbyOfferRow row) {
-        return new NearbyOfferCandidate(row.getOfferId(), row.getTitle(), row.getPrice(), row.getValidTo(),
+        return new NearbyOfferCandidate(row.getOfferId(), row.getTitle(), row.getPrice(), row.getRegularPrice(),
+                row.getValidTo(),
                 row.getCategory(), row.getAddress(), row.getImageUrl(), new GeoPoint(row.getLatitude(), row.getLongitude()), row.getBusinessId(),
                 row.getBusinessName(), row.getVerifiedSeal(), row.getOpenReports(), zoneOf(row));
     }
