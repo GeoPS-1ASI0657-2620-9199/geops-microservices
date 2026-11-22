@@ -1,0 +1,59 @@
+{
+  "provider": "catalog-service",
+  "consumer": "reservation-service",
+  "interactions": [
+    {
+      "description": "a published offer inside its validity",
+      "request": { "method": "GET", "path": "/internal/v1/offers/1052/availability" },
+      "response": {
+        "status": 200,
+        "body": {
+          "offerId": 1052,
+          "businessId": 84,
+          "title": "2x1 en almuerzos ejecutivos",
+          "validTo": "2026-10-15",
+          "available": true
+        }
+      }
+    },
+    {
+      "description": "an offer past its validity",
+      "request": { "method": "GET", "path": "/internal/v1/offers/1053/availability" },
+      "response": {
+        "status": 200,
+        "body": {
+          "offerId": 1053,
+          "businessId": 84,
+          "title": "Desayuno 2x1",
+          "validTo": "2026-10-06",
+          "available": false
+        }
+      }
+    },
+    {
+      "description": "an offer of a public source, without a business",
+      "request": { "method": "GET", "path": "/internal/v1/offers/1060/availability" },
+      "response": {
+        "status": 200,
+        "body": {
+          "offerId": 1060,
+          "businessId": null,
+          "title": "Ceviche a 15 soles",
+          "validTo": "2026-10-20",
+          "available": false
+        }
+      }
+    },
+    {
+      "description": "an unknown offer",
+      "request": { "method": "GET", "path": "/internal/v1/offers/9999/availability" },
+      "response": {
+        "status": 404,
+        "body": {
+          "code": "OFFER_NOT_FOUND",
+          "message": "La oferta 9999 no existe."
+        }
+      }
+    }
+  ]
+}
