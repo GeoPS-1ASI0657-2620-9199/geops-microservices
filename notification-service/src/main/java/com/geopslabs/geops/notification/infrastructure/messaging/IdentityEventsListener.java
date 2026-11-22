@@ -20,6 +20,8 @@ import java.time.Instant;
 @Component
 public class IdentityEventsListener {
     private static final int VERSION = 1;
+    private static final String SEARCH_RADIUS = "searchRadiusMinutes";
+    private static final String PUBLISHED_RADIUS = "radiusMinutes";
     private final EventEnvelopeReader reader;
     private final ApplyIdentityEventsUseCase projector;
     private final SendEmailConfirmationUseCase confirmations;
@@ -59,8 +61,10 @@ public class IdentityEventsListener {
         try { return Instant.parse(value); } catch (DateTimeException error) { throw new UnreadableEventException("Invalid confirmationExpiresAt", error); }
     }
 
+    /** Identity writes radiusMinutes while the contract says searchRadiusMinutes; both are read until they agree. */
     private void radius(EventEnvelope event) {
-        var minutes = EventFields.id(event.payload(), "searchRadiusMinutes");
+        var field = event.payload().has(SEARCH_RADIUS) ? SEARCH_RADIUS : PUBLISHED_RADIUS;
+        var minutes = EventFields.id(event.payload(), field);
         if (minutes > 20) throw new UnreadableEventException("Invalid searchRadiusMinutes");
         projector.consumerPreferencesChanged(EventFields.id(event.payload(), "consumerId"), minutes.intValue());
     }

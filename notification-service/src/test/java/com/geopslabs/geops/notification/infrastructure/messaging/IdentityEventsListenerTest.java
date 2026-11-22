@@ -78,6 +78,18 @@ class IdentityEventsListenerTest {
         verifyNoInteractions(projector);
     }
 
+    @Test
+    void theRadiusIsReadWithTheNameOfTheContractAndWithTheOneIdentityPublishes() {
+        listener.onEvent(record(EventFixtures.read("ConsumerPreferencesChanged")), ack);
+        listener.onEvent(record("""
+                {"eventId": "3c1d2e4f-5a6b-4c7d-8e9f-0a1b2c3d4e60", "eventType": "ConsumerPreferencesChanged",
+                 "version": 1, "occurredAt": "2026-10-27T14:05:00Z", "aggregateId": 2001,
+                 "payload": {"consumerId": 2001, "radiusMinutes": 15}}"""), ack);
+
+        verify(projector).consumerPreferencesChanged(2001L, 10);
+        verify(projector).consumerPreferencesChanged(2001L, 15);
+    }
+
     private static ConsumerRecord<String, String> record(String value) {
         return new ConsumerRecord<>(TOPIC, 0, 0L, "2001", value);
     }
