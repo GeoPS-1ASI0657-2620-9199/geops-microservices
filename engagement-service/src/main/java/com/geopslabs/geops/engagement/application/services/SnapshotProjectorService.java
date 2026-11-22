@@ -31,5 +31,11 @@ public class SnapshotProjectorService implements ProjectCatalogEventsUseCase, Pr
 
     @Override
     @Transactional
+    public void offerRemoved(Long offerId, Instant occurredAt) {
+        projections.changeStatus(List.of(offerId), OfferSnapshot.REMOVED, occurredAt);
+    }
+
+    @Override
+    @Transactional
     public void reservationRedeemed(RedeemedReservation reservation) { projections.redeem(reservation); }
 }
