@@ -21,6 +21,11 @@ public class EmailConfiguration {
     @Bean
     SmtpEmailChannel smtpEmailChannel(JavaMailSender mail, @Value("${geops.notifications.email-from:avisos@geops.local}") String from) { return new SmtpEmailChannel(mail, from); }
     @Bean
+    EmailConfirmationMailService emailConfirmationMailService(ConfirmationEmailRepositoryPort confirmationEmails, EmailSender sender, Clock clock, @Value("${geops.notifications.web-base-url:http://localhost:4200}") String webBaseUrl) throws java.io.IOException {
+        var template = new ClassPathResource("templates/email-confirmation.html").getContentAsString(StandardCharsets.UTF_8);
+        return new EmailConfirmationMailService(confirmationEmails, sender, clock, webBaseUrl, template);
+    }
+    @Bean
     EmailDigestService emailDigestService(EmailDigestRepositoryPort digests, @Value("${geops.notifications.email-window:60m}") String window) { return new EmailDigestService(digests, org.springframework.boot.convert.DurationStyle.detectAndParse(window)); }
     @Bean
     NotificationPlanner notificationPlanner(NoticePlanningRepositoryPort notices, EmailUnsubscriptionRepositoryPort unsubscriptions, EmailDigestRepositoryPort digestRepository, EmailDigestService digests, List<NotificationChannelStrategy> channels, PlatformTransactionManager manager, Clock clock) { return new NotificationPlanner(notices, unsubscriptions, digestRepository, digests, channels, new TransactionTemplate(manager), clock); }
