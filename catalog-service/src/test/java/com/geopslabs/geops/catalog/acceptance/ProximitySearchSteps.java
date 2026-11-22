@@ -79,6 +79,7 @@ public class ProximitySearchSteps {
     private static final long FIRST_NEARBY_BUSINESS_ID = 100L;
     private static final String NO_REPORTS = "0";
     private static final String CATEGORY_COLUMN = "category";
+    private static final String BUSINESS_COLUMN = "business";
 
     private final OfferRepositoryPort offers;
     private final CampaignRepositoryPort campaigns;
@@ -249,7 +250,8 @@ public class ProximitySearchSteps {
         var businessId = FIRST_NEARBY_BUSINESS_ID;
         for (Map<String, String> row : table.asMaps()) {
             var openReports = Integer.parseInt(row.getOrDefault(OPEN_REPORTS, NO_REPORTS));
-            standings.save(new MerchantStanding(businessId, row.get(TITLE), false, openReports, FULL_COMPLIANCE, false,
+            var businessName = row.getOrDefault(BUSINESS_COLUMN, row.get(TITLE));
+            standings.save(new MerchantStanding(businessId, businessName, false, openReports, FULL_COMPLIANCE, false,
                     clock.instant()));
             var campaignId = campaigns.save(new Campaign(null, businessId, row.get(TITLE), row.get(TITLE), period,
                     new CampaignZone(ZoneType.RADIUS, null, CAMPAIGN_RADIUS_METERS, null), CampaignStatus.ACTIVE,
