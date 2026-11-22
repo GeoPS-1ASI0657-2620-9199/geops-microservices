@@ -50,6 +50,7 @@ public class CampaignMetricsSteps {
     private static final String BASELINE = CAMPAIGNS + "/baseline";
     private static final String NEARBY = "/api/v1/offers/nearby?lat=%s&lng=%s&radiusMinutes=10";
     private static final String OFFER_DETAIL = "/api/v1/offers/%d";
+    private static final String OFFER_DETAIL_SCREEN = OFFER_DETAIL + "?track=click";
     private static final String BASELINE_BODY = "{\"customersPerWeek\": %d, \"averageTicket\": %s}";
     private static final String INSERT_METRICS = """
             INSERT INTO campaign_daily_metrics (campaign_id, metric_date, impressions, clicks, reservations, conversions)
@@ -123,6 +124,15 @@ public class CampaignMetricsSteps {
     @Y("abrió el detalle de {string} {int} veces")
     public void abrióElDetalle(String title, int times) {
         for (var open = 0; open < times; open++) {
+            var result = http.get(OFFER_DETAIL_SCREEN.formatted(state.offerId(title)), null);
+            assertThat(result.status()).as(result.body()).isEqualTo(HTTP_OK);
+        }
+    }
+
+    // Mi reserva y las demás pantallas leen el mismo detalle sin track=click.
+    @Y("otras pantallas leyeron el detalle de {string} {int} veces sin marcarlo como clic")
+    public void otrasPantallasLeyeronElDetalle(String title, int times) {
+        for (var read = 0; read < times; read++) {
             var result = http.get(OFFER_DETAIL.formatted(state.offerId(title)), null);
             assertThat(result.status()).as(result.body()).isEqualTo(HTTP_OK);
         }

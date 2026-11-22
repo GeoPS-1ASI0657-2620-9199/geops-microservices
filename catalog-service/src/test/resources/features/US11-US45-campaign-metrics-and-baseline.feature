@@ -11,6 +11,7 @@ Característica: Métricas por campaña y línea base del negocio
   Escenario: Las búsquedas cercanas y los detalles abiertos se cuentan como impresiones y clics
     Dado que un consumidor buscó ofertas junto al local 3 veces
     Y abrió el detalle de "Menú ejecutivo" 2 veces
+    Y otras pantallas leyeron el detalle de "Menú ejecutivo" 4 veces sin marcarlo como clic
     Cuando se escriben los contadores de impresiones y clics
     Y el dueño del comercio 84 consulta las métricas de "Almuerzos de octubre" del "2026-10-08" al "2026-10-08"
     Entonces la respuesta tiene el estado 200

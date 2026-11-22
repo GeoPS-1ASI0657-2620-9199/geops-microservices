@@ -12,6 +12,7 @@ import com.geopslabs.geops.catalog.domain.models.OfferSource;
 import com.geopslabs.geops.catalog.domain.models.OfferStatus;
 import com.geopslabs.geops.catalog.domain.models.exceptions.OfferNotFoundException;
 import com.geopslabs.geops.catalog.domain.models.queries.GetOfferByIdQuery;
+import com.geopslabs.geops.catalog.domain.models.queries.GetOfferDetailQuery;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.MerchantStandingRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.OfferRepositoryPort;
@@ -35,7 +36,10 @@ public class OfferQueryService implements GetOfferDetailUseCase, GetOfferAvailab
                 RecordOfferInteractionsUseCase.NONE);
     }
 
-    /** Opening the public detail of an offer of a campaign counts as one click of that campaign (US11). */
+    /**
+     * Opening the public detail of an offer of a campaign counts as one click of that campaign (US11), only when the
+     * request says so: other screens read the same detail and must not inflate the clicks.
+     */
     public OfferQueryService(OfferRepositoryPort offerRepository, CampaignRepositoryPort campaignRepository,
                              MerchantStandingRepositoryPort merchantStandingRepository, Clock clock,
                              RecordOfferInteractionsUseCase interactions) {
@@ -47,7 +51,7 @@ public class OfferQueryService implements GetOfferDetailUseCase, GetOfferAvailab
     }
 
     @Override
-    public OfferDetail getDetail(GetOfferByIdQuery query) {
+    public OfferDetail getDetail(GetOfferDetailQuery query) {
         var offer = findOffer(query.offerId());
         if (offer.getStatus() == OfferStatus.REMOVED) {
             throw new OfferNotFoundException(offer.getId());
@@ -56,7 +60,9 @@ public class OfferQueryService implements GetOfferDetailUseCase, GetOfferAvailab
         if (offer.getSource() == OfferSource.PUBLIC_SOURCE) {
             return new OfferDetail(offer, offer.getSourceName(), false, available);
         }
-        interactions.recordClick(offer.getId());
+        if (query.countsAsClick()) {
+            interactions.recordClick(offer.getId());
+        }
         var standing = merchantStandingRepository.findByBusinessId(offer.getBusinessId());
         return new OfferDetail(offer, standing.map(MerchantStanding::getBusinessName).orElse(null),
                 standing.map(MerchantStanding::hasVerifiedSeal).orElse(false), available);
