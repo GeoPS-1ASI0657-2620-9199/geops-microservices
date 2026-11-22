@@ -1,6 +1,7 @@
 package com.geopslabs.geops.notification.configuration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.geopslabs.geops.notification.application.exceptions.ProviderUnavailableException;
 import com.geopslabs.geops.notification.infrastructure.messaging.UnreadableEventException;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
@@ -26,8 +27,8 @@ import java.util.List;
  * What happens to an event the consumer cannot apply (US33, S3-02), in three cases:
  * <ul>
  * <li>Unreadable (broken JSON, missing field, version newer than known): to {@code <topic>.DLT} at once.</li>
- * <li>The database or Redis is down: retried with no limit, 1 s doubling up to 60 s, and applied when the
- * dependency comes back. It is never discarded.</li>
+ * <li>The database or Redis is down, or the circuit breaker of a delivery provider is open (US34): retried with no
+ * limit, 1 s doubling up to 60 s, and applied when the dependency comes back. It is never discarded.</li>
  * <li>Any other failure, a rule or a bug: five attempts (1, 2, 4 and 8 s apart) and then to {@code <topic>.DLT}
  * with its cause.</li>
  * </ul>
@@ -44,7 +45,7 @@ public class MessagingConfiguration {
     private static final String UNKNOWN = "unknown";
     private static final List<Class<? extends Exception>> INFRASTRUCTURE_FAILURES = List.of(
             CannotCreateTransactionException.class, DataAccessResourceFailureException.class,
-            TransientDataAccessException.class);
+            TransientDataAccessException.class, ProviderUnavailableException.class);
     /** Redis only exists in Catalog: it is compared by name so the other services do not need the dependency. */
     private static final String REDIS_FAILURE = "org.springframework.data.redis.RedisConnectionFailureException";
 
