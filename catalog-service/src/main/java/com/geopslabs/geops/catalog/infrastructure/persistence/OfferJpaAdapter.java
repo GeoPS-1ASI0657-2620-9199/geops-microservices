@@ -116,6 +116,11 @@ public class OfferJpaAdapter implements OfferRepositoryPort {
     }
 
     @Override
+    public boolean markRemoved(Long offerId) {
+        return repository.markRemoved(offerId, OfferStatus.REMOVED.name()) == 1;
+    }
+
+    @Override
     public Map<GeocodingStatus, Long> countPublicSourceByGeocodingStatus() {
         return repository.countByGeocodingStatus(OfferSource.PUBLIC_SOURCE.name()).stream()
                 .collect(Collectors.toMap(row -> GeocodingStatus.valueOf(row.getStatus()),

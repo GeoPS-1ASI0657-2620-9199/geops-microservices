@@ -1,7 +1,9 @@
 package com.geopslabs.geops.catalog.domain.models;
 
+import com.geopslabs.geops.catalog.domain.models.exceptions.OfferAlreadyRemovedException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.OfferValidityOutsideCampaignException;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 public class Offer {
@@ -68,6 +70,22 @@ public class Offer {
     public Offer inCampaign(Long savedCampaignId) {
         return new Offer(id, savedCampaignId, businessId, title, conditions, price, validTo, category,
                 geocodingStatus, address, imageUrl, source, sourceName, status, location);
+    }
+
+    /**
+     * US24: the administrator takes the offer out of the catalog. The offer is kept with status REMOVED, so the
+     * reservations that point to it keep their reference; the action records who removed it, when and why.
+     */
+    public ModerationAction remove(Long adminId, String reason, Instant removedAt) {
+        if (status == OfferStatus.REMOVED) {
+            throw new OfferAlreadyRemovedException(id);
+        }
+        return new ModerationAction(null, id, adminId, reason, removedAt);
+    }
+
+    public Offer asRemoved() {
+        return new Offer(id, campaignId, businessId, title, conditions, price, validTo, category, geocodingStatus,
+                address, imageUrl, source, sourceName, OfferStatus.REMOVED, location);
     }
 
     public boolean isValidOn(LocalDate date) {

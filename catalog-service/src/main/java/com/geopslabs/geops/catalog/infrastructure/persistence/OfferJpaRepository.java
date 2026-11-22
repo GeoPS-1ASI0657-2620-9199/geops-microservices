@@ -171,6 +171,12 @@ public interface OfferJpaRepository extends JpaRepository<OfferJpaEntity, Long> 
     int markForManualReview(@Param("offerId") Long offerId, @Param("manualReview") String manualReview,
                             @Param("pending") String pending);
 
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = "UPDATE offers SET status = :removed WHERE id = :offerId AND status <> :removed",
+            nativeQuery = true)
+    int markRemoved(@Param("offerId") Long offerId, @Param("removed") String removed);
+
     @Query(value = """
             SELECT geocoding_status AS "status", count(*) AS "total"
             FROM offers
