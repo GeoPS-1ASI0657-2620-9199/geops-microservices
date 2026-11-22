@@ -7,6 +7,12 @@ import java.time.ZoneOffset;
 import java.util.Objects;
 import java.util.UUID;
 
+/**
+ * The business validated the code of a reservation at the counter (US41). Topic {@code reservation.events}, key
+ * {@code reservationId}, contract {@code platform/messaging/events/ReservationRedeemed.v1.json}. Catalog counts the
+ * redemption in the compliance of the business (US44) and Engagement lets the consumer review it (US49).
+ * {@code occurredAt} and {@code redeemedAt} are the same instant, in UTC.
+ */
 public record ReservationRedeemed(UUID eventId, Instant occurredAt, Payload payload) implements DomainEvent {
     public static final String EVENT_TYPE = "ReservationRedeemed";
     public static final int VERSION = 1;
