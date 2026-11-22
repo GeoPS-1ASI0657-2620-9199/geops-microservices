@@ -36,8 +36,12 @@ public class AdminGeocodingController {
             content = @Content(examples = @ExampleObject(value = """
                     {"runId": "3f6c2d1e-8a4b-4c7d-9e2f-1a2b3c4d5e6f", "status": "RUNNING",
                      "startedAt": "2026-10-21T15:00:00Z", "finishedAt": null, "report": null}""")))
-    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
-    @ApiResponse(responseCode = "403", description = "The token is not of an administrator")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token",
+            content = @Content(examples = @ExampleObject(value = """
+                    {"code": "UNAUTHORIZED", "message": "A valid token is required"}""")))
+    @ApiResponse(responseCode = "403", description = "The token is not of an administrator",
+            content = @Content(examples = @ExampleObject(value = """
+                    {"code": "FORBIDDEN", "message": "Your account is not allowed to perform this operation"}""")))
     @ApiResponse(responseCode = "409", description = "Another run is in progress",
             content = @Content(examples = @ExampleObject(value = """
                     {"code": "GEOCODING_RUN_IN_PROGRESS", "message": "Ya hay una conversión a coordenadas en curso. Inténtalo cuando termine."}""")))
@@ -58,7 +62,9 @@ public class AdminGeocodingController {
                        "report": {"processed": 12, "geocoded": 10, "manualReview": 2, "stillPending": 0,
                          "stoppedByProvider": false, "startedAt": "2026-10-21T15:00:00Z",
                          "finishedAt": "2026-10-21T15:00:13Z"}}}""")))
-    @ApiResponse(responseCode = "403", description = "The token is not of an administrator")
+    @ApiResponse(responseCode = "403", description = "The token is not of an administrator",
+            content = @Content(examples = @ExampleObject(value = """
+                    {"code": "FORBIDDEN", "message": "Your account is not allowed to perform this operation"}""")))
     @GetMapping("/geocoding-summary")
     public GeocodingSummary summary() {
         return geocoding.summary();
