@@ -24,6 +24,7 @@ public class CatalogEventsListener {
         switch (event.eventType()) {
             case "OfferPublished" -> planner.offerPublished(offer(reader.requireVersion(event, VERSION)));
             case "OfferExpired" -> cancel.offerUnavailable(List.of(EventFields.id(reader.requireVersion(event, VERSION).payload(), "offerId")));
+            case "OfferRemoved" -> cancel.offerUnavailable(List.of(EventFields.id(reader.requireVersion(event, VERSION).payload(), "offerId")));
             case "CampaignPaused" -> cancel.offerUnavailable(offerIds(reader.requireVersion(event, VERSION).payload().path("offerIds")));
             default -> { }
         }
