@@ -4,6 +4,7 @@ import com.geopslabs.geops.catalog.application.usecases.GetOfferAvailabilityUseC
 import com.geopslabs.geops.catalog.application.usecases.GetOfferDetailUseCase;
 import com.geopslabs.geops.catalog.application.usecases.OfferAvailability;
 import com.geopslabs.geops.catalog.application.usecases.OfferDetail;
+import com.geopslabs.geops.catalog.application.usecases.RecordOfferInteractionsUseCase;
 import com.geopslabs.geops.catalog.domain.models.Campaign;
 import com.geopslabs.geops.catalog.domain.models.MerchantStanding;
 import com.geopslabs.geops.catalog.domain.models.Offer;
@@ -26,13 +27,23 @@ public class OfferQueryService implements GetOfferDetailUseCase, GetOfferAvailab
     private final CampaignRepositoryPort campaignRepository;
     private final MerchantStandingRepositoryPort merchantStandingRepository;
     private final Clock clock;
+    private final RecordOfferInteractionsUseCase interactions;
 
     public OfferQueryService(OfferRepositoryPort offerRepository, CampaignRepositoryPort campaignRepository,
                              MerchantStandingRepositoryPort merchantStandingRepository, Clock clock) {
+        this(offerRepository, campaignRepository, merchantStandingRepository, clock,
+                RecordOfferInteractionsUseCase.NONE);
+    }
+
+    /** Opening the public detail of an offer of a campaign counts as one click of that campaign (US11). */
+    public OfferQueryService(OfferRepositoryPort offerRepository, CampaignRepositoryPort campaignRepository,
+                             MerchantStandingRepositoryPort merchantStandingRepository, Clock clock,
+                             RecordOfferInteractionsUseCase interactions) {
         this.offerRepository = offerRepository;
         this.campaignRepository = campaignRepository;
         this.merchantStandingRepository = merchantStandingRepository;
         this.clock = clock;
+        this.interactions = interactions;
     }
 
     @Override
@@ -45,6 +56,7 @@ public class OfferQueryService implements GetOfferDetailUseCase, GetOfferAvailab
         if (offer.getSource() == OfferSource.PUBLIC_SOURCE) {
             return new OfferDetail(offer, offer.getSourceName(), false, available);
         }
+        interactions.recordClick(offer.getId());
         var standing = merchantStandingRepository.findByBusinessId(offer.getBusinessId());
         return new OfferDetail(offer, standing.map(MerchantStanding::getBusinessName).orElse(null),
                 standing.map(MerchantStanding::hasVerifiedSeal).orElse(false), available);

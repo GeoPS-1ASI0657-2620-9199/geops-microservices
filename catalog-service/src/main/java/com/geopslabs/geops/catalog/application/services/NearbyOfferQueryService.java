@@ -1,6 +1,7 @@
 package com.geopslabs.geops.catalog.application.services;
 
 import com.geopslabs.geops.catalog.application.usecases.NearbyOffersPage;
+import com.geopslabs.geops.catalog.application.usecases.RecordOfferInteractionsUseCase;
 import com.geopslabs.geops.catalog.application.usecases.SearchNearbyOffersUseCase;
 import com.geopslabs.geops.catalog.domain.models.GeoPoint;
 import com.geopslabs.geops.catalog.domain.models.OfferCategory;
@@ -17,9 +18,17 @@ public class NearbyOfferQueryService implements SearchNearbyOffersUseCase {
     private static final Logger LOGGER = LoggerFactory.getLogger(NearbyOfferQueryService.class);
 
     private final ProximitySearchService proximitySearch;
+    private final RecordOfferInteractionsUseCase interactions;
 
     public NearbyOfferQueryService(ProximitySearchService proximitySearch) {
+        this(proximitySearch, RecordOfferInteractionsUseCase.NONE);
+    }
+
+    /** Every offer of the page returned counts as one impression of its campaign (US11). */
+    public NearbyOfferQueryService(ProximitySearchService proximitySearch,
+                                   RecordOfferInteractionsUseCase interactions) {
         this.proximitySearch = proximitySearch;
+        this.interactions = interactions;
     }
 
     @Override
@@ -39,6 +48,8 @@ public class NearbyOfferQueryService implements SearchNearbyOffersUseCase {
         var totalPages = (ranked.size() + size - 1) / size;
         LOGGER.info("offers.nearby.searched radiusMinutes={} category={} page={} found={}", radius.minutes(), category,
                 page, ranked.size());
-        return new NearbyOffersPage(ranked.subList(from, to), page, ranked.size(), totalPages);
+        var content = ranked.subList(from, to);
+        interactions.recordImpressions(content.stream().map(offer -> offer.offer().offerId()).toList());
+        return new NearbyOffersPage(content, page, ranked.size(), totalPages);
     }
 }

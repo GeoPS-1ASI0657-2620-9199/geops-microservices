@@ -1,5 +1,6 @@
 package com.geopslabs.geops.catalog.application.services;
 
+import com.geopslabs.geops.catalog.application.usecases.RecordOfferInteractionsUseCase;
 import com.geopslabs.geops.catalog.domain.models.Campaign;
 import com.geopslabs.geops.catalog.domain.models.CampaignStatus;
 import com.geopslabs.geops.catalog.domain.models.CampaignZone;
@@ -31,6 +32,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -225,6 +228,47 @@ class OfferQueryServiceTest {
 
         assertThatThrownBy(() -> service.getAvailability(new GetOfferByIdQuery(OFFER_ID)))
                 .isInstanceOf(OfferNotFoundException.class);
+    }
+
+    @Test
+    void openingTheDetailOfAnOfferOfACampaignCountsOneClick() {
+        var interactions = mock(RecordOfferInteractionsUseCase.class);
+        var counted = new OfferQueryService(offerRepository, campaignRepository, merchantStandingRepository,
+                Clock.fixed(NOW, OfferQueryService.OFFER_ZONE), interactions);
+        when(offerRepository.findById(OFFER_ID))
+                .thenReturn(Optional.of(affiliated(TODAY_IN_LIMA, OfferStatus.PUBLISHED)));
+        stubCampaign(CampaignStatus.ACTIVE);
+        when(merchantStandingRepository.findByBusinessId(BUSINESS_ID)).thenReturn(Optional.of(standing()));
+
+        counted.getDetail(new GetOfferByIdQuery(OFFER_ID));
+
+        verify(interactions).recordClick(OFFER_ID);
+    }
+
+    @Test
+    void theDetailOfAPublicSourceOfferCountsNoClick() {
+        var interactions = mock(RecordOfferInteractionsUseCase.class);
+        var counted = new OfferQueryService(offerRepository, campaignRepository, merchantStandingRepository,
+                Clock.fixed(NOW, OfferQueryService.OFFER_ZONE), interactions);
+        when(offerRepository.findById(OFFER_ID)).thenReturn(Optional.of(publicSource()));
+
+        counted.getDetail(new GetOfferByIdQuery(OFFER_ID));
+
+        verifyNoInteractions(interactions);
+    }
+
+    @Test
+    void askingForTheAvailabilityCountsNoClick() {
+        var interactions = mock(RecordOfferInteractionsUseCase.class);
+        var counted = new OfferQueryService(offerRepository, campaignRepository, merchantStandingRepository,
+                Clock.fixed(NOW, OfferQueryService.OFFER_ZONE), interactions);
+        when(offerRepository.findById(OFFER_ID))
+                .thenReturn(Optional.of(affiliated(TODAY_IN_LIMA, OfferStatus.PUBLISHED)));
+        stubCampaign(CampaignStatus.ACTIVE);
+
+        counted.getAvailability(new GetOfferByIdQuery(OFFER_ID));
+
+        verifyNoInteractions(interactions);
     }
 
     private void stubCampaign(CampaignStatus status) {

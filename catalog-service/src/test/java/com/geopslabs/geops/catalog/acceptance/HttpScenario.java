@@ -62,6 +62,16 @@ public class HttpScenario {
         return last;
     }
 
+    public HttpResult put(String path, String token, String jsonBody) {
+        var request = restClient.put().uri(path).contentType(MediaType.APPLICATION_JSON).body(jsonBody);
+        if (token != null) {
+            request.header(HttpHeaders.AUTHORIZATION, BEARER + token);
+        }
+        last = request.exchange((ignored, response) -> new HttpResult(response.getStatusCode().value(),
+                StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8)));
+        return last;
+    }
+
     public HttpResult last() {
         return last;
     }
