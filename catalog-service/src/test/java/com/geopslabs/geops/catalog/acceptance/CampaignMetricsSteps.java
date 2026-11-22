@@ -172,6 +172,11 @@ public class CampaignMetricsSteps {
         http.get(SUMMARY, ownerToken(businessId));
     }
 
+    @Dado("que Catalog todavía no tiene la copia local del comercio {long}")
+    public void catalogNoTieneElComercio(Long businessId) {
+        assertThat(standings.findByBusinessId(businessId)).isEmpty();
+    }
+
     // Los decimales van como texto: con "# language: es" Cucumber lee 18.50 con la coma como separador decimal.
     @Cuando("el dueño del comercio {long} declara {int} clientes por semana y un ticket promedio de {string}")
     @Dado("que el comercio {long} declaró {int} clientes por semana y un ticket promedio de {string}")

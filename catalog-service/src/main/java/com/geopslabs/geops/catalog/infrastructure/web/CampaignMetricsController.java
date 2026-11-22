@@ -178,7 +178,8 @@ public class CampaignMetricsController {
 
     @Operation(summary = "Declare or replace the baseline of the business in the token",
             description = "Records the customers per week and the average ticket with the current date. Declaring "
-                    + "again replaces both numbers and the date.")
+                    + "again replaces both numbers and the date. A business that just registered can declare it "
+                    + "before creating its first campaign.")
     @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples =
             @ExampleObject(value = DECLARE_BASELINE_EXAMPLE)))
     @ApiResponse(responseCode = "200", description = "Baseline recorded",
@@ -193,9 +194,6 @@ public class CampaignMetricsController {
             content = @Content(examples = @ExampleObject(value = UNAUTHORIZED_EXAMPLE)))
     @ApiResponse(responseCode = "403", description = "Token without ROLE_BUSINESS_OWNER or without businessId",
             content = @Content(examples = @ExampleObject(value = OWNER_ONLY_EXAMPLE)))
-    @ApiResponse(responseCode = "404", description = "Catalog does not know the business yet",
-            content = @Content(examples = @ExampleObject(value = """
-                    {"code": "BUSINESS_NOT_FOUND", "message": "Business 84 is not in the catalog yet"}""")))
     @PutMapping(value = "/baseline", consumes = APPLICATION_JSON_VALUE)
     public BusinessBaselineResponse declareBaseline(@AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody DeclareBaselineRequest request) {

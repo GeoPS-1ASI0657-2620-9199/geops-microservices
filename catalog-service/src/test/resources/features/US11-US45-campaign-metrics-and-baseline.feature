@@ -66,6 +66,13 @@ Característica: Métricas por campaña y línea base del negocio
     Y la línea base del comercio 84 tiene 140 clientes por semana, ticket "18.50" y fecha "2026-10-08T13:05:00Z"
 
   @US45
+  Escenario: Un negocio sin campañas declara su línea base
+    Dado que Catalog todavía no tiene la copia local del comercio 66
+    Cuando el dueño del comercio 66 declara 40 clientes por semana y un ticket promedio de "12.00"
+    Entonces la respuesta tiene el estado 200
+    Y la línea base del comercio 66 tiene 40 clientes por semana, ticket "12.00" y fecha "2026-10-08T13:05:00Z"
+
+  @US45
   Escenario: Con línea base la comparación contra el periodo se muestra en porcentaje
     Dado que el comercio 84 declaró 140 clientes por semana y un ticket promedio de "18.50"
     Y que la campaña "Almuerzos de octubre" registró estas métricas:

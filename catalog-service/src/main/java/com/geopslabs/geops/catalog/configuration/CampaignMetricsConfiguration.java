@@ -7,7 +7,6 @@ import com.geopslabs.geops.catalog.application.usecases.GetCampaignByIdUseCase;
 import com.geopslabs.geops.catalog.domain.ports.BusinessBaselineRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.CampaignMetricsRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
-import com.geopslabs.geops.catalog.domain.ports.MerchantStandingRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.ProcessedEventsPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,8 +36,7 @@ public class CampaignMetricsConfiguration {
     }
 
     @Bean
-    public BusinessBaselineService businessBaselineService(BusinessBaselineRepositoryPort baselines,
-                                                           MerchantStandingRepositoryPort standings, Clock clock) {
-        return new BusinessBaselineService(baselines, standings, clock);
+    public BusinessBaselineService businessBaselineService(BusinessBaselineRepositoryPort baselines, Clock clock) {
+        return new BusinessBaselineService(baselines, clock);
     }
 }

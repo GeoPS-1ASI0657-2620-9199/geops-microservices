@@ -2,11 +2,8 @@ package com.geopslabs.geops.catalog.application.services;
 
 import com.geopslabs.geops.catalog.application.usecases.DeclareBaselineCommand;
 import com.geopslabs.geops.catalog.domain.models.BusinessBaseline;
-import com.geopslabs.geops.catalog.domain.models.MerchantStanding;
-import com.geopslabs.geops.catalog.domain.models.exceptions.BusinessNotFoundException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidBaselineException;
 import com.geopslabs.geops.catalog.domain.ports.BusinessBaselineRepositoryPort;
-import com.geopslabs.geops.catalog.domain.ports.MerchantStandingRepositoryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,7 +19,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -34,19 +30,16 @@ class BusinessBaselineServiceTest {
 
     @Mock
     private BusinessBaselineRepositoryPort baselines;
-    @Mock
-    private MerchantStandingRepositoryPort standings;
 
     private BusinessBaselineService service;
 
     @BeforeEach
     void setUp() {
-        service = new BusinessBaselineService(baselines, standings, Clock.fixed(NOW, ZoneOffset.UTC));
+        service = new BusinessBaselineService(baselines, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
     void recordsTheNumbersWithTheDateOfTheDeclaration() {
-        when(standings.findByBusinessId(BUSINESS_ID)).thenReturn(Optional.of(standing()));
         when(baselines.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         var saved = service.declare(new DeclareBaselineCommand(BUSINESS_ID, 140, new BigDecimal("18.50")));
@@ -56,23 +49,27 @@ class BusinessBaselineServiceTest {
     }
 
     @Test
-    void aBusinessCatalogDoesNotKnowCannotDeclare() {
-        when(standings.findByBusinessId(BUSINESS_ID)).thenReturn(Optional.empty());
+    void aBusinessThatJustRegisteredDeclaresWithoutItsLocalCopy() {
+        when(baselines.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertThatThrownBy(() -> service.declare(new DeclareBaselineCommand(BUSINESS_ID, 140, BigDecimal.TEN)))
-                .isInstanceOf(BusinessNotFoundException.class);
-        verify(baselines, never()).save(any());
+        var saved = service.declare(new DeclareBaselineCommand(66L, 40, new BigDecimal("12.00")));
+
+        assertThat(saved).isEqualTo(new BusinessBaseline(66L, 40, new BigDecimal("12.00"), NOW));
+        verify(baselines).save(saved);
+    }
+
+    @Test
+    void theDeclaredBaselineIsReadBack() {
+        var stored = new BusinessBaseline(BUSINESS_ID, 140, new BigDecimal("18.50"), NOW);
+        when(baselines.findByBusinessId(BUSINESS_ID)).thenReturn(Optional.of(stored));
+
+        assertThat(service.find(BUSINESS_ID)).contains(stored);
     }
 
     @Test
     void invalidNumbersAreRejectedBeforeReadingAnything() {
         assertThatThrownBy(() -> service.declare(new DeclareBaselineCommand(BUSINESS_ID, 0, BigDecimal.TEN)))
                 .isInstanceOf(InvalidBaselineException.class);
-        verifyNoInteractions(standings, baselines);
-    }
-
-    private static MerchantStanding standing() {
-        return new MerchantStanding(BUSINESS_ID, "Restaurante Don Pepe", true, 0, new BigDecimal("100.00"), true,
-                NOW);
+        verifyNoInteractions(baselines);
     }
 }
