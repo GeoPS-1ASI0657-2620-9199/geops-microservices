@@ -142,11 +142,12 @@ us17() {
       -Dtest=ContextBoundariesArchTest -Dsurefire.failIfNoSpecifiedTests=false > /dev/null 2>&1); then ok; else ko; fi
 
   echo " Scenario: Identity keeps working while the catalog restarts"
-  local suffix email phone password login_code
-  suffix=$(date +%s)
-  email="us17.${suffix}@ejemplo.pe"
-  phone="9$(printf '%08d' $((suffix % 100000000)))"
-  password="Us17#${suffix}"
+  # Cuenta fija, como en US33: si ya existe el registro responde 409 y el login sirve igual, así
+  # cada corrida no deja un consumidor nuevo en la base de la demo.
+  local email phone password login_code
+  email="us17.consumidor@ejemplo.pe"
+  phone="987000017"
+  password="Us17#Consumidor2026"
   curl -s -o /dev/null -X POST "${GATEWAY_URL}/api/v1/auth/register" -H 'Content-Type: application/json' \
     -d "{\"role\":\"CONSUMER\",\"fullName\":\"Prueba US17\",\"email\":\"${email}\",\"phone\":\"${phone}\",\"password\":\"${password}\"}"
   "${COMPOSE[@]}" restart catalog-service > /dev/null 2>&1 &
@@ -221,7 +222,7 @@ lag_is_zero() { [ "$(topic_lag "$1" "$US33_TOPIC")" = "0" ]; }
 # Deja un canje listo: crea (o reutiliza) comercio y consumidor, publica una oferta y reserva.
 # Deja en variables globales US33_OWNER_TOKEN, US33_RESERVATION_ID y US33_CODE.
 us33_prepare_reservation() {
-  local start end body offer_id business_id reservation
+  local start end body offer_id business_id campaign_id reservation
   if [ -z "${US33_OWNER_TOKEN:-}" ]; then
     US33_OWNER_TOKEN=$(login_token "$US33_OWNER_EMAIL" "$US33_OWNER_PASSWORD")
     if [ -z "$US33_OWNER_TOKEN" ]; then
@@ -240,12 +241,23 @@ us33_prepare_reservation() {
   start=$(date -u +%Y-%m-%d); end=$(date -u -d '+30 days' +%Y-%m-%d)
   body=$(http_json POST /api/v1/campaigns "$US33_OWNER_TOKEN" "{\"businessName\":\"Bodega US33\",\"name\":\"Prueba US33 $(date +%s)\",\"description\":\"Oferta para la prueba de eventos\",\"period\":{\"start\":\"${start}\",\"end\":\"${end}\"},\"storeLocation\":{\"address\":\"Jr. Huanuco 1250, La Victoria\",\"latitude\":-12.067,\"longitude\":-77.024},\"zone\":{\"type\":\"RADIUS\",\"center\":{\"latitude\":-12.067,\"longitude\":-77.024},\"radiusMeters\":800},\"offers\":[{\"title\":\"Almuerzo US33\",\"conditions\":\"Solo para la prueba.\",\"price\":15,\"validTo\":\"${end}\",\"category\":\"Gastronomia\"}]}")
   business_id=$(printf '%s' "$body" | json_field businessId)
+  campaign_id=$(printf '%s' "$body" | json_field campaignId)
+  [ -n "$campaign_id" ] && US33_CAMPAIGNS+=("$campaign_id")
   offer_id=$(psql_db catalog_db "SELECT id FROM offers WHERE business_id = ${business_id:-0} ORDER BY id DESC LIMIT 1" | tr -d '[:space:]')
   [ -n "$offer_id" ] || return 1
   reservation=$(http_json POST /api/v1/reservations "$US33_CONSUMER_TOKEN" "{\"offerId\":${offer_id}}" | head -1)
   US33_RESERVATION_ID=$(printf '%s' "$reservation" | json_field reservationId)
   US33_CODE=$(printf '%s' "$reservation" | json_field code)
   [ -n "$US33_RESERVATION_ID" ] && [ -n "$US33_CODE" ]
+}
+# Al terminar se pausan las campañas de la prueba: la búsqueda por cercanía solo muestra campañas
+# ACTIVE, así que no quedan ofertas "Almuerzo US33" visibles en la demo.
+us33_pause_campaigns() {
+  local id
+  for id in "${US33_CAMPAIGNS[@]}"; do
+    http_json PATCH "/api/v1/campaigns/${id}/status" "$US33_OWNER_TOKEN" '{"status":"PAUSED"}' > /dev/null
+  done
+  US33_CAMPAIGNS=()
 }
 us33_redeem() {
   http_json POST /api/v1/reservations/redeem "$US33_OWNER_TOKEN" "{\"code\":\"${US33_CODE}\"}" | tail -1
@@ -254,6 +266,7 @@ us33_redeem() {
 us33() {
   echo "Feature: US33 Communicate the services asynchronously"
   US33_OWNER_TOKEN=""
+  US33_CAMPAIGNS=()
   local code lag marker
   # US17 deja a Catalog reiniciando; sin Catalog sano no se puede publicar la oferta del escenario.
   step "Catalog is healthy before the scenarios"
@@ -261,7 +274,7 @@ us33() {
 
   echo " Scenario: The redemption completes while the consumer service is down"
   step "Background: a business owner has an ACTIVE reservation code"
-  if us33_prepare_reservation; then ok "reservation ${US33_RESERVATION_ID}"; else ko; return; fi
+  if us33_prepare_reservation; then ok "reservation ${US33_RESERVATION_ID}"; else ko; us33_pause_campaigns; return; fi
   "${COMPOSE[@]}" stop engagement-service > /dev/null 2>&1
   step "engagement-service is stopped"
   [ -z "$("${COMPOSE[@]}" ps -q --status running engagement-service)" ] && ok || ko
@@ -296,6 +309,7 @@ us33() {
   else
     ko
   fi
+  us33_pause_campaigns
 }
 
 case "${1:-all}" in
