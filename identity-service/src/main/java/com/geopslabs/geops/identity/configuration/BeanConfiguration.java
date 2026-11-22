@@ -4,6 +4,7 @@ import com.geopslabs.geops.identity.application.services.BusinessProfileQuerySer
 import com.geopslabs.geops.identity.application.services.BusinessVerificationService;
 import com.geopslabs.geops.identity.application.services.ConsumerProfileService;
 import com.geopslabs.geops.identity.application.services.PublicKeyQueryService;
+import com.geopslabs.geops.identity.application.services.TokenIntrospectionService;
 import com.geopslabs.geops.identity.application.services.UserCommandService;
 import com.geopslabs.geops.identity.application.services.UserAuthenticationService;
 import com.geopslabs.geops.identity.application.usecases.GetPublicKeysUseCase;
@@ -14,9 +15,11 @@ import com.geopslabs.geops.identity.domain.ports.ConsumerProfileRepositoryPort;
 import com.geopslabs.geops.identity.domain.ports.GeocodingPort;
 import com.geopslabs.geops.identity.domain.ports.OutboxPort;
 import com.geopslabs.geops.identity.domain.ports.PasswordHasherPort;
+import com.geopslabs.geops.identity.domain.ports.RevokedTokenRepositoryPort;
 import com.geopslabs.geops.identity.domain.ports.RucVerificationRepositoryPort;
 import com.geopslabs.geops.identity.domain.ports.TaxpayerRegistryPort;
 import com.geopslabs.geops.identity.domain.ports.TokenIssuerPort;
+import com.geopslabs.geops.identity.domain.ports.TokenVerifierPort;
 import com.geopslabs.geops.identity.domain.ports.UserRepositoryPort;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -58,6 +61,14 @@ public class BeanConfiguration {
     @Bean
     public GetPublicKeysUseCase getPublicKeysUseCase(TokenIssuerPort tokenIssuer) {
         return new PublicKeyQueryService(tokenIssuer);
+    }
+
+    /** One bean for the three use cases: introspection, logout and the purge of expired revocations. */
+    @Bean
+    public TokenIntrospectionService tokenIntrospectionService(TokenVerifierPort tokenVerifier,
+                                                               RevokedTokenRepositoryPort revokedTokens,
+                                                               Clock clock) {
+        return new TokenIntrospectionService(tokenVerifier, revokedTokens, clock);
     }
 
     @Bean
