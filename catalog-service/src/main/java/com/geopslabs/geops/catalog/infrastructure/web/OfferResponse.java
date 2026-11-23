@@ -10,6 +10,7 @@ public record OfferResponse(
         String title,
         String conditions,
         BigDecimal price,
+        BigDecimal regularPrice,
         LocalDate validTo,
         String category,
         String address,

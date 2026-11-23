@@ -25,25 +25,31 @@ final class ConsumerGroupProgress {
     }
 
     static void awaitConsumed(KafkaAdmin kafkaAdmin, String topic) throws Exception {
+        awaitConsumed(kafkaAdmin, topic, GROUP);
+    }
+
+    /** The same wait for another consumer group of Catalog, such as the one of the campaign metrics. */
+    static void awaitConsumed(KafkaAdmin kafkaAdmin, String topic, String group) throws Exception {
         try (var admin = AdminClient.create(kafkaAdmin.getConfigurationProperties())) {
             var partitions = admin.describeTopics(List.of(topic)).allTopicNames().get().get(topic)
                     .partitions().stream().map(info -> new TopicPartition(topic, info.partition())).toList();
             var deadline = Instant.now().plus(WAIT);
             while (Instant.now().isBefore(deadline)) {
-                if (allCommitted(admin, partitions)) {
+                if (allCommitted(admin, partitions, group)) {
                     return;
                 }
                 Thread.sleep(POLL_MILLIS);
             }
         }
-        throw new AssertionError("Catalog did not consume " + topic + " within " + WAIT);
+        throw new AssertionError("Catalog (" + group + ") did not consume " + topic + " within " + WAIT);
     }
 
-    private static boolean allCommitted(AdminClient admin, List<TopicPartition> partitions) throws Exception {
+    private static boolean allCommitted(AdminClient admin, List<TopicPartition> partitions, String group)
+            throws Exception {
         var ends = admin.listOffsets(partitions.stream()
                         .collect(Collectors.toMap(Function.identity(), partition -> OffsetSpec.latest())))
                 .all().get();
-        Map<TopicPartition, Long> committed = admin.listConsumerGroupOffsets(GROUP)
+        Map<TopicPartition, Long> committed = admin.listConsumerGroupOffsets(group)
                 .partitionsToOffsetAndMetadata().get().entrySet().stream()
                 .filter(entry -> entry.getValue() != null)
                 .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().offset()));

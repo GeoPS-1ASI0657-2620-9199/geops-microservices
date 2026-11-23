@@ -10,6 +10,11 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/catalog_db}
     username: catalog_user
     password: ${CATALOG_DB_PASSWORD}
+  # Offer photos (OfferImage.MAX_BYTES): 2 MB per file; the request may carry the multipart overhead.
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 3MB
   jpa:
     open-in-view: false
     hibernate:
@@ -84,6 +89,9 @@ geops:
     pause-after-failure: 5s
   expiration:
     delay: 5m
+  metrics:
+    # US11: las impresiones y clics se cuentan en memoria y se escriben en lote cada este intervalo.
+    flush-delay: ${METRICS_FLUSH_DELAY:15s}
   geocoding:
     # Retries the offers left PENDING because Nominatim did not answer.
     delay: 30m

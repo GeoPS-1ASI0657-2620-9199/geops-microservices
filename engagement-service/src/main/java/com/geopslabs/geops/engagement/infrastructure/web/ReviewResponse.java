@@ -5,6 +5,7 @@ import java.time.Instant;
 public record ReviewResponse(
         Long reviewId,
         Long businessId,
+        String authorName,
         Integer rating,
         String text,
         boolean verifiedRedemption,

@@ -15,6 +15,9 @@ ofertas y consulta sus campañas y las ofertas de cada una.
 | `POST /api/v1/admin/public-offers` | `ROLE_ADMIN` | Carga de 1 a 200 ofertas de fuente pública; quedan `PENDING` y sin coordenadas (E2-09) |
 | `POST /api/v1/admin/geocoding-runs` | `ROLE_ADMIN` | Inicia la conversión a coordenadas y responde `202` con `runId`; la corrida sigue en segundo plano, una petición por segundo a Nominatim. Otra corrida en curso: `409 GEOCODING_RUN_IN_PROGRESS` |
 | `GET /api/v1/admin/geocoding-summary` | `ROLE_ADMIN` | Ofertas de fuente pública por `geocoding_status` y `lastRun`: `RUNNING`, `FINISHED` con su informe, `SKIPPED` (otra réplica tenía el bloqueo) o `FAILED` |
+| `DELETE /api/v1/admin/offers/{offerId}` | `ROLE_ADMIN` | Retira una oferta (US24) con `{"reason"}` obligatorio de 10 a 255 caracteres: la oferta queda `REMOVED` (sale de la búsqueda y su detalle responde `404`), se guarda en `moderation_actions` quién, cuándo y por qué, y la oferta de campaña escribe `OfferRemoved`. Ya retirada: `409 OFFER_ALREADY_REMOVED` |
+| `GET /api/v1/admin/offers` | `ROLE_ADMIN` | Ofertas para el panel de moderación, de la más nueva a la más antigua, con su estado y el comercio con sus reportes abiertos. Filtros `status` (repetible), `reported=true` (comercio con reportes abiertos) y `q` (título o comercio); `page` y `size` (hasta 50) |
+| `GET /api/v1/admin/moderation-actions` | `ROLE_ADMIN` | Historial de moderación, del más reciente al más antiguo: oferta, administrador, motivo y fecha |
 | `GET /api/v1/offers/{offerId}` | Pública | Detalle de US04: precio, vigencia, condiciones, dirección, coordenadas, categoría, fuente, nombre y sello del comercio, y `available` |
 | `GET /internal/v1/offers/{offerId}/availability` | Interna, sin token | Para reservation-service: `offerId`, `businessId`, `title`, `validTo` y `available` |
 | `POST /api/v1/campaigns` | `ROLE_BUSINESS_OWNER` | Publica una campaña con zona por radio o por distrito y sus ofertas para el comercio del token; responde `201` con la campaña, su zona y sus ofertas |
@@ -87,6 +90,7 @@ al menos una vez: quien consume descarta repetidos por `eventId`.
 | `OfferPublished` | Una por oferta al publicar una campaña; `reactivated: false` | `platform/messaging/events/OfferPublished.v1.json` |
 | `OfferExpired` | El Programador de Vencimientos marca `EXPIRED` una oferta de campaña | `platform/messaging/events/OfferExpired.v1.json` |
 | `CampaignPaused` | El dueño pausa una campaña, con los `offerIds` de la campaña | `platform/messaging/events/CampaignPaused.v1.json` |
+| `OfferRemoved` | Un administrador retira una oferta de campaña (US24); el motivo no viaja | `platform/messaging/events/OfferRemoved.v1.json` |
 | `OfferPublished` | Una por oferta vigente al reactivar una campaña; `reactivated: true` | `platform/messaging/events/OfferPublished.v1.json` |
 
 La migración `V5` carga un `OfferPublished` por cada oferta ya publicada y vigente de una campaña
@@ -148,6 +152,7 @@ El healthcheck del compose usa `localhost:9082/actuator/health`.
 | V4 | `V4__outbox_relay_columns.sql` | `status`, `attempts`, `last_error` y `seq` de `outbox_events` para el relay (US33) |
 | V5 | `V5__backfill_offer_published_events.sql` | `OfferPublished` de las ofertas vigentes publicadas antes del relay (US33) |
 | V6 | `V6__merchant_standing_compliance_counters.sql` | `redeemed_reservations` y `consumer_favor_reports` de `merchant_standings` (US44) |
+| V9 | `V9__moderation_history_indexes.sql` | Índices de `moderation_actions` por fecha de retiro y por oferta para el historial de moderación (US24) |
 | V7 en adelante | — | Siguientes cambios de Catalog |
 
 Reglas:

@@ -1,5 +1,6 @@
 package com.geopslabs.geops.catalog.application.services;
 
+import com.geopslabs.geops.catalog.application.usecases.RecordOfferInteractionsUseCase;
 import com.geopslabs.geops.catalog.domain.models.Campaign;
 import com.geopslabs.geops.catalog.domain.models.CampaignStatus;
 import com.geopslabs.geops.catalog.domain.models.CampaignZone;
@@ -13,6 +14,7 @@ import com.geopslabs.geops.catalog.domain.models.OfferSource;
 import com.geopslabs.geops.catalog.domain.models.OfferStatus;
 import com.geopslabs.geops.catalog.domain.models.exceptions.OfferNotFoundException;
 import com.geopslabs.geops.catalog.domain.models.queries.GetOfferByIdQuery;
+import com.geopslabs.geops.catalog.domain.models.queries.GetOfferDetailQuery;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.MerchantStandingRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.OfferRepositoryPort;
@@ -31,6 +33,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -73,7 +77,7 @@ class OfferQueryServiceTest {
         stubCampaign(CampaignStatus.ACTIVE);
         when(merchantStandingRepository.findByBusinessId(BUSINESS_ID)).thenReturn(Optional.of(standing()));
 
-        var detail = service.getDetail(new GetOfferByIdQuery(OFFER_ID));
+        var detail = service.getDetail(new GetOfferDetailQuery(OFFER_ID));
 
         assertThat(detail.offer().getLocation()).isEqualTo(STORE);
         assertThat(detail.businessName()).isEqualTo(BUSINESS_NAME);
@@ -85,7 +89,7 @@ class OfferQueryServiceTest {
     void unknownOfferIsNotFound() {
         when(offerRepository.findById(OFFER_ID)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.getDetail(new GetOfferByIdQuery(OFFER_ID)))
+        assertThatThrownBy(() -> service.getDetail(new GetOfferDetailQuery(OFFER_ID)))
                 .isInstanceOf(OfferNotFoundException.class)
                 .hasMessage("La oferta 1052 no existe.");
     }
@@ -95,7 +99,7 @@ class OfferQueryServiceTest {
         when(offerRepository.findById(OFFER_ID))
                 .thenReturn(Optional.of(affiliated(TODAY_IN_LIMA.minusDays(1), OfferStatus.PUBLISHED)));
 
-        assertThat(service.getDetail(new GetOfferByIdQuery(OFFER_ID)).available()).isFalse();
+        assertThat(service.getDetail(new GetOfferDetailQuery(OFFER_ID)).available()).isFalse();
     }
 
     @Test
@@ -103,7 +107,7 @@ class OfferQueryServiceTest {
         when(offerRepository.findById(OFFER_ID))
                 .thenReturn(Optional.of(affiliated(TODAY_IN_LIMA.plusWeeks(1), OfferStatus.EXPIRED)));
 
-        assertThat(service.getDetail(new GetOfferByIdQuery(OFFER_ID)).available()).isFalse();
+        assertThat(service.getDetail(new GetOfferDetailQuery(OFFER_ID)).available()).isFalse();
     }
 
     @Test
@@ -111,7 +115,7 @@ class OfferQueryServiceTest {
         when(offerRepository.findById(OFFER_ID))
                 .thenReturn(Optional.of(affiliated(TODAY_IN_LIMA.plusWeeks(1), OfferStatus.REMOVED)));
 
-        assertThatThrownBy(() -> service.getDetail(new GetOfferByIdQuery(OFFER_ID)))
+        assertThatThrownBy(() -> service.getDetail(new GetOfferDetailQuery(OFFER_ID)))
                 .isInstanceOf(OfferNotFoundException.class);
     }
 
@@ -123,14 +127,14 @@ class OfferQueryServiceTest {
                 .thenReturn(Optional.of(affiliated(TODAY_IN_LIMA, OfferStatus.PUBLISHED)));
         stubCampaign(CampaignStatus.ACTIVE);
 
-        assertThat(lateNightInLima.getDetail(new GetOfferByIdQuery(OFFER_ID)).available()).isTrue();
+        assertThat(lateNightInLima.getDetail(new GetOfferDetailQuery(OFFER_ID)).available()).isTrue();
     }
 
     @Test
     void publicSourceOfferShowsItsSourceWithoutSeal() {
         when(offerRepository.findById(OFFER_ID)).thenReturn(Optional.of(publicSource()));
 
-        var detail = service.getDetail(new GetOfferByIdQuery(OFFER_ID));
+        var detail = service.getDetail(new GetOfferDetailQuery(OFFER_ID));
 
         assertThat(detail.offer().getBusinessId()).isNull();
         assertThat(detail.businessName()).isEqualTo(SOURCE_NAME);
@@ -144,7 +148,7 @@ class OfferQueryServiceTest {
                 .thenReturn(Optional.of(affiliated(TODAY_IN_LIMA, OfferStatus.PUBLISHED)));
         when(merchantStandingRepository.findByBusinessId(BUSINESS_ID)).thenReturn(Optional.empty());
 
-        var detail = service.getDetail(new GetOfferByIdQuery(OFFER_ID));
+        var detail = service.getDetail(new GetOfferDetailQuery(OFFER_ID));
 
         assertThat(detail.businessName()).isNull();
         assertThat(detail.verifiedSeal()).isFalse();
@@ -171,7 +175,7 @@ class OfferQueryServiceTest {
                 .thenReturn(Optional.of(affiliated(TODAY_IN_LIMA.plusWeeks(1), OfferStatus.PUBLISHED)));
         stubCampaign(CampaignStatus.PAUSED);
 
-        assertThat(service.getDetail(new GetOfferByIdQuery(OFFER_ID)).available()).isFalse();
+        assertThat(service.getDetail(new GetOfferDetailQuery(OFFER_ID)).available()).isFalse();
     }
 
     @Test
@@ -225,6 +229,63 @@ class OfferQueryServiceTest {
 
         assertThatThrownBy(() -> service.getAvailability(new GetOfferByIdQuery(OFFER_ID)))
                 .isInstanceOf(OfferNotFoundException.class);
+    }
+
+    @Test
+    void openingTheDetailScreenOfAnOfferOfACampaignCountsOneClick() {
+        var interactions = mock(RecordOfferInteractionsUseCase.class);
+        var counted = new OfferQueryService(offerRepository, campaignRepository, merchantStandingRepository,
+                Clock.fixed(NOW, OfferQueryService.OFFER_ZONE), interactions);
+        when(offerRepository.findById(OFFER_ID))
+                .thenReturn(Optional.of(affiliated(TODAY_IN_LIMA, OfferStatus.PUBLISHED)));
+        stubCampaign(CampaignStatus.ACTIVE);
+        when(merchantStandingRepository.findByBusinessId(BUSINESS_ID)).thenReturn(Optional.of(standing()));
+
+        counted.getDetail(new GetOfferDetailQuery(OFFER_ID, true));
+
+        verify(interactions).recordClick(OFFER_ID);
+    }
+
+    @Test
+    void readingTheDetailWithoutTrackingCountsNoClick() {
+        var interactions = mock(RecordOfferInteractionsUseCase.class);
+        var counted = new OfferQueryService(offerRepository, campaignRepository, merchantStandingRepository,
+                Clock.fixed(NOW, OfferQueryService.OFFER_ZONE), interactions);
+        when(offerRepository.findById(OFFER_ID))
+                .thenReturn(Optional.of(affiliated(TODAY_IN_LIMA, OfferStatus.PUBLISHED)));
+        stubCampaign(CampaignStatus.ACTIVE);
+        when(merchantStandingRepository.findByBusinessId(BUSINESS_ID)).thenReturn(Optional.of(standing()));
+
+        var detail = counted.getDetail(new GetOfferDetailQuery(OFFER_ID));
+
+        assertThat(detail.available()).isTrue();
+        verifyNoInteractions(interactions);
+    }
+
+    @Test
+    void theDetailOfAPublicSourceOfferCountsNoClick() {
+        var interactions = mock(RecordOfferInteractionsUseCase.class);
+        var counted = new OfferQueryService(offerRepository, campaignRepository, merchantStandingRepository,
+                Clock.fixed(NOW, OfferQueryService.OFFER_ZONE), interactions);
+        when(offerRepository.findById(OFFER_ID)).thenReturn(Optional.of(publicSource()));
+
+        counted.getDetail(new GetOfferDetailQuery(OFFER_ID, true));
+
+        verifyNoInteractions(interactions);
+    }
+
+    @Test
+    void askingForTheAvailabilityCountsNoClick() {
+        var interactions = mock(RecordOfferInteractionsUseCase.class);
+        var counted = new OfferQueryService(offerRepository, campaignRepository, merchantStandingRepository,
+                Clock.fixed(NOW, OfferQueryService.OFFER_ZONE), interactions);
+        when(offerRepository.findById(OFFER_ID))
+                .thenReturn(Optional.of(affiliated(TODAY_IN_LIMA, OfferStatus.PUBLISHED)));
+        stubCampaign(CampaignStatus.ACTIVE);
+
+        counted.getAvailability(new GetOfferByIdQuery(OFFER_ID));
+
+        verifyNoInteractions(interactions);
     }
 
     private void stubCampaign(CampaignStatus status) {

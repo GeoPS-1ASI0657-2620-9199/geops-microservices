@@ -6,6 +6,8 @@ import com.geopslabs.geops.notification.infrastructure.channels.FcmWebPushChanne
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.*;
 import com.google.firebase.messaging.FirebaseMessaging;
+import io.github.resilience4j.bulkhead.BulkheadRegistry;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
@@ -15,6 +17,7 @@ import java.time.Clock;
 
 @Configuration
 public class FirebaseConfiguration {
+    public static final String FCM = "fcm";
     private static final int TIMEOUT_MS = 2000;
     @Bean(destroyMethod = "delete")
     @Conditional(CredentialsConfigured.class)
@@ -28,7 +31,11 @@ public class FirebaseConfiguration {
     @Conditional(CredentialsConfigured.class)
     FirebaseMessaging firebaseMessaging(FirebaseApp app) { return FirebaseMessaging.getInstance(app); }
     @Bean
-    FcmWebPushChannel fcmWebPushChannel(ObjectProvider<FirebaseMessaging> messaging, PushSubscriptionRepositoryPort subscriptions, @Value("${geops.notifications.web-base-url:http://localhost:4200}") String url) { return new FcmWebPushChannel(messaging.getIfAvailable(), subscriptions, url); }
+    FcmWebPushChannel fcmWebPushChannel(ObjectProvider<FirebaseMessaging> messaging, PushSubscriptionRepositoryPort subscriptions, @Value("${geops.notifications.web-base-url:http://localhost:4200}") String url,
+                                        CircuitBreakerRegistry circuitBreakers, BulkheadRegistry bulkheads) {
+        // US34: circuit breaker and bulkhead "fcm" from resilience4j.*.instances.fcm in application.yml.
+        return new FcmWebPushChannel(messaging.getIfAvailable(), subscriptions, url, circuitBreakers.circuitBreaker(FCM), bulkheads.bulkhead(FCM));
+    }
     @Bean
     PushSubscriptionService pushSubscriptionService(PushSubscriptionRepositoryPort subscriptions, RecipientRepositoryPort recipients, NotificationPreferenceRepositoryPort preferences, Clock clock) { return new PushSubscriptionService(subscriptions, recipients, preferences, clock); }
     static class CredentialsConfigured implements Condition {

@@ -27,6 +27,7 @@ public class RsaTokenIssuerAdapter implements TokenIssuerPort {
     private static final String ROLES_CLAIM = "roles";
     private static final String ROLE_PREFIX = "ROLE_";
     private static final String BUSINESS_ID_CLAIM = "businessId";
+    private static final String NAME_CLAIM = "name";
 
     private final RsaKeyProvider keyProvider;
     private final JWSSigner signer;
@@ -62,6 +63,7 @@ public class RsaTokenIssuerAdapter implements TokenIssuerPort {
                 .audience(properties.audience())
                 .subject(String.valueOf(user.getId()))
                 .claim(ROLES_CLAIM, List.of(ROLE_PREFIX + user.getRole().name()))
+                .claim(NAME_CLAIM, user.getFullName())
                 .issueTime(Date.from(issuedAt))
                 .expirationTime(Date.from(issuedAt.plus(TOKEN_LIFETIME)));
         if (user.getRole() == Role.BUSINESS_OWNER) {
