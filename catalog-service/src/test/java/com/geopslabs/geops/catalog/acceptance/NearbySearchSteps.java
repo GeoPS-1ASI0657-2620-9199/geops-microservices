@@ -37,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class NearbySearchSteps {
     static final String NEARBY = "/api/v1/offers/nearby?lat=%s&lng=%s&radiusMinutes=%d";
     private static final String CATEGORY = "&category=%s";
+    private static final String TEXT = "&q=%s";
     private static final double METERS_PER_DEGREE = Math.toRadians(1) * GeoPoint.EARTH_MEAN_RADIUS_METERS;
     private static final BigDecimal PRICE = new BigDecimal("15.00");
     private static final BigDecimal FULL_COMPLIANCE = new BigDecimal("100.00");
@@ -98,6 +99,11 @@ public class NearbySearchSteps {
         http.get(nearby(minutes) + CATEGORY.formatted(category), null);
     }
 
+    @When("I search within {int} minutes for {string}")
+    public void searchWithText(int minutes, String text) {
+        http.get(nearby(minutes) + TEXT.formatted(text), null);
+    }
+
     @When("I search within {int} minutes")
     public void search(int minutes) {
         http.get(nearby(minutes), null);
@@ -120,6 +126,11 @@ public class NearbySearchSteps {
     public void titlesAre(String titles) throws JsonProcessingException {
         var expected = Arrays.stream(titles.split(TITLE_SEPARATOR)).map(String::strip).toList();
         assertThat(titles()).containsExactlyElementsOf(expected);
+    }
+
+    @Then("totalElements is {int}")
+    public void totalElementsIs(int total) throws JsonProcessingException {
+        assertThat(http.json(http.last()).path("totalElements").asInt()).isEqualTo(total);
     }
 
     @Then("the result is empty")
