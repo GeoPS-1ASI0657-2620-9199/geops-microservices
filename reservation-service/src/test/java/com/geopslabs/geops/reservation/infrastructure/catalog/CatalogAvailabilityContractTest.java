@@ -6,6 +6,8 @@ import com.geopslabs.geops.reservation.domain.models.OfferSnapshot;
 import com.geopslabs.geops.reservation.domain.models.exceptions.OfferNotAvailableException;
 import com.geopslabs.geops.reservation.domain.models.exceptions.OfferNotFoundException;
 import com.sun.net.httpserver.HttpServer;
+import io.github.resilience4j.bulkhead.Bulkhead;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DynamicTest;
@@ -105,8 +107,10 @@ class CatalogAvailabilityContractTest {
     }
 
     private CatalogOfferCatalogAdapter adapter() {
+        // The contract is about the answers, not the resilience: a breaker and bulkhead that never trip (US34).
         return new CatalogOfferCatalogAdapter(RestClient.builder(),
-                "http://" + LOOPBACK + ":" + catalog.getAddress().getPort());
+                "http://" + LOOPBACK + ":" + catalog.getAddress().getPort(),
+                CircuitBreaker.ofDefaults("catalog-contract"), Bulkhead.ofDefaults("catalog-contract"));
     }
 
     private static Stream<JsonNode> interactions() {
