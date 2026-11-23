@@ -5,6 +5,7 @@ import com.geopslabs.geops.catalog.application.usecases.SearchNearbyOffersUseCas
 import com.geopslabs.geops.catalog.domain.models.GeoPoint;
 import com.geopslabs.geops.catalog.domain.models.OfferCategory;
 import com.geopslabs.geops.catalog.domain.models.ProximitySearchService;
+import com.geopslabs.geops.catalog.domain.models.SearchText;
 import com.geopslabs.geops.catalog.domain.models.WalkingRadius;
 import com.geopslabs.geops.catalog.domain.models.queries.SearchNearbyOffersQuery;
 import org.slf4j.Logger;
@@ -27,18 +28,19 @@ public class NearbyOfferQueryService implements SearchNearbyOffersUseCase {
         var radius = new WalkingRadius(query.radiusMinutes());
         var origin = new GeoPoint(query.latitude(), query.longitude());
         var category = OfferCategory.labelOrNull(query.category());
+        var text = SearchText.parseOrNull(query.text());
         var page = query.page();
         var size = query.size();
         if (page < FIRST_PAGE || size < MIN_PAGE_SIZE || size > MAX_PAGE_SIZE) {
             throw new InvalidPageRequestException(MAX_PAGE_SIZE);
         }
 
-        var ranked = proximitySearch.search(origin, radius.toMeters(), category);
+        var ranked = proximitySearch.search(origin, radius.toMeters(), category, text);
         var from = (int) Math.min((long) page * size, ranked.size());
         var to = Math.min(from + size, ranked.size());
         var totalPages = (ranked.size() + size - 1) / size;
-        LOGGER.info("offers.nearby.searched radiusMinutes={} category={} page={} found={}", radius.minutes(), category,
-                page, ranked.size());
+        LOGGER.info("offers.nearby.searched radiusMinutes={} category={} hasText={} page={} found={}", radius.minutes(),
+                category, text != null, page, ranked.size());
         return new NearbyOffersPage(ranked.subList(from, to), page, ranked.size(), totalPages);
     }
 }

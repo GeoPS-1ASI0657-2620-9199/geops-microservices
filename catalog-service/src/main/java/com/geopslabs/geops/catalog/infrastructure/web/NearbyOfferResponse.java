@@ -17,5 +17,6 @@ public record NearbyOfferResponse(
         double latitude,
         double longitude,
         BigDecimal price,
+        BigDecimal regularPrice,
         LocalDate validTo) {
 }

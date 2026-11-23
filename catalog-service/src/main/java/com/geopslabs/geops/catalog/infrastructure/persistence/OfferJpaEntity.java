@@ -54,6 +54,9 @@ public class OfferJpaEntity {
     @Column(name = "price", nullable = false, precision = AMOUNT_PRECISION, scale = AMOUNT_SCALE)
     private BigDecimal price;
 
+    @Column(name = "regular_price", precision = AMOUNT_PRECISION, scale = AMOUNT_SCALE)
+    private BigDecimal regularPrice;
+
     @Column(name = "valid_to", nullable = false)
     private LocalDate validTo;
 

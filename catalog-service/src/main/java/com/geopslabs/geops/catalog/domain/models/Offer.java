@@ -1,5 +1,6 @@
 package com.geopslabs.geops.catalog.domain.models;
 
+import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidRegularPriceException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.OfferAlreadyRemovedException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.OfferValidityOutsideCampaignException;
 
@@ -7,12 +8,15 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 public class Offer {
+    private static final Money NO_REGULAR_PRICE = null;
+
     private final Long id;
     private final Long campaignId;
     private final Long businessId;
     private final String title;
     private final String conditions;
     private final Money price;
+    private final Money regularPrice;
     private final LocalDate validTo;
     private final String category;
     private final GeocodingStatus geocodingStatus;
@@ -23,10 +27,20 @@ public class Offer {
     private final OfferStatus status;
     private final GeoPoint location;
 
+    /** An offer without a regular price. */
     @SuppressWarnings("java:S107")
     public Offer(Long id, Long campaignId, Long businessId, String title, String conditions, Money price,
                  LocalDate validTo, String category, GeocodingStatus geocodingStatus, String address,
                  String imageUrl, OfferSource source, String sourceName, OfferStatus status,
+                 GeoPoint location) {
+        this(id, campaignId, businessId, title, conditions, price, NO_REGULAR_PRICE, validTo, category,
+                geocodingStatus, address, imageUrl, source, sourceName, status, location);
+    }
+
+    @SuppressWarnings("java:S107")
+    public Offer(Long id, Long campaignId, Long businessId, String title, String conditions, Money price,
+                 Money regularPrice, LocalDate validTo, String category, GeocodingStatus geocodingStatus,
+                 String address, String imageUrl, OfferSource source, String sourceName, OfferStatus status,
                  GeoPoint location) {
         this.id = id;
         this.campaignId = campaignId;
@@ -34,6 +48,7 @@ public class Offer {
         this.title = title;
         this.conditions = conditions;
         this.price = price;
+        this.regularPrice = regularPrice;
         this.validTo = validTo;
         this.category = category;
         this.geocodingStatus = geocodingStatus;
@@ -45,14 +60,22 @@ public class Offer {
         this.location = location;
     }
 
+    /**
+     * The regular price is optional; when the merchant gives it, it must be above the offer price so the saving the
+     * consumer sees is real.
+     */
     @SuppressWarnings("java:S107")
-    public static Offer publishFor(Campaign campaign, String title, String conditions, Money price, LocalDate validTo,
-                                   String category, String imageUrl, String address, GeoPoint location) {
+    public static Offer publishFor(Campaign campaign, String title, String conditions, Money price,
+                                   Money regularPrice, LocalDate validTo, String category, String imageUrl,
+                                   String address, GeoPoint location) {
         if (!campaign.getPeriod().contains(validTo)) {
             throw new OfferValidityOutsideCampaignException(title);
         }
-        return new Offer(null, campaign.getId(), campaign.getBusinessId(), title, conditions, price, validTo,
-                category, GeocodingStatus.GEOCODED, address, imageUrl, OfferSource.AFFILIATED, null,
+        if (regularPrice != null && regularPrice.amount().compareTo(price.amount()) <= 0) {
+            throw new InvalidRegularPriceException(title);
+        }
+        return new Offer(null, campaign.getId(), campaign.getBusinessId(), title, conditions, price, regularPrice,
+                validTo, category, GeocodingStatus.GEOCODED, address, imageUrl, OfferSource.AFFILIATED, null,
                 OfferStatus.PUBLISHED, location);
     }
 
@@ -68,7 +91,7 @@ public class Offer {
     }
 
     public Offer inCampaign(Long savedCampaignId) {
-        return new Offer(id, savedCampaignId, businessId, title, conditions, price, validTo, category,
+        return new Offer(id, savedCampaignId, businessId, title, conditions, price, regularPrice, validTo, category,
                 geocodingStatus, address, imageUrl, source, sourceName, status, location);
     }
 
@@ -118,6 +141,11 @@ public class Offer {
 
     public Money getPrice() {
         return price;
+    }
+
+    /** Null when the merchant did not give a regular price. */
+    public Money getRegularPrice() {
+        return regularPrice;
     }
 
     public LocalDate getValidTo() {
