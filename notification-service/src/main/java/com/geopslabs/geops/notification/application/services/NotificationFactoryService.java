@@ -21,8 +21,8 @@ public class NotificationFactoryService {
                     "%s tiene una oferta cerca de donde estuviste: %s.", List.of(BUSINESS_NAME, OFFER_TITLE)),
             NotificationType.FOLLOWED_BUSINESS_OFFER, new Template("Nueva oferta de un comercio que sigues",
                     "%s publicó una oferta: %s.", List.of(BUSINESS_NAME, OFFER_TITLE)),
-            NotificationType.REPORT_RESOLVED, new Template("Se cerr? tu reporte",
-                    "Tu reporte de la reserva %s se cerr?.", List.of(RESERVATION_CODE)),
+            NotificationType.REPORT_RESOLVED, new Template("Se cerró tu reporte",
+                    "Tu reporte de la reserva %s se cerró.", List.of(RESERVATION_CODE)),
             NotificationType.REPORT_RECEIVED, new Template("Recibiste un reporte",
                     "Un consumidor reportó la reserva %s. Responde dentro del plazo.", List.of(RESERVATION_CODE)),
             NotificationType.REPORT_ANSWERED, new Template("Respondieron tu reporte",
@@ -45,9 +45,9 @@ public class NotificationFactoryService {
                                       com.geopslabs.geops.notification.domain.models.ReportNoticeEvent event,
                                       NotificationType type, java.time.Instant now) {
         var message = switch (type) {
-            case REPORT_RECEIVED -> "Un consumidor report? la reserva %s (%s). Responde dentro del plazo.".formatted(event.reservationCode(), event.offerTitle());
-            case REPORT_ANSWERED -> "El comercio respondi? tu reporte de la reserva %s (%s).".formatted(event.reservationCode(), event.offerTitle());
-            case REPORT_RESOLVED -> "El reporte de la reserva %s (%s) se cerr? a favor del %s.".formatted(event.reservationCode(), event.offerTitle(), "CONSUMER_FAVOR".equals(event.resolution()) ? "cliente" : "comercio");
+            case REPORT_RECEIVED -> "Un consumidor reportó la reserva %s (%s). Responde dentro del plazo.".formatted(event.reservationCode(), event.offerTitle());
+            case REPORT_ANSWERED -> "El comercio respondió tu reporte de la reserva %s (%s).".formatted(event.reservationCode(), event.offerTitle());
+            case REPORT_RESOLVED -> "El reporte de la reserva %s (%s) se cerró a favor del %s.".formatted(event.reservationCode(), event.offerTitle(), "CONSUMER_FAVOR".equals(event.resolution()) ? "cliente" : "comercio");
             default -> throw new IllegalArgumentException("Unsupported report notification type");
         };
         return new Notification(null, recipientId, type, Channel.EMAIL, "Novedades de tu reporte", message,
