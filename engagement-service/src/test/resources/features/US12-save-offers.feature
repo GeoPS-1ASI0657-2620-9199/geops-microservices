@@ -100,3 +100,12 @@ Feature: Save offers
     Then the response has status 201
     When consumer 2001 lists saved businesses
     Then the saved business is called "Don Pepe"
+
+  Scenario: A saved business shows every open offer so the consumer picks one
+    Given business 85 is called "Bodega Rosa"
+    And offer 1070 of business 85 titled "Menu del dia" is published until "2026-11-15"
+    And offer 1071 of business 85 titled "2x1 en gaseosas" is published until "2026-11-15"
+    And offer 1072 of business 85 titled "Old offer" is published until "2026-10-01"
+    When consumer 2002 saves business 85
+    And consumer 2002 lists saved businesses
+    Then the saved business has 2 active offers titled "Menu del dia" and "2x1 en gaseosas"

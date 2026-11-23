@@ -21,6 +21,7 @@ import java.util.List;
 @ApiResponse(responseCode = "403", description = "Consumer role required", content = @Content(examples = @ExampleObject(value = "{\"code\":\"FORBIDDEN\",\"message\":\"Consumer role required\"}")))
 public class SavedBusinessesController {
     private static final String EXAMPLE = "{\"id\":1,\"businessId\":84,\"businessName\":\"Don Pepe\",\"savedAt\":\"2026-10-27T16:00:00Z\"}";
+    private static final String LIST_EXAMPLE = "[{\"id\":1,\"businessId\":84,\"businessName\":\"Don Pepe\",\"savedAt\":\"2026-10-27T16:00:00Z\",\"activeOffersCount\":2,\"activeOffers\":[{\"offerId\":1052,\"title\":\"2x1\",\"validTo\":\"2026-11-15\"},{\"offerId\":1053,\"title\":\"Menu del dia\",\"validTo\":\"2026-11-20\"}]}]";
     private final SaveBusinessUseCase save;
     private final ListSavedBusinessesUseCase list;
     private final RemoveSavedBusinessUseCase remove;
@@ -38,10 +39,10 @@ public class SavedBusinessesController {
         return ResponseEntity.status(result.created() ? 201 : 200).body(result.business());
     }
 
-    @Operation(summary = "List the saved businesses of the consumer")
-    @ApiResponse(responseCode = "200", description = "Saved businesses", content = @Content(examples = @ExampleObject(value = "[" + EXAMPLE + "]")))
+    @Operation(summary = "List the saved businesses of the consumer", description = "Each one with every offer it has open today, to pick one.")
+    @ApiResponse(responseCode = "200", description = "Saved businesses", content = @Content(examples = @ExampleObject(value = LIST_EXAMPLE)))
     @GetMapping
-    public List<SavedBusiness> list(@AuthenticationPrincipal Jwt jwt) { return list.list(AuthenticatedUser.from(jwt).consumerId()); }
+    public List<SavedBusinessView> list(@AuthenticationPrincipal Jwt jwt) { return list.list(AuthenticatedUser.from(jwt).consumerId()); }
 
     @Operation(summary = "Remove a saved business")
     @ApiResponse(responseCode = "204", description = "Removed")
