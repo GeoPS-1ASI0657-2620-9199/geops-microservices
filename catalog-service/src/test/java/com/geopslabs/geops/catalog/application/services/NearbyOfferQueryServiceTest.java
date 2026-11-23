@@ -1,5 +1,6 @@
 package com.geopslabs.geops.catalog.application.services;
 
+import com.geopslabs.geops.catalog.application.usecases.RecordOfferInteractionsUseCase;
 import com.geopslabs.geops.catalog.domain.models.CampaignZone;
 import com.geopslabs.geops.catalog.domain.models.GeoPoint;
 import com.geopslabs.geops.catalog.domain.models.NearbyOfferCandidate;
@@ -26,6 +27,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -154,6 +156,17 @@ class NearbyOfferQueryServiceTest {
                 new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, null, "x".repeat(61), 0, 20)))
                 .isInstanceOf(InvalidSearchTextException.class);
         verifyNoInteractions(proximitySearch);
+    }
+
+    @Test
+    void eachOfferOfThePageReturnedCountsAsOneImpression() {
+        var interactions = mock(RecordOfferInteractionsUseCase.class);
+        var counted = new NearbyOfferQueryService(proximitySearch, interactions);
+        when(proximitySearch.search(ORIGIN, 800, null, null)).thenReturn(ranked(25));
+
+        counted.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, null, 1, 20));
+
+        verify(interactions).recordImpressions(List.of(21L, 22L, 23L, 24L, 25L));
     }
 
     private static List<RankedOffer> ranked(int count) {

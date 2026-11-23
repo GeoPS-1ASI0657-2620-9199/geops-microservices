@@ -4,6 +4,7 @@ import com.geopslabs.geops.catalog.application.usecases.GetOfferAvailabilityUseC
 import com.geopslabs.geops.catalog.application.usecases.GetOfferDetailUseCase;
 import com.geopslabs.geops.catalog.application.usecases.OfferAvailability;
 import com.geopslabs.geops.catalog.application.usecases.OfferDetail;
+import com.geopslabs.geops.catalog.application.usecases.RecordOfferInteractionsUseCase;
 import com.geopslabs.geops.catalog.domain.models.Campaign;
 import com.geopslabs.geops.catalog.domain.models.MerchantStanding;
 import com.geopslabs.geops.catalog.domain.models.Offer;
@@ -11,6 +12,7 @@ import com.geopslabs.geops.catalog.domain.models.OfferSource;
 import com.geopslabs.geops.catalog.domain.models.OfferStatus;
 import com.geopslabs.geops.catalog.domain.models.exceptions.OfferNotFoundException;
 import com.geopslabs.geops.catalog.domain.models.queries.GetOfferByIdQuery;
+import com.geopslabs.geops.catalog.domain.models.queries.GetOfferDetailQuery;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.MerchantStandingRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.OfferRepositoryPort;
@@ -26,17 +28,30 @@ public class OfferQueryService implements GetOfferDetailUseCase, GetOfferAvailab
     private final CampaignRepositoryPort campaignRepository;
     private final MerchantStandingRepositoryPort merchantStandingRepository;
     private final Clock clock;
+    private final RecordOfferInteractionsUseCase interactions;
 
     public OfferQueryService(OfferRepositoryPort offerRepository, CampaignRepositoryPort campaignRepository,
                              MerchantStandingRepositoryPort merchantStandingRepository, Clock clock) {
+        this(offerRepository, campaignRepository, merchantStandingRepository, clock,
+                RecordOfferInteractionsUseCase.NONE);
+    }
+
+    /**
+     * Opening the public detail of an offer of a campaign counts as one click of that campaign (US11), only when the
+     * request says so: other screens read the same detail and must not inflate the clicks.
+     */
+    public OfferQueryService(OfferRepositoryPort offerRepository, CampaignRepositoryPort campaignRepository,
+                             MerchantStandingRepositoryPort merchantStandingRepository, Clock clock,
+                             RecordOfferInteractionsUseCase interactions) {
         this.offerRepository = offerRepository;
         this.campaignRepository = campaignRepository;
         this.merchantStandingRepository = merchantStandingRepository;
         this.clock = clock;
+        this.interactions = interactions;
     }
 
     @Override
-    public OfferDetail getDetail(GetOfferByIdQuery query) {
+    public OfferDetail getDetail(GetOfferDetailQuery query) {
         var offer = findOffer(query.offerId());
         if (offer.getStatus() == OfferStatus.REMOVED) {
             throw new OfferNotFoundException(offer.getId());
@@ -44,6 +59,9 @@ public class OfferQueryService implements GetOfferDetailUseCase, GetOfferAvailab
         var available = offer.isValidOn(today()) && isInActiveCampaign(offer);
         if (offer.getSource() == OfferSource.PUBLIC_SOURCE) {
             return new OfferDetail(offer, offer.getSourceName(), false, available);
+        }
+        if (query.countsAsClick()) {
+            interactions.recordClick(offer.getId());
         }
         var standing = merchantStandingRepository.findByBusinessId(offer.getBusinessId());
         return new OfferDetail(offer, standing.map(MerchantStanding::getBusinessName).orElse(null),

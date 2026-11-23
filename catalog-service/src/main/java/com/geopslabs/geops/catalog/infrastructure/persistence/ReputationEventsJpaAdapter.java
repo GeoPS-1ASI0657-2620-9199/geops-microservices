@@ -11,14 +11,15 @@ import java.util.UUID;
 
 /**
  * processed_events and standing_changes with plain inserts. ON CONFLICT DO NOTHING makes the check of a repeated
- * event atomic: two deliveries of the same event in parallel insert one row, and only one of them goes on.
+ * event atomic: two deliveries of the same event in parallel insert one row, and only one of them goes on. The row
+ * takes the default consumer of the column, reputation; the campaign metrics keep their own row for the same event.
  */
 @Component
 public class ReputationEventsJpaAdapter implements ReputationEventsPort {
     private static final String MARK_PROCESSED = """
             INSERT INTO processed_events (event_id, event_type, processed_at)
             VALUES (:eventId, :eventType, :processedAt)
-            ON CONFLICT (event_id) DO NOTHING
+            ON CONFLICT (event_id, consumer) DO NOTHING
             """;
     private static final String RECORD_SEAL_CHANGE = """
             INSERT INTO standing_changes (business_id, verified_seal, reason, changed_at)

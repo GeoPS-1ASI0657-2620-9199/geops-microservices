@@ -7,6 +7,7 @@ import com.geopslabs.geops.catalog.application.services.CellInvalidator;
 import com.geopslabs.geops.catalog.application.services.OfferImageService;
 import com.geopslabs.geops.catalog.application.services.ModerationCommandService;
 import com.geopslabs.geops.catalog.application.services.ModerationQueryService;
+import com.geopslabs.geops.catalog.application.services.OfferInteractionCounter;
 import com.geopslabs.geops.catalog.application.services.OfferQueryService;
 import com.geopslabs.geops.catalog.application.services.PublicOfferCommandService;
 import com.geopslabs.geops.catalog.application.services.PublicSourceOfferQueryService;
@@ -39,8 +40,9 @@ public class BeanConfiguration {
     public OfferQueryService offerQueryService(OfferRepositoryPort offerRepository,
                                                CampaignRepositoryPort campaignRepository,
                                                MerchantStandingRepositoryPort merchantStandingRepository,
-                                               Clock clock) {
-        return new OfferQueryService(offerRepository, campaignRepository, merchantStandingRepository, clock);
+                                               Clock clock, OfferInteractionCounter interactions) {
+        return new OfferQueryService(offerRepository, campaignRepository, merchantStandingRepository, clock,
+                interactions);
     }
 
     @Bean
