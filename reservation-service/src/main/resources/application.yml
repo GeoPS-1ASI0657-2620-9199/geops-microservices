@@ -57,11 +57,38 @@ geops:
     deadline-check-ms: ${REPORTS_DEADLINE_CHECK_MS:300000}
     scheduler-enabled: ${REPORTS_SCHEDULER_ENABLED:true}
 
+# US34: cinco fallos de Catalog en diez segundos abren el circuito 15 s; mientras tanto la reserva responde
+# CATALOG_UNAVAILABLE (503) sin esperar a Catalog. Una oferta inexistente o vencida es una respuesta, no un fallo,
+# y un bulkhead lleno es saturación propia, no una caída de Catalog.
+resilience4j:
+  circuitbreaker:
+    instances:
+      catalog:
+        sliding-window-type: TIME_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 100
+        wait-duration-in-open-state: 15s
+        permitted-number-of-calls-in-half-open-state: 1
+        ignore-exceptions:
+          - com.geopslabs.geops.reservation.domain.models.exceptions.OfferNotFoundException
+          - com.geopslabs.geops.reservation.domain.models.exceptions.OfferNotAvailableException
+          - io.github.resilience4j.bulkhead.BulkheadFullException
+  # Como mucho 25 reservas esperan a Catalog a la vez; la siguiente recibe 503 al instante en vez de hacer cola.
+  bulkhead:
+    instances:
+      catalog:
+        max-concurrent-calls: 25
+        max-wait-duration: 0
+
 management:
+  # Actuator en su propio puerto, que compose no publica y el gateway no enruta (igual que Catalog).
+  server:
+    port: ${MANAGEMENT_PORT:9083}
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics,circuitbreakers
 
 springdoc:
   swagger-ui:

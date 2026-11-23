@@ -1,6 +1,8 @@
 package com.geopslabs.geops.catalog.infrastructure.web;
 
+import com.geopslabs.geops.catalog.application.services.InvalidPageRequestException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidCategoryException;
+import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidModerationReasonException;
 import com.geopslabs.geops.catalog.shared.domain.DomainException;
 import com.geopslabs.geops.catalog.shared.web.ErrorResponse;
 import org.slf4j.Logger;
@@ -17,7 +19,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class AdminExceptionHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(AdminExceptionHandler.class);
 
-    @ExceptionHandler(InvalidCategoryException.class)
+    @ExceptionHandler({InvalidCategoryException.class, InvalidModerationReasonException.class,
+            InvalidPageRequestException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleRejectedBatch(DomainException exception) {
         LOGGER.info("admin.request.rejected code={}", exception.getCode());

@@ -13,6 +13,7 @@ Feature: Reserve an offer on the platform without paying
     And the field "expiresAt" is "2026-10-15T04:59:59Z"
     And the Location header points to the created reservation
     And the stored reservation is ACTIVE with the title "Menú ejecutivo a mitad de precio" and business 301
+    And a ReservationCreated event of the created reservation is in the outbox
 
   Scenario: The offer has already expired
     Given Catalog has offer 1053 from business 301 titled "Desayuno 2x1" valid until "2026-01-01"
@@ -46,11 +47,13 @@ Feature: Reserve an offer on the platform without paying
     Then the response has status 200
     And the response is the same reservation as before
     And consumer 2001 has 1 ACTIVE reservation for offer 1052
+    And the outbox has 1 ReservationCreated event
 
   Scenario: Simultaneous requests for the same reservation create only one
     When consumer 2001 sends 5 simultaneous reservations for offer 1052
     Then one response has status 201 and the others 200 with the same reservation
     And consumer 2001 has 1 ACTIVE reservation for offer 1052
+    And the outbox has 1 ReservationCreated event
 
   Scenario: A redeemed reservation does not prevent reserving the same offer again
     Given consumer 2001 already reserved offer 1052

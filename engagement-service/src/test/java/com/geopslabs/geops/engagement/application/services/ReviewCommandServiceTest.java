@@ -36,8 +36,9 @@ class ReviewCommandServiceTest {
     private static final Long REVIEW_ID = 3L;
     private static final int FIVE_STARS = 5;
     private static final String TEXT = "Respetaron el precio";
-    private static final CreateReviewCommand COMMAND = new CreateReviewCommand(CONSUMER_ID, BUSINESS_ID, FIVE_STARS,
-            TEXT);
+    private static final String AUTHOR_FULL_NAME = "Lucía Fernández Ríos";
+    private static final CreateReviewCommand COMMAND = new CreateReviewCommand(CONSUMER_ID, AUTHOR_FULL_NAME,
+            BUSINESS_ID, FIVE_STARS, TEXT);
     private static final RedeemedReservation OLDEST_REDEMPTION = new RedeemedReservation(OLDEST_RESERVATION_ID,
             CONSUMER_ID, BUSINESS_ID, LocalDateTime.parse("2026-10-01T18:00:00"));
 
@@ -67,6 +68,26 @@ class ReviewCommandServiceTest {
         assertThat(review.getConsumerId()).isEqualTo(CONSUMER_ID);
         assertThat(review.getRating().stars()).isEqualTo(FIVE_STARS);
         assertThat(review.getCreatedAt()).isEqualTo(LocalDateTime.ofInstant(NOW, ZoneOffset.UTC));
+    }
+
+    @Test
+    void keepsOnlyTheFirstNameAndTheInitialOfTheSurnameOfTheAuthor() {
+        givenUnreviewedRedemption();
+        when(reviewRepository.save(any())).thenAnswer(invocation -> withId(invocation.getArgument(0)));
+
+        var review = service.create(COMMAND);
+
+        assertThat(review.getAuthorName()).isEqualTo("Lucía F.");
+    }
+
+    @Test
+    void aTokenWithoutNameLeavesTheReviewWithoutAuthorName() {
+        givenUnreviewedRedemption();
+        when(reviewRepository.save(any())).thenAnswer(invocation -> withId(invocation.getArgument(0)));
+
+        var review = service.create(new CreateReviewCommand(CONSUMER_ID, null, BUSINESS_ID, FIVE_STARS, TEXT));
+
+        assertThat(review.getAuthorName()).isNull();
     }
 
     @Test
@@ -106,6 +127,7 @@ class ReviewCommandServiceTest {
 
     private static Review withId(Review review) {
         return new Review(REVIEW_ID, review.getConsumerId(), review.getBusinessId(), review.getReservationId(),
-                review.getRating(), review.getText(), review.getVerifiedRedemption(), review.getCreatedAt());
+                review.getRating(), review.getText(), review.getVerifiedRedemption(), review.getCreatedAt(),
+                review.getAuthorName());
     }
 }

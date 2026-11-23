@@ -41,6 +41,12 @@ public interface OfferRepositoryPort {
      */
     List<ExpiredOffer> expirePublishedBefore(LocalDate today);
 
+    /**
+     * Sets REMOVED only if the offer is not REMOVED yet; true when it changed. Two administrators removing the same
+     * offer at once leave a single moderation action.
+     */
+    boolean markRemoved(Long offerId);
+
     /** Offers waiting for coordinates, in id order. */
     List<Offer> findPendingGeocoding();
 

@@ -19,7 +19,7 @@ public class ReviewReplySteps {
     public void review(Long consumerId, Long businessId, int rating, String text) {
         var redemption = new RedeemedReservation(5012L, consumerId, businessId, LocalDateTime.of(2026, 10, 7, 12, 0));
         redemptions.saveIfAbsent(redemption);
-        reviewId = reviews.save(Review.of(redemption, new Rating(rating), text, LocalDateTime.of(2026, 10, 8, 12, 0))).getId();
+        reviewId = reviews.save(Review.of(redemption, null, new Rating(rating), text, LocalDateTime.of(2026, 10, 8, 12, 0))).getId();
     }
 
     @When("the business owner of business {long} replies {string}")

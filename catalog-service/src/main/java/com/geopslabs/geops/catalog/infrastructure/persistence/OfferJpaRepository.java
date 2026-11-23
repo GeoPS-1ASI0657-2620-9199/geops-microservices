@@ -15,6 +15,7 @@ public interface OfferJpaRepository extends JpaRepository<OfferJpaEntity, Long> 
             SELECT o.id                       AS "offerId",
                    o.title                    AS "title",
                    o.price                    AS "price",
+                   o.regular_price            AS "regularPrice",
                    o.valid_to                 AS "validTo",
                    o.category                 AS "category",
                    o.address                  AS "address",
@@ -170,6 +171,12 @@ public interface OfferJpaRepository extends JpaRepository<OfferJpaEntity, Long> 
             """, nativeQuery = true)
     int markForManualReview(@Param("offerId") Long offerId, @Param("manualReview") String manualReview,
                             @Param("pending") String pending);
+
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = "UPDATE offers SET status = :removed WHERE id = :offerId AND status <> :removed",
+            nativeQuery = true)
+    int markRemoved(@Param("offerId") Long offerId, @Param("removed") String removed);
 
     @Query(value = """
             SELECT geocoding_status AS "status", count(*) AS "total"

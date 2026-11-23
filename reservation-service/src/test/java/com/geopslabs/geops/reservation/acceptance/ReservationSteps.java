@@ -1,8 +1,10 @@
 package com.geopslabs.geops.reservation.acceptance;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.geopslabs.geops.reservation.domain.events.ReservationCreated;
 import com.geopslabs.geops.reservation.domain.models.OfferSnapshot;
 import com.geopslabs.geops.reservation.domain.models.ReservationStatus;
+import com.geopslabs.geops.reservation.infrastructure.persistence.OutboxEventJpaRepository;
 import com.geopslabs.geops.reservation.infrastructure.persistence.ReservationJpaRepository;
 import io.cucumber.java.Before;
 import io.cucumber.java.en.And;
@@ -37,13 +39,15 @@ public class ReservationSteps {
     private final FakeOfferCatalog catalog;
     private final ReservationJpaRepository reservations;
     private final ScenarioState state;
+    private final OutboxEventJpaRepository outbox;
 
     public ReservationSteps(HttpScenario http, FakeOfferCatalog catalog, ReservationJpaRepository reservations,
-                            ScenarioState state) {
+                            ScenarioState state, OutboxEventJpaRepository outbox) {
         this.http = http;
         this.catalog = catalog;
         this.reservations = reservations;
         this.state = state;
+        this.outbox = outbox;
     }
 
     @Before
@@ -186,6 +190,19 @@ public class ReservationSteps {
                 .filter(entity -> entity.getStatus() == ReservationStatus.valueOf(status))
                 .count();
         assertThat(count).isEqualTo(expected);
+    }
+
+    @And("a ReservationCreated event of the created reservation is in the outbox")
+    public void reservationCreatedIsInTheOutbox() throws JsonProcessingException {
+        var id = http.json(http.last()).path("reservationId").asLong();
+        assertThat(outbox.findByAggregateIdAndEventType(id, ReservationCreated.EVENT_TYPE)).hasSize(SINGLE_RESERVATION);
+    }
+
+    @And("the outbox has {int} ReservationCreated event(s)")
+    public void outboxHasReservationCreatedEvents(int expected) {
+        assertThat(outbox.findAll().stream()
+                .filter(event -> ReservationCreated.EVENT_TYPE.equals(event.getEventType()))
+                .count()).isEqualTo(expected);
     }
 
     @And("no reservation was stored")
