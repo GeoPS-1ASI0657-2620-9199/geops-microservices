@@ -17,6 +17,7 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 @Configuration
 public class SecurityConfiguration {
     private static final String ROLE_CONSUMER = "ROLE_CONSUMER";
+    private static final String ROLE_BUSINESS_OWNER = "ROLE_BUSINESS_OWNER";
     private static final String ROLES_CLAIM = "roles";
     private static final String NO_PREFIX = "";
     private static final String NOTIFICATION_PREFERENCES = "/api/v1/notification-preferences";
@@ -54,6 +55,7 @@ public class SecurityConfiguration {
                 .requestMatchers(managementPort).permitAll()
                 .requestMatchers(PUBLIC_PATHS).permitAll()
                 .requestMatchers("/api/v1/push-subscriptions", "/api/v1/push-subscriptions/**").hasAuthority(ROLE_CONSUMER)
+                .requestMatchers("/api/v1/notifications", "/api/v1/notifications/**").hasAnyAuthority(ROLE_CONSUMER, ROLE_BUSINESS_OWNER)
                 .requestMatchers(HttpMethod.POST, "/api/v1/email-unsubscriptions").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/notification-preferences").hasAuthority(ROLE_CONSUMER)
                 .requestMatchers(HttpMethod.PUT, NOTIFICATION_PREFERENCES).hasAuthority(ROLE_CONSUMER)
