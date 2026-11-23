@@ -10,6 +10,11 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/catalog_db}
     username: catalog_user
     password: ${CATALOG_DB_PASSWORD}
+  # Offer photos (OfferImage.MAX_BYTES): 2 MB per file; the request may carry the multipart overhead.
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 3MB
   jpa:
     open-in-view: false
     hibernate:
