@@ -92,6 +92,11 @@ management:
     web:
       exposure:
         include: health,info,metrics,circuitbreakers
+  # Un servidor de correo caído no deja al servicio fuera de servicio: lo cubre el circuito smtp (US34), que se ve
+  # en /actuator/circuitbreakers. Si contara en health, compose marcaría a Notification como unhealthy.
+  health:
+    mail:
+      enabled: false
 
 springdoc:
   swagger-ui:
