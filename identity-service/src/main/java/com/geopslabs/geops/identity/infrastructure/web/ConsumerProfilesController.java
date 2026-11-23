@@ -56,7 +56,9 @@ public class ConsumerProfilesController {
                                     {"code": "RADIUS_OUT_OF_RANGE",
                                      "message": "Elige un radio entre 5 y 20 minutos a pie."}"""))),
             @ApiResponse(responseCode = "403", description = "The token is not of a consumer",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(name = "forbidden", value = """
+                                    {"code": "FORBIDDEN", "message": "Tu cuenta no puede hacer esta operación."}""")))
     })
     @PutMapping(value = "/search-radius", consumes = APPLICATION_JSON_VALUE)
     public ConsumerProfileResponse changeSearchRadius(@Valid @RequestBody SearchRadiusRequest request,
@@ -68,7 +70,14 @@ public class ConsumerProfilesController {
 
     @Operation(summary = "Read the consumer profile", description = "Returns the saved walking radius.")
     @ApiResponse(responseCode = "200", description = "Profile of the consumer",
-            content = @Content(schema = @Schema(implementation = ConsumerProfileResponse.class)))
+            content = @Content(schema = @Schema(implementation = ConsumerProfileResponse.class),
+                    examples = @ExampleObject(name = "profile", value = """
+                            {"consumerId": 41, "searchRadiusMinutes": 10, "locationPermission": false,
+                             "defaultDistrict": null}""")))
+    @ApiResponse(responseCode = "403", description = "The token is not of a consumer",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                    examples = @ExampleObject(name = "forbidden", value = """
+                            {"code": "FORBIDDEN", "message": "Tu cuenta no puede hacer esta operación."}""")))
     @GetMapping
     public ConsumerProfileResponse getProfile(@AuthenticationPrincipal Jwt jwt) {
         return ConsumerProfileResponse.from(getConsumerProfileUseCase.get(AuthenticatedUser.from(jwt).consumerId()));

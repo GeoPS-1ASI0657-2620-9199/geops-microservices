@@ -11,6 +11,14 @@ import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
 
+/**
+ * An offer of a campaign became visible: the campaign was published or reactivated (US05, US10). Topic
+ * {@code catalog.events}, key {@code campaignId}, contract {@code platform/messaging/events/OfferPublished.v1.json}.
+ * Engagement keeps a copy of the offer and of the business for saved offers; Notification plans the nearby notices.
+ * {@code location} is the point of the offer; {@code zone} is the zone of the campaign, with {@code center} and
+ * {@code reachMeters} null when it reaches every district; {@code reactivated} is true when a paused campaign comes
+ * back.
+ */
 public record OfferPublished(UUID eventId, Instant occurredAt, Payload payload) implements DomainEvent {
     public static final String EVENT_TYPE = "OfferPublished";
     public static final int VERSION = 1;

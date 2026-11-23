@@ -3,6 +3,11 @@ package com.geopslabs.geops.engagement.domain.events;
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * A consumer started following a business (US13). Topic {@code engagement.events}, key {@code consumerId}, contract
+ * {@code platform/messaging/events/BusinessFollowed.v1.json}. Notification keeps the followers of each business to
+ * tell them about its new offers.
+ */
 public record BusinessFollowed(UUID eventId, Instant occurredAt, Long aggregateId, Payload payload) implements DomainEvent {
     private static final int VERSION = 1;
 
