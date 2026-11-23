@@ -23,7 +23,8 @@ public class IdentitySchemaSteps {
             ROOT_PACKAGE + ".notification.."
     };
     private static final String[] PROVIDER_ADAPTERS = {
-            OWN_PACKAGE + ".infrastructure.geocoding..", OWN_PACKAGE + ".infrastructure.sunat.."
+            OWN_PACKAGE + ".infrastructure.geocoding..", OWN_PACKAGE + ".infrastructure.sunat..",
+            OWN_PACKAGE + ".infrastructure.decolecta.."
     };
     private static final String[] HTTP_CLIENTS = {
             "org.springframework.web.client..", "org.springframework.web.reactive.function.client..",

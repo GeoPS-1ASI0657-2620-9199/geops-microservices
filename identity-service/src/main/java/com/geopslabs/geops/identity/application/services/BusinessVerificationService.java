@@ -8,9 +8,11 @@ import com.geopslabs.geops.identity.domain.events.BusinessVerified;
 import com.geopslabs.geops.identity.domain.models.BusinessProfile;
 import com.geopslabs.geops.identity.domain.models.BusinessProfileAccessDeniedException;
 import com.geopslabs.geops.identity.domain.models.BusinessProfileNotFoundException;
+import com.geopslabs.geops.identity.domain.models.Ruc;
 import com.geopslabs.geops.identity.domain.models.RucVerification;
 import com.geopslabs.geops.identity.domain.models.Taxpayer;
 import com.geopslabs.geops.identity.domain.models.TaxpayerRegistryEmptyException;
+import com.geopslabs.geops.identity.domain.models.TaxpayerRegistryUnavailableException;
 import com.geopslabs.geops.identity.domain.models.VerificationStatus;
 import com.geopslabs.geops.identity.domain.ports.BusinessProfileRepositoryPort;
 import com.geopslabs.geops.identity.domain.ports.GeocodingPort;
@@ -22,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
@@ -91,10 +94,19 @@ public class BusinessVerificationService implements VerifyBusinessRucUseCase, Re
     private VerificationOutcome verifyAndRecord(BusinessProfile profile, String correctedAddress) {
         var address = correctedAddress != null ? correctedAddress : profile.getAddress();
         var ruc = profile.getRuc();
-        Optional<Taxpayer> taxpayer = ruc.isWellFormed() ? taxpayerRegistry.findByRuc(ruc) : Optional.empty();
-        var attempt = RucVerification.evaluate(profile.getId(), ruc, taxpayer, () -> geocoding.geocode(address),
-                clock.instant().truncatedTo(ChronoUnit.MILLIS));
+        var attempt = evaluate(profile.getId(), ruc, address, clock.instant().truncatedTo(ChronoUnit.MILLIS));
         return transactions.execute(status -> record(profile.getId(), attempt, correctedAddress, address));
+    }
+
+    private RucVerification evaluate(Long businessId, Ruc ruc, String address, Instant checkedAt) {
+        try {
+            Optional<Taxpayer> taxpayer = ruc.isWellFormed() ? taxpayerRegistry.findByRuc(ruc) : Optional.empty();
+            return RucVerification.evaluate(businessId, ruc, taxpayer, () -> geocoding.geocode(address), checkedAt);
+        } catch (TaxpayerRegistryUnavailableException exception) {
+            LOGGER.warn("business.verification.pending reason=taxpayer-registry-unavailable businessId={}",
+                    businessId);
+            return RucVerification.registryUnavailable(businessId, ruc, checkedAt);
+        }
     }
 
     private VerificationOutcome record(Long businessId, RucVerification attempt, String correctedAddress,

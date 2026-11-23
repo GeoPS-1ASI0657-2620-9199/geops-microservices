@@ -42,9 +42,24 @@ Los errores responden `{"code": "...", "message": "..."}`. Los ejemplos de cada 
 | `TAXPAYER_REGISTRY_EMPTY` | 503 | El padrón de SUNAT nunca se cargó |
 
 Motivos de la verificación del RUC: `RUC_NOT_FOUND`, `TAXPAYER_NOT_ACTIVE`, `TAXPAYER_NOT_HABIDO` y
-`ADDRESS_NOT_GEOCODABLE` (rechazo), `GEOCODER_UNAVAILABLE` (pendiente). Un comercio verificado
-conserva el sello mientras Nominatim no responde; las verificaciones `PENDING` se reintentan cada
-10 minutos.
+`ADDRESS_NOT_GEOCODABLE` (rechazo), `GEOCODER_UNAVAILABLE` y `TAXPAYER_REGISTRY_UNAVAILABLE`
+(pendiente). Un comercio verificado conserva el sello mientras Nominatim o la consulta de RUC no
+responden; las verificaciones `PENDING` se reintentan cada 10 minutos.
+
+## Consulta de RUC
+
+`GEOPS_TAXPAYER_LOOKUP` elige de dónde se lee el contribuyente:
+
+- `registry` (por defecto, y el que usan las pruebas): la copia del padrón reducido de SUNAT descrita abajo.
+- `decolecta`: al verificar se consulta solo ese RUC en `GET https://api.decolecta.com/v1/sunat/ruc?numero=`
+  con `RUC_LOOKUP_TOKEN`. Responde también los RUC 10 de personas naturales, que el padrón reducido trae
+  sin distrito y por eso no se cargan. En este modo no se descarga el padrón.
+
+Con `decolecta`, un 404 es un RUC que SUNAT no conoce (`RUC_NOT_FOUND`). Un tiempo agotado, un error del
+servidor, un 401 (token inválido o límite mensual alcanzado) o el circuito `decolecta` abierto (tres fallos
+seguidos, un minuto) dejan la verificación `PENDING` con `TAXPAYER_REGISTRY_UNAVAILABLE`. La respuesta de cada
+RUC se reusa 24 horas para que los reintentos no gasten la cuota del plan. Sin token, la verificación responde
+503 `TAXPAYER_REGISTRY_EMPTY`.
 
 ## Padrón de SUNAT
 

@@ -13,6 +13,7 @@ import com.geopslabs.geops.identity.domain.models.Ruc;
 import com.geopslabs.geops.identity.domain.models.RucVerification;
 import com.geopslabs.geops.identity.domain.models.Taxpayer;
 import com.geopslabs.geops.identity.domain.models.TaxpayerRegistryEmptyException;
+import com.geopslabs.geops.identity.domain.models.TaxpayerRegistryUnavailableException;
 import com.geopslabs.geops.identity.domain.models.VerificationReason;
 import com.geopslabs.geops.identity.domain.models.VerificationResult;
 import com.geopslabs.geops.identity.domain.models.VerificationStatus;
@@ -221,6 +222,20 @@ class BusinessVerificationServiceTest {
         assertThat(outcome.verification().result()).isEqualTo(VerificationResult.PENDING);
         assertThat(outcome.verification().reason()).isEqualTo(VerificationReason.GEOCODER_UNAVAILABLE);
         assertThat(outcome.verificationStatus()).isEqualTo(VerificationStatus.PENDING);
+        verify(outbox, never()).append(any());
+    }
+
+    @Test
+    void aRucLookupThatDoesNotAnswerLeavesThePendingStatusWithoutAskingTheGeocoder() {
+        givenProfile(VerificationStatus.UNVERIFIED);
+        when(taxpayerRegistry.findByRuc(RUC)).thenThrow(new TaxpayerRegistryUnavailableException("timeout"));
+
+        var outcome = service.verify(ownerRequest(null));
+
+        assertThat(outcome.verification().result()).isEqualTo(VerificationResult.PENDING);
+        assertThat(outcome.verification().reason()).isEqualTo(VerificationReason.TAXPAYER_REGISTRY_UNAVAILABLE);
+        assertThat(outcome.verificationStatus()).isEqualTo(VerificationStatus.PENDING);
+        verify(geocoding, never()).geocode(anyString());
         verify(outbox, never()).append(any());
     }
 

@@ -20,7 +20,7 @@ import java.util.Comparator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(properties = "geops.outbox.relay-enabled=false")
+@SpringBootTest(properties = {"geops.outbox.relay-enabled=false", "geops.taxpayer-lookup.provider=registry"})
 class IdentityServiceApplicationTests {
     private static final DockerImageName POSTGIS_IMAGE =
             DockerImageName.parse("imresamu/postgis:16-3.4").asCompatibleSubstituteFor("postgres");

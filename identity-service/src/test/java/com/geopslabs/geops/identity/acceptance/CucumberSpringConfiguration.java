@@ -18,7 +18,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
  */
 @CucumberContextConfiguration
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"geops.sunat.schedule-enabled=false", "geops.outbox.relay-enabled=false",
+        properties = {"geops.taxpayer-lookup.provider=registry", "geops.sunat.schedule-enabled=false", "geops.outbox.relay-enabled=false",
                 "geops.verification.retry-enabled=false", "geops.nominatim.min-interval=0s"})
 public class CucumberSpringConfiguration {
     private static final DockerImageName POSTGIS_IMAGE =
