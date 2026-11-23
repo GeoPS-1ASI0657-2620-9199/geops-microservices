@@ -59,14 +59,14 @@ public class OffersController {
             @ExampleObject(name = "validOffer", value = """
                     {"offerId": 1052, "title": "2x1 en almuerzos ejecutivos",
                      "conditions": "Válido de lunes a viernes de 12:00 a 15:00. Un cupón por mesa.",
-                     "price": 15.00, "validTo": "2026-10-15", "category": "Gastronomía",
+                     "price": 15.00, "regularPrice": 30.00, "validTo": "2026-10-15", "category": "Gastronomía",
                      "address": "Av. Larco 345, Miraflores", "latitude": -12.1211, "longitude": -77.0297,
                      "imageUrl": "https://images.geops.pe/offers/1052.jpg", "source": "AFFILIATED",
                      "businessId": 84, "businessName": "Restaurante Don Pepe", "verifiedSeal": false,
                      "available": true}"""),
             @ExampleObject(name = "expiredOffer", value = """
                     {"offerId": 1053, "title": "Desayuno 2x1", "conditions": "Solo hasta las 10:00.",
-                     "price": 9.90, "validTo": "2026-10-01", "category": "Gastronomía",
+                     "price": 9.90, "regularPrice": null, "validTo": "2026-10-01", "category": "Gastronomía",
                      "address": "Av. Larco 345, Miraflores", "latitude": -12.1211, "longitude": -77.0297,
                      "imageUrl": null, "source": "AFFILIATED", "businessId": 84,
                      "businessName": "Restaurante Don Pepe", "verifiedSeal": false, "available": false}""")}))

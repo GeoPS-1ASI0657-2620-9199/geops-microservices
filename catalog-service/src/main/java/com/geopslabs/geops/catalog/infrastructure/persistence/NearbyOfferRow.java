@@ -10,6 +10,8 @@ public interface NearbyOfferRow {
 
     BigDecimal getPrice();
 
+    BigDecimal getRegularPrice();
+
     LocalDate getValidTo();
 
     String getCategory();

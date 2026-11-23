@@ -9,6 +9,7 @@ import com.geopslabs.geops.catalog.domain.models.RankedOffer;
 import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidCategoryException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidGeoPointException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidSearchRadiusException;
+import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidSearchTextException;
 import com.geopslabs.geops.catalog.domain.models.queries.SearchNearbyOffersQuery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -41,7 +45,7 @@ class NearbyOfferQueryServiceTest {
 
     @Test
     void pagesFortyFiveOffersInThreePagesOfTwenty() {
-        when(proximitySearch.search(ORIGIN, 800, null)).thenReturn(ranked(45));
+        when(proximitySearch.search(ORIGIN, 800, null, null)).thenReturn(ranked(45));
 
         var last = service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, null, 2, 20));
 
@@ -54,7 +58,7 @@ class NearbyOfferQueryServiceTest {
 
     @Test
     void answersAnEmptyPageWhenTheZoneHasNoOffers() {
-        when(proximitySearch.search(any(), anyInt(), any())).thenReturn(List.of());
+        when(proximitySearch.search(any(), anyInt(), any(), any())).thenReturn(List.of());
 
         var empty = service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, null, 0, 20));
 
@@ -65,7 +69,7 @@ class NearbyOfferQueryServiceTest {
 
     @Test
     void answersAnEmptyPageAfterTheLastOne() {
-        when(proximitySearch.search(any(), anyInt(), any())).thenReturn(ranked(5));
+        when(proximitySearch.search(any(), anyInt(), any(), any())).thenReturn(ranked(5));
 
         var beyond = service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, null, 3, 20));
 
@@ -99,7 +103,7 @@ class NearbyOfferQueryServiceTest {
 
     @Test
     void passesTheCanonicalCategoryToTheSearch() {
-        when(proximitySearch.search(ORIGIN, 800, "Gastronomía")).thenReturn(ranked(2));
+        when(proximitySearch.search(ORIGIN, 800, "Gastronomía", null)).thenReturn(ranked(2));
 
         var page = service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, "gastronomia", 0, 20));
 
@@ -108,7 +112,7 @@ class NearbyOfferQueryServiceTest {
 
     @Test
     void searchesEveryCategoryWhenNoneIsGiven() {
-        when(proximitySearch.search(ORIGIN, 800, null)).thenReturn(ranked(3));
+        when(proximitySearch.search(ORIGIN, 800, null, null)).thenReturn(ranked(3));
 
         assertThat(service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, null, 0, 20))
                 .totalElements()).isEqualTo(3);
@@ -123,10 +127,42 @@ class NearbyOfferQueryServiceTest {
     }
 
     @Test
+    void passesTheTrimmedTextToTheSearchAndCountsOnlyTheMatches() {
+        when(proximitySearch.search(eq(ORIGIN), eq(800), isNull(),
+                argThat(text -> text != null && "cafe".equals(text.value())))).thenReturn(ranked(4));
+
+        var page = service.searchNearbyOffers(
+                new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, null, "  Café ", 0, 20));
+
+        assertThat(page.totalElements()).isEqualTo(4);
+        assertThat(page.totalPages()).isEqualTo(1);
+    }
+
+    @Test
+    void aBlankTextSearchesWithoutTextFilter() {
+        when(proximitySearch.search(ORIGIN, 800, null, null)).thenReturn(ranked(3));
+
+        assertThat(service.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, null, "   ", 0, 20))
+                .totalElements()).isEqualTo(3);
+    }
+
+    @Test
+    void rejectsATextOfOneOrMoreThanSixtyCharactersBeforeSearching() {
+        assertThatThrownBy(() -> service.searchNearbyOffers(
+                new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, null, " a ", 0, 20)))
+                .isInstanceOf(InvalidSearchTextException.class)
+                .hasMessage("La búsqueda debe tener entre 2 y 60 caracteres");
+        assertThatThrownBy(() -> service.searchNearbyOffers(
+                new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, null, "x".repeat(61), 0, 20)))
+                .isInstanceOf(InvalidSearchTextException.class);
+        verifyNoInteractions(proximitySearch);
+    }
+
+    @Test
     void eachOfferOfThePageReturnedCountsAsOneImpression() {
         var interactions = mock(RecordOfferInteractionsUseCase.class);
         var counted = new NearbyOfferQueryService(proximitySearch, interactions);
-        when(proximitySearch.search(ORIGIN, 800, null)).thenReturn(ranked(25));
+        when(proximitySearch.search(ORIGIN, 800, null, null)).thenReturn(ranked(25));
 
         counted.searchNearbyOffers(new SearchNearbyOffersQuery(-12.1211, -77.0297, 10, null, 1, 20));
 
@@ -135,7 +171,7 @@ class NearbyOfferQueryServiceTest {
 
     private static List<RankedOffer> ranked(int count) {
         return LongStream.rangeClosed(1, count)
-                .mapToObj(id -> RankedOffer.of(new NearbyOfferCandidate(id, "Oferta " + id, BigDecimal.TEN,
+                .mapToObj(id -> RankedOffer.of(new NearbyOfferCandidate(id, "Oferta " + id, BigDecimal.TEN, null,
                         LocalDate.of(2026, 10, 15), "Gastronomía", "Av. Larco 345, Miraflores", null, ORIGIN, 84L, "Comercio", false, 0,
                         CampaignZone.radius(ORIGIN, CampaignZone.MAX_RADIUS_METERS)), id * 10.0))
                 .toList();

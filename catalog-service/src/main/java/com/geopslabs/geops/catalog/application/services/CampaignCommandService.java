@@ -92,7 +92,12 @@ public class CampaignCommandService implements CreateCampaignUseCase {
 
     private static Offer offerOf(Campaign campaign, CreateOfferCommand offer, CreateCampaignCommand command) {
         return Offer.publishFor(campaign, offer.title(), offer.conditions(), Money.soles(offer.price()),
-                offer.validTo(), OfferCategory.of(offer.category()).label(), offer.imageUrl(), command.storeAddress(), command.storeLocation());
+                regularPriceOf(offer), offer.validTo(), OfferCategory.of(offer.category()).label(), offer.imageUrl(),
+                command.storeAddress(), command.storeLocation());
+    }
+
+    private static Money regularPriceOf(CreateOfferCommand offer) {
+        return Optional.ofNullable(offer.regularPrice()).map(Money::soles).orElse(null);
     }
 
     private static CampaignZone zoneOf(CreateCampaignCommand command) {

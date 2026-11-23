@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.cucumber.spring.ScenarioScope;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -62,6 +63,20 @@ public class HttpScenario {
         return last;
     }
 
+    /** A DELETE that may carry a JSON body, like the reason of a removal (US24). */
+    public HttpResult delete(String path, String token, String jsonBody) {
+        var request = restClient.method(HttpMethod.DELETE).uri(path);
+        if (jsonBody != null) {
+            request.contentType(MediaType.APPLICATION_JSON).body(jsonBody);
+        }
+        if (token != null) {
+            request.header(HttpHeaders.AUTHORIZATION, BEARER + token);
+        }
+        last = request.exchange((ignored, response) -> new HttpResult(response.getStatusCode().value(),
+                StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8)));
+        return last;
+    }
+
     public HttpResult put(String path, String token, String jsonBody) {
         var request = restClient.put().uri(path).contentType(MediaType.APPLICATION_JSON).body(jsonBody);
         if (token != null) {
@@ -70,6 +85,11 @@ public class HttpScenario {
         last = request.exchange((ignored, response) -> new HttpResult(response.getStatusCode().value(),
                 StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8)));
         return last;
+    }
+
+    /** Puts back a response after a step read something else with its own request. */
+    public void restore(HttpResult result) {
+        last = result;
     }
 
     public HttpResult last() {

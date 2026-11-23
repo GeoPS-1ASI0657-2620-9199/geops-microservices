@@ -7,6 +7,7 @@ public record NearbyOfferCandidate(
         Long offerId,
         String title,
         BigDecimal price,
+        BigDecimal regularPrice,
         LocalDate validTo,
         String category,
         String address,

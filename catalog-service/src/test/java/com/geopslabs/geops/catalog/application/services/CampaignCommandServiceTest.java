@@ -12,6 +12,7 @@ import com.geopslabs.geops.catalog.domain.models.ZoneType;
 import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidCategoryException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.CampaignAlreadyEndedException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidCampaignZoneException;
+import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidRegularPriceException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.OfferValidityOutsideCampaignException;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.MerchantStandingRepositoryPort;
@@ -162,7 +163,7 @@ class CampaignCommandServiceTest {
     void nothingIsSavedWhenAnOfferHasACategoryOutsideTheList() {
         var toys = new CreateCampaignCommand(BUSINESS_ID, BUSINESS_NAME, "Juguetes", "Juguetes", START, END, BUDGET,
                 ADDRESS, STORE, ZoneType.RADIUS, STORE, RADIUS_METERS, null,
-                List.of(new CreateOfferCommand("Carritos 2x1", "Hasta agotar stock", new BigDecimal("15.00"),
+                List.of(new CreateOfferCommand("Carritos 2x1", "Hasta agotar stock", new BigDecimal("15.00"), null,
                         OFFER_VALID_TO, "Juguetería", null)));
 
         assertThatThrownBy(() -> service.publish(toys)).isInstanceOf(InvalidCategoryException.class);
@@ -174,11 +175,36 @@ class CampaignCommandServiceTest {
         stubSaves();
         var lowerCase = new CreateCampaignCommand(BUSINESS_ID, BUSINESS_NAME, "Menú", "Menú", START, END, BUDGET,
                 ADDRESS, STORE, ZoneType.RADIUS, STORE, RADIUS_METERS, null,
-                List.of(new CreateOfferCommand("Menú", "Lunes a viernes", new BigDecimal("15.00"), OFFER_VALID_TO,
-                        "gastronomia", null)));
+                List.of(new CreateOfferCommand("Menú", "Lunes a viernes", new BigDecimal("15.00"), null,
+                        OFFER_VALID_TO, "gastronomia", null)));
 
         assertThat(service.publish(lowerCase).offers()).singleElement()
                 .extracting(offer -> offer.getCategory()).isEqualTo("Gastronomía");
+    }
+
+    @Test
+    void theRegularPriceIsSavedWithTheOffer() {
+        stubSaves();
+        var withSaving = campaignWith(offerWithRegularPrice(new BigDecimal("30.00")));
+
+        assertThat(service.publish(withSaving).offers()).singleElement()
+                .extracting(offer -> offer.getRegularPrice().amount()).isEqualTo(new BigDecimal("30.00"));
+    }
+
+    @Test
+    void anOfferWithoutRegularPriceIsSavedWithoutIt() {
+        stubSaves();
+
+        assertThat(service.publish(command(START, END, BUDGET, ZoneType.RADIUS, OFFER_VALID_TO)).offers())
+                .singleElement().extracting(Offer::getRegularPrice).isNull();
+    }
+
+    @Test
+    void nothingIsSavedWhenTheRegularPriceIsNotAboveThePrice() {
+        var sameAsPrice = campaignWith(offerWithRegularPrice(new BigDecimal("15.00")));
+
+        assertThatThrownBy(() -> service.publish(sameAsPrice)).isInstanceOf(InvalidRegularPriceException.class);
+        verifyNoInteractions(merchantStandingRepository, campaignRepository, offerRepository, outbox);
     }
 
     @Test
@@ -269,8 +295,18 @@ class CampaignCommandServiceTest {
                 List.of(offer(OFFER_VALID_TO)));
     }
 
+    private static CreateCampaignCommand campaignWith(CreateOfferCommand offer) {
+        return new CreateCampaignCommand(BUSINESS_ID, BUSINESS_NAME, "Almuerzos de octubre", "Menú ejecutivo",
+                START, END, BUDGET, ADDRESS, STORE, ZoneType.RADIUS, STORE, RADIUS_METERS, null, List.of(offer));
+    }
+
     private static CreateOfferCommand offer(LocalDate validTo) {
         return new CreateOfferCommand("2x1 en almuerzos ejecutivos", "Lunes a viernes de 12:00 a 15:00",
-                new BigDecimal("15.00"), validTo, "Gastronomía", null);
+                new BigDecimal("15.00"), null, validTo, "Gastronomía", null);
+    }
+
+    private static CreateOfferCommand offerWithRegularPrice(BigDecimal regularPrice) {
+        return new CreateOfferCommand("2x1 en almuerzos ejecutivos", "Lunes a viernes de 12:00 a 15:00",
+                new BigDecimal("15.00"), regularPrice, OFFER_VALID_TO, "Gastronomía", null);
     }
 }
