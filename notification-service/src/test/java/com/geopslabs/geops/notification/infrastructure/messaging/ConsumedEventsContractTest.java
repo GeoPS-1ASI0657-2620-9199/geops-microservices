@@ -1,6 +1,7 @@
 package com.geopslabs.geops.notification.infrastructure.messaging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.geopslabs.geops.notification.application.usecases.SendEmailConfirmationUseCase;
 import com.geopslabs.geops.notification.application.usecases.ApplyFollowEventsUseCase;
 import com.geopslabs.geops.notification.application.usecases.ApplyIdentityEventsUseCase;
 import com.geopslabs.geops.notification.application.usecases.CancelOfferNoticesUseCase;
@@ -61,7 +62,7 @@ class ConsumedEventsContractTest {
     void userRegisteredProjectsTheRecipient() {
         var identity = mock(ApplyIdentityEventsUseCase.class);
 
-        new IdentityEventsListener(reader, identity).onEvent(record("identity.events", "UserRegistered"),
+        new IdentityEventsListener(reader, identity, mock(SendEmailConfirmationUseCase.class)).onEvent(record("identity.events", "UserRegistered"),
                 acknowledgment);
 
         verify(identity).userRegistered(new Recipient(2001L, "lucia.fernandez@ejemplo.pe", false, "CONSUMER", null),
@@ -73,7 +74,7 @@ class ConsumedEventsContractTest {
     void consumerPreferencesChangedUpdatesTheRadius() {
         var identity = mock(ApplyIdentityEventsUseCase.class);
 
-        new IdentityEventsListener(reader, identity).onEvent(record("identity.events", "ConsumerPreferencesChanged"),
+        new IdentityEventsListener(reader, identity, mock(SendEmailConfirmationUseCase.class)).onEvent(record("identity.events", "ConsumerPreferencesChanged"),
                 acknowledgment);
 
         verify(identity).consumerPreferencesChanged(2001L, 10);
