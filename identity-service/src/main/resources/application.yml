@@ -71,6 +71,16 @@ geops:
     # Rechazos de Kafka antes de marcar la fila FAILED; los tiempos de espera agotados no cuentan.
     max-attempts: ${OUTBOX_MAX_ATTEMPTS:10}
     topic: identity.events
+  # registry: copia del padrón reducido (pruebas y demo sin token). decolecta: consulta en línea del RUC al verificar.
+  taxpayer-lookup:
+    provider: ${GEOPS_TAXPAYER_LOOKUP:registry}
+  decolecta:
+    base-url: ${DECOLECTA_BASE_URL:https://api.decolecta.com}
+    # El token solo llega por el entorno (platform/.env); nunca se escribe en el repositorio.
+    token: ${RUC_LOOKUP_TOKEN:}
+    timeout: 3s
+    # El plan gratuito da 100 consultas al mes: los reintentos de una verificación pendiente reusan la respuesta.
+    cache-ttl: 24h
   nominatim:
     base-url: ${NOMINATIM_BASE_URL:https://nominatim.openstreetmap.org}
     # Política de uso de Nominatim (E2-15): User-Agent con correo de contacto y una petición por segundo.
@@ -88,6 +98,14 @@ resilience4j:
         minimum-number-of-calls: 5
         failure-rate-threshold: 100
         wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 1
+      # Consulta de RUC en línea: tres fallos seguidos abren el circuito un minuto; la verificación queda PENDING.
+      decolecta:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 3
+        minimum-number-of-calls: 3
+        failure-rate-threshold: 100
+        wait-duration-in-open-state: 60s
         permitted-number-of-calls-in-half-open-state: 1
 
 management:

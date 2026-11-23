@@ -55,7 +55,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * result on the state the first one saved.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK,
-        properties = {"geops.outbox.relay-enabled=false", "geops.sunat.schedule-enabled=false",
+        properties = {"geops.taxpayer-lookup.provider=registry", "geops.outbox.relay-enabled=false", "geops.sunat.schedule-enabled=false",
                 "geops.verification.retry-enabled=false"})
 class BusinessVerificationConcurrencyTest {
     private static final DockerImageName POSTGIS_IMAGE =

@@ -42,7 +42,7 @@ import static org.mockito.Mockito.when;
  * mock so each test decides which row it confirms or rejects.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK,
-        properties = {"geops.outbox.relay-enabled=false", "geops.sunat.schedule-enabled=false"})
+        properties = {"geops.taxpayer-lookup.provider=registry", "geops.outbox.relay-enabled=false", "geops.sunat.schedule-enabled=false"})
 class OutboxRelayIntegrationTest {
     private static final DockerImageName POSTGIS_IMAGE =
             DockerImageName.parse("imresamu/postgis:16-3.4").asCompatibleSubstituteFor("postgres");

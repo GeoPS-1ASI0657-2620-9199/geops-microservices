@@ -49,6 +49,12 @@ public record RucVerification(Long id, Long businessProfileId, Ruc ruc, Verifica
         };
     }
 
+    /** The RUC lookup gave no answer: nothing is known about the taxpayer yet, so the attempt stays pending. */
+    public static RucVerification registryUnavailable(Long businessProfileId, Ruc ruc, Instant checkedAt) {
+        return new RucVerification(null, businessProfileId, ruc, VerificationResult.PENDING,
+                VerificationReason.TAXPAYER_REGISTRY_UNAVAILABLE, null, null, checkedAt);
+    }
+
     public RucVerification withId(Long newId) {
         return new RucVerification(newId, businessProfileId, ruc, result, reason, taxpayerStatus, taxpayerCondition,
                 checkedAt);
