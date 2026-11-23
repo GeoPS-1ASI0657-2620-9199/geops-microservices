@@ -31,6 +31,15 @@ class NotificationFactoryServiceTest {
     }
 
     @Test
+    void reportNoticesKeepTheirAccents() {
+        var event = new com.geopslabs.geops.notification.domain.models.ReportNoticeEvent("report.received", 7L, 1L, 2L, "RES-1", "2x1", "CONSUMER_FAVOR");
+        var now = java.time.Instant.parse("2026-11-23T15:00:00Z");
+        assertThat(NotificationFactoryService.report(9L, event, NotificationType.REPORT_RECEIVED, now).getMessage()).contains("reportó");
+        assertThat(NotificationFactoryService.report(9L, event, NotificationType.REPORT_ANSWERED, now).getMessage()).contains("respondió");
+        assertThat(NotificationFactoryService.report(9L, event, NotificationType.REPORT_RESOLVED, now).getMessage()).contains("cerró").doesNotContain("?");
+    }
+
+    @Test
     void rejectsANoticeWithoutTheDataItsMessageNeeds() {
         var data = Map.of(NotificationFactoryService.RECIPIENT_ID, "1",
                 NotificationFactoryService.CHANNEL, Channel.WEB_PUSH.name());

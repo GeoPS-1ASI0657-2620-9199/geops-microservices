@@ -27,6 +27,7 @@ public class CatalogEventsListener {
             case "OfferPublished" -> publish(reader.requireVersion(event, VERSION));
             case "CampaignPaused" -> projector.campaignPaused(ids(reader.requireVersion(event, VERSION).payload().path("offerIds")), event.occurredAt());
             case "OfferExpired" -> projector.offerExpired(id(reader.requireVersion(event, VERSION).payload(), "offerId"), event.occurredAt());
+            case "OfferRemoved" -> projector.offerRemoved(id(reader.requireVersion(event, VERSION).payload(), "offerId"), event.occurredAt());
             default -> { }
         }
         ack.acknowledge();

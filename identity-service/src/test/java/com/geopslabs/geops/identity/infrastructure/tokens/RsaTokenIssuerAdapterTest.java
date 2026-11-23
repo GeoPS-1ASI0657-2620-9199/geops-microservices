@@ -53,6 +53,7 @@ class RsaTokenIssuerAdapterTest {
         assertThat(claims.getAudience()).containsExactly(AUDIENCE);
         assertThat(claims.getSubject()).isEqualTo(String.valueOf(USER_ID));
         assertThat(claims.getStringListClaim("roles")).containsExactly("ROLE_CONSUMER");
+        assertThat(claims.getStringClaim("name")).isEqualTo("Lucía Fernández Ríos");
         assertThat(claims.getClaims()).doesNotContainKeys("businessId", "consumerId", "jti");
         assertThat(claims.getIssueTime()).isEqualTo(Date.from(NOW));
         assertThat(claims.getExpirationTime()).isEqualTo(Date.from(NOW.plus(TOKEN_LIFETIME)));
@@ -64,7 +65,7 @@ class RsaTokenIssuerAdapterTest {
         var claims = SignedJWT.parse(adapter.issue(businessOwner(), BUSINESS_ID).value()).getJWTClaimsSet();
 
         assertThat(claims.getClaims().keySet())
-                .containsExactlyInAnyOrder("iss", "aud", "sub", "roles", "businessId", "iat", "exp");
+                .containsExactlyInAnyOrder("iss", "aud", "sub", "roles", "name", "businessId", "iat", "exp");
         assertThat(claims.getSubject()).isEqualTo(String.valueOf(OWNER_ID));
         assertThat(claims.getStringListClaim("roles")).containsExactly("ROLE_BUSINESS_OWNER");
         assertThat(claims.getLongClaim("businessId")).isEqualTo(BUSINESS_ID);

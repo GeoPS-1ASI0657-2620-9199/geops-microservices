@@ -13,7 +13,7 @@ class ReviewReplyCommandServiceTest {
     private final Clock clock = Clock.fixed(Instant.parse("2026-10-29T10:00:00Z"), ZoneOffset.UTC);
     private final ReviewRepositoryPort reviews = mock(ReviewRepositoryPort.class);
     private final ReviewReplyCommandService service = new ReviewReplyCommandService(reviews, clock);
-    private final Review review = new Review(3L, 2001L, 84L, 5012L, new Rating(5), "Good", true, LocalDateTime.now(clock));
+    private final Review review = new Review(3L, 2001L, 84L, 5012L, new Rating(5), "Good", true, LocalDateTime.now(clock), null);
 
     @Test
     void ownerCanReply() {

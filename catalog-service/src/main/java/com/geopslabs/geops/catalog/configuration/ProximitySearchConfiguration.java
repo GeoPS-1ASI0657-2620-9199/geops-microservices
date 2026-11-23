@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.geopslabs.geops.catalog.application.services.CellInvalidator;
 import com.geopslabs.geops.catalog.application.services.NearbyOfferQueryService;
 import com.geopslabs.geops.catalog.application.services.OfferExpirationScheduler;
+import com.geopslabs.geops.catalog.application.services.OfferInteractionCounter;
 import com.geopslabs.geops.catalog.application.usecases.SearchNearbyOffersUseCase;
 import com.geopslabs.geops.catalog.domain.models.ProximitySearchService;
 import com.geopslabs.geops.catalog.domain.ports.CellCachePort;
@@ -60,8 +61,9 @@ public class ProximitySearchConfiguration {
     }
 
     @Bean
-    public SearchNearbyOffersUseCase searchNearbyOffersUseCase(ProximitySearchService proximitySearchService) {
-        return new NearbyOfferQueryService(proximitySearchService);
+    public SearchNearbyOffersUseCase searchNearbyOffersUseCase(ProximitySearchService proximitySearchService,
+                                                               OfferInteractionCounter interactions) {
+        return new NearbyOfferQueryService(proximitySearchService, interactions);
     }
 
     @Bean

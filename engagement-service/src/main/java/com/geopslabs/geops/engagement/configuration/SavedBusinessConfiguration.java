@@ -7,5 +7,8 @@ import java.time.Clock;
 @Configuration
 public class SavedBusinessConfiguration {
     @Bean
-    SavedBusinessCommandService savedBusinessCommandService(SavedBusinessRepositoryPort saved, BusinessSnapshotRepositoryPort businesses, Clock clock) { return new SavedBusinessCommandService(saved, businesses, clock); }
+    SavedBusinessCommandService savedBusinessCommandService(SavedBusinessRepositoryPort saved, BusinessSnapshotRepositoryPort businesses,
+                                                             OfferSnapshotRepositoryPort offers, Clock clock) {
+        return new SavedBusinessCommandService(saved, businesses, offers, clock);
+    }
 }

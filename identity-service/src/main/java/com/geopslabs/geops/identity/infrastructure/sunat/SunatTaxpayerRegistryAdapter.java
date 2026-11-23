@@ -3,6 +3,7 @@ package com.geopslabs.geops.identity.infrastructure.sunat;
 import com.geopslabs.geops.identity.domain.models.Ruc;
 import com.geopslabs.geops.identity.domain.models.Taxpayer;
 import com.geopslabs.geops.identity.domain.ports.TaxpayerRegistryPort;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +13,7 @@ import java.util.Optional;
  * Reads Identity's copy of the registry in sunat_taxpayers. Nothing of SUNAT's file format reaches the domain.
  */
 @Component
+@ConditionalOnProperty(name = "geops.taxpayer-lookup.provider", havingValue = "registry", matchIfMissing = true)
 public class SunatTaxpayerRegistryAdapter implements TaxpayerRegistryPort {
     private static final String FIND_BY_RUC = """
             SELECT ruc, business_name, taxpayer_status, taxpayer_condition

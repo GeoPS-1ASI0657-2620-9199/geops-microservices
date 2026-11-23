@@ -10,7 +10,7 @@ import com.geopslabs.geops.identity.domain.models.VerificationStatus;
  */
 final class VerificationMessages {
     private static final String APPROVED = "Tu comercio quedó verificado. El sello aparecerá junto a tus ofertas.";
-    private static final String RUC_NOT_FOUND = "No encontramos el RUC %s en el padrón de SUNAT de Lima y Callao. "
+    private static final String RUC_NOT_FOUND = "No encontramos el RUC %s en SUNAT. "
             + "Revisa que sea el RUC de tu negocio; si está mal registrado, escríbenos para corregirlo.";
     private static final String TAXPAYER_NOT_ACTIVE = "SUNAT muestra tu RUC con estado \"%s\". Regulariza el "
             + "estado en SUNAT y vuelve a solicitar la verificación.";
@@ -23,6 +23,8 @@ final class VerificationMessages {
             + "vuelve a intentarlo.";
     private static final String GEOCODER_UNAVAILABLE = "El servicio de mapas no respondió. Tu verificación quedó "
             + "pendiente y la reintentaremos en unos minutos; no tienes que hacer nada.";
+    private static final String TAXPAYER_REGISTRY_UNAVAILABLE = "La consulta de RUC en SUNAT no respondió. Tu "
+            + "verificación quedó pendiente y la reintentaremos en unos minutos; no tienes que hacer nada.";
 
     private VerificationMessages() {
     }
@@ -41,6 +43,7 @@ final class VerificationMessages {
             case TAXPAYER_NOT_HABIDO -> TAXPAYER_NOT_HABIDO.formatted(verification.taxpayerCondition());
             case ADDRESS_NOT_GEOCODABLE -> ADDRESS_NOT_GEOCODABLE.formatted(checkedAddress);
             case GEOCODER_UNAVAILABLE -> GEOCODER_UNAVAILABLE;
+            case TAXPAYER_REGISTRY_UNAVAILABLE -> TAXPAYER_REGISTRY_UNAVAILABLE;
         };
     }
 }

@@ -23,6 +23,12 @@ public class SprintThreeSavedSteps {
     public void list(Long consumerId) { http.get("/api/v1/saved-businesses", TestIdentity.consumerToken(consumerId)); }
     @Then("the saved business is called {string}")
     public void shown(String name) throws Exception { assertThat(http.json(http.last()).get(0).path("businessName").asText()).isEqualTo(name); }
+    @Then("the saved business has {int} active offers titled {string} and {string}")
+    public void activeOffers(int count, String first, String second) throws Exception {
+        var business = http.json(http.last()).get(0);
+        assertThat(business.path("activeOffersCount").asInt()).isEqualTo(count);
+        assertThat(business.path("activeOffers").findValuesAsText("title")).containsExactlyInAnyOrder(first, second);
+    }
     @Then("the saved offer response has status {string}")
     public void status(String status) throws Exception { assertThat(http.json(http.last()).get(0).path("status").asText()).isEqualTo(status); }
 }

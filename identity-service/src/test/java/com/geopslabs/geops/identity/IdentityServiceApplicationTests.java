@@ -4,6 +4,7 @@ import com.geopslabs.geops.identity.acceptance.TestKeys;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.MigrationInfo;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -14,14 +15,15 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Comparator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(properties = "geops.outbox.relay-enabled=false")
+@SpringBootTest(properties = {"geops.outbox.relay-enabled=false", "geops.taxpayer-lookup.provider=registry"})
 class IdentityServiceApplicationTests {
     private static final DockerImageName POSTGIS_IMAGE =
             DockerImageName.parse("imresamu/postgis:16-3.4").asCompatibleSubstituteFor("postgres");
-    private static final String LATEST_VERSION = "5";
 
     @ServiceConnection
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(POSTGIS_IMAGE);
@@ -42,7 +44,11 @@ class IdentityServiceApplicationTests {
 
     @Test
     void appliesEveryMigration() {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo(LATEST_VERSION);
+        // Against the newest migration on the classpath, so a new migration does not need this test edited.
+        var newest = Arrays.stream(flyway.info().all()).map(MigrationInfo::getVersion).max(Comparator.naturalOrder());
+
+        assertThat(flyway.info().pending()).isEmpty();
+        assertThat(flyway.info().current().getVersion()).isEqualTo(newest.orElseThrow());
     }
 
     @Test

@@ -16,7 +16,8 @@ import java.util.stream.Collectors;
 /**
  * Búsqueda por proximidad (Informe 4.3.2.5). With the cell cache it asks the cache for the geohash cells that cover
  * the circle, reads from the database only the cells that are missing, stores them, and then applies in memory what
- * does not depend on the cell: validity in Lima today, exact distance, campaign zone, category and order. Without
+ * does not depend on the cell: validity in Lima today, exact distance, campaign zone, category, search text and
+ * order. The cells are always stored whole, so a text search never changes what the cache holds. Without
  * the cache (geops.cache.enabled=false) it runs the radius query of Sprint 1.
  */
 public class ProximitySearchService {
@@ -45,10 +46,16 @@ public class ProximitySearchService {
     }
 
     public List<RankedOffer> search(GeoPoint origin, int radiusMeters, String category) {
+        return search(origin, radiusMeters, category, null);
+    }
+
+    /** text may be null: no text filter. */
+    public List<RankedOffer> search(GeoPoint origin, int radiusMeters, String category, SearchText text) {
         var today = LocalDate.now(clock);
         return candidates(origin, radiusMeters, today).stream()
                 .filter(candidate -> !candidate.validTo().isBefore(today))
                 .filter(candidate -> category == null || category.equals(candidate.category()))
+                .filter(candidate -> text == null || text.matches(candidate))
                 .map(candidate -> RankedOffer.of(candidate, origin.distanceTo(candidate.location())))
                 .filter(ranked -> ranked.distanceMeters() <= radiusMeters)
                 .filter(ranked -> ranked.offer().zone().covers(origin))

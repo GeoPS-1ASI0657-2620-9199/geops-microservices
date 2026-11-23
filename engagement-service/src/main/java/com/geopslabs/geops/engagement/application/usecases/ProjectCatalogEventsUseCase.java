@@ -8,4 +8,5 @@ public interface ProjectCatalogEventsUseCase {
     void offerPublished(BusinessSnapshot business, OfferSnapshot offer, Instant occurredAt);
     void campaignPaused(Collection<Long> offerIds, Instant occurredAt);
     void offerExpired(Long offerId, Instant occurredAt);
+    void offerRemoved(Long offerId, Instant occurredAt);
 }

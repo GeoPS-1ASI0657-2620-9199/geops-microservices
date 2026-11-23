@@ -78,7 +78,8 @@ public class BusinessProfile {
         }
         if (correctedAddress != null) {
             var addressNotConfirmed = verification.reason() == VerificationReason.ADDRESS_NOT_GEOCODABLE
-                    || verification.reason() == VerificationReason.GEOCODER_UNAVAILABLE;
+                    || verification.reason() == VerificationReason.GEOCODER_UNAVAILABLE
+                    || verification.reason() == VerificationReason.TAXPAYER_REGISTRY_UNAVAILABLE;
             if (isVerified() && addressNotConfirmed) {
                 return SealChange.UNCHANGED;
             }

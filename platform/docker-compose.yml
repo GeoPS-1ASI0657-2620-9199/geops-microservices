@@ -126,6 +126,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${IDENTITY_DB_PASSWORD:?IDENTITY_DB_PASSWORD en .env}
       OUTBOX_RELAY_ENABLED: ${OUTBOX_RELAY_ENABLED:-true}
       GEOPS_SUNAT_SOURCE: ${GEOPS_SUNAT_SOURCE:-file}
+      GEOPS_TAXPAYER_LOOKUP: ${GEOPS_TAXPAYER_LOOKUP:-registry}
+      RUC_LOOKUP_TOKEN: ${RUC_LOOKUP_TOKEN:-}
       NOMINATIM_CONTACT_EMAIL: ${NOMINATIM_CONTACT_EMAIL:-}
       JWT_PRIVATE_KEY_PATH: /run/keys/jwt-private.pem
       JWT_PUBLIC_KEY_PATH: /run/keys/jwt-public.pem
@@ -138,8 +140,15 @@ services:
   catalog-service:
     <<: *service
     build: ../catalog-service
+    # Catalog carga más clases que los demás (JPA espacial, Redis, Kafka, Resilience4j, OpenAPI): con 128 MB
+    # de metaspace la VM terminó con OutOfMemoryError: Metaspace y el servicio dejó de responder (504 en el
+    # gateway). Metaspace a 192 MB y 64 MB más de contenedor; el heap baja al 45 % para que la suma no cambie.
+    mem_limit: 512m
     environment:
       <<: *service-env
+      JAVA_TOOL_OPTIONS: >-
+        -XX:MaxRAMPercentage=45 -XX:+UseSerialGC -Xss512k -XX:MaxMetaspaceSize=192m
+        -XX:ReservedCodeCacheSize=64m -XX:MaxDirectMemorySize=32m
       SERVER_PORT: 8082
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/catalog_db
       SPRING_DATASOURCE_USERNAME: catalog_user
@@ -176,7 +185,8 @@ services:
         condition: service_healthy
     healthcheck:
       <<: *health
-      test: ["CMD", "curl", "-fs", "http://localhost:8083/actuator/health"]
+      # Actuator listens on the management port 9083, not published nor routed by the gateway.
+      test: ["CMD", "curl", "-fs", "http://localhost:9083/actuator/health"]
 
   engagement-service:
     <<: *service
@@ -227,7 +237,8 @@ services:
         condition: service_healthy
     healthcheck:
       <<: *health
-      test: ["CMD", "curl", "-fs", "http://localhost:8085/actuator/health"]
+      # Actuator listens on the management port 9085, not published nor routed by the gateway.
+      test: ["CMD", "curl", "-fs", "http://localhost:9085/actuator/health"]
 
   # Correo local de desarrollo: Notification envía aquí y la bandeja se ve en http://localhost:8025.
   mailpit:

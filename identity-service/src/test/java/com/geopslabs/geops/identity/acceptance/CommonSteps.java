@@ -31,6 +31,7 @@ public class CommonSteps {
     public void startWithEmptyAccounts() {
         jdbc.update("DELETE FROM outbox_events");
         jdbc.update("DELETE FROM ruc_verifications");
+        jdbc.update("DELETE FROM revoked_tokens");
         consumerProfiles.deleteAll();
         businessProfiles.deleteAll();
         users.deleteAll();

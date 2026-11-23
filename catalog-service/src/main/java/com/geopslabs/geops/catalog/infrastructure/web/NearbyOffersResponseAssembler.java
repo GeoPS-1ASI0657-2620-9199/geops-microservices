@@ -18,6 +18,6 @@ final class NearbyOffersResponseAssembler {
         return new NearbyOfferResponse(offer.offerId(), offer.title(), offer.businessId(), offer.businessName(),
                 offer.verifiedSeal(), Math.round(ranked.distanceMeters()), ranked.walkMinutes(), offer.category(),
                 offer.address(), offer.imageUrl(), offer.location().latitude(), offer.location().longitude(),
-                offer.price(), offer.validTo());
+                offer.price(), offer.regularPrice(), offer.validTo());
     }
 }

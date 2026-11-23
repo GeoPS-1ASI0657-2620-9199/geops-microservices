@@ -95,14 +95,19 @@ public class BusinessProfilesController {
                             examples = @ExampleObject(name = "invalidRequest", value = """
                                     {"code": "INVALID_REQUEST", "message": "Revisa estos datos: address."}"""))),
             @ApiResponse(responseCode = "401", description = "Missing or invalid token",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(name = "unauthorized", value = """
+                                    {"code": "UNAUTHORIZED", "message": "Inicia sesión para continuar."}"""))),
             @ApiResponse(responseCode = "403", description = "The token is not of the owner of this business",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
                             examples = @ExampleObject(name = "forbidden", value = """
                                     {"code": "FORBIDDEN",
                                      "message": "Solo el dueño del negocio puede hacer esta operación."}"""))),
             @ApiResponse(responseCode = "404", description = "The business profile does not exist",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(name = "notFound", value = """
+                                    {"code": "BUSINESS_PROFILE_NOT_FOUND",
+                                     "message": "No encontramos el perfil de ese negocio."}"""))),
             @ApiResponse(responseCode = "503", description = "The SUNAT registry has never been loaded",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
                             examples = @ExampleObject(name = "registryEmpty", value = """
@@ -134,9 +139,15 @@ public class BusinessProfilesController {
                                       "message": "Tu comercio quedó verificado. El sello aparecerá junto a tus ofertas.",
                                       "checkedAt": "2026-10-21T15:04:00Z"}}"""))),
             @ApiResponse(responseCode = "403", description = "The token is not of the owner of this business",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(name = "forbidden", value = """
+                                    {"code": "FORBIDDEN",
+                                     "message": "Solo el dueño del negocio puede hacer esta operación."}"""))),
             @ApiResponse(responseCode = "404", description = "The business profile does not exist",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(name = "notFound", value = """
+                                    {"code": "BUSINESS_PROFILE_NOT_FOUND",
+                                     "message": "No encontramos el perfil de ese negocio."}""")))
     })
     @GetMapping("/{id}")
     public BusinessProfileResponse getProfile(@PathVariable("id") Long businessId, @AuthenticationPrincipal Jwt jwt) {
