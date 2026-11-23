@@ -4,6 +4,7 @@ import com.geopslabs.geops.catalog.application.services.CampaignCommandService;
 import com.geopslabs.geops.catalog.application.services.CampaignQueryService;
 import com.geopslabs.geops.catalog.application.services.CampaignStatusCommandService;
 import com.geopslabs.geops.catalog.application.services.CellInvalidator;
+import com.geopslabs.geops.catalog.application.services.OfferImageService;
 import com.geopslabs.geops.catalog.application.services.OfferQueryService;
 import com.geopslabs.geops.catalog.application.services.PublicOfferCommandService;
 import com.geopslabs.geops.catalog.application.services.PublicSourceOfferQueryService;
@@ -11,8 +12,10 @@ import com.geopslabs.geops.catalog.application.usecases.LoadPublicOffersUseCase;
 import com.geopslabs.geops.catalog.application.usecases.SearchPublicSourceOffersUseCase;
 import com.geopslabs.geops.catalog.application.usecases.ChangeCampaignStatusUseCase;
 import com.geopslabs.geops.catalog.application.usecases.CreateCampaignUseCase;
+import com.geopslabs.geops.catalog.application.usecases.UploadOfferImageUseCase;
 import com.geopslabs.geops.catalog.domain.ports.CampaignRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.MerchantStandingRepositoryPort;
+import com.geopslabs.geops.catalog.domain.ports.OfferImageRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.OfferRepositoryPort;
 import com.geopslabs.geops.catalog.domain.ports.OutboxPort;
 import org.springframework.context.annotation.Bean;
@@ -71,5 +74,10 @@ public class BeanConfiguration {
     public SearchPublicSourceOffersUseCase searchPublicSourceOffersUseCase(OfferRepositoryPort offerRepository,
                                                                            Clock clock) {
         return new PublicSourceOfferQueryService(offerRepository, clock);
+    }
+
+    @Bean
+    public UploadOfferImageUseCase uploadOfferImageUseCase(OfferImageRepositoryPort images, Clock clock) {
+        return new OfferImageService(images, clock);
     }
 }
