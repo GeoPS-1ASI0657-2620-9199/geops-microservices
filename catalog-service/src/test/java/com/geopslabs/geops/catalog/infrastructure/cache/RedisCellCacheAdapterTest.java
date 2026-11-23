@@ -87,6 +87,29 @@ class RedisCellCacheAdapterTest {
     }
 
     @Test
+    void keepsTheRegularPriceOfACachedOffer() {
+        var withSaving = new NearbyOfferCandidate(3L, "Menú ejecutivo", new BigDecimal("15.00"),
+                new BigDecimal("30.00"), LocalDate.of(2026, 10, 15), "Gastronomía", "Av. Larco 345, Miraflores", null,
+                POINT, 84L, "Restaurante Don Pepe", true, 0, new CampaignZone(ZoneType.RADIUS, POINT, 800, null));
+        cache.put(CELL, null, List.of(withSaving));
+
+        assertThat(cache.lookup(Set.of(CELL)).hits().get(CELL)).containsExactly(withSaving);
+    }
+
+    @Test
+    void aCellCachedBeforeTheRegularPriceExistedIsReadWithoutIt() {
+        redis.opsForValue().set("catalog:cell:v1:" + CELL, """
+                [{"offerId": 1, "title": "Menú ejecutivo", "price": 15.00, "validTo": "2026-10-15",
+                  "category": "Gastronomía", "address": "Av. Larco 345, Miraflores", "imageUrl": null,
+                  "location": {"latitude": -12.1211, "longitude": -77.0297}, "businessId": 84,
+                  "businessName": "Restaurante Don Pepe", "verifiedSeal": true, "openReports": 0,
+                  "zone": {"type": "RADIUS", "center": {"latitude": -12.1211, "longitude": -77.0297},
+                           "radiusMeters": 800, "district": null}}]""");
+
+        assertThat(cache.lookup(Set.of(CELL)).hits().get(CELL)).containsExactly(offer(1L));
+    }
+
+    @Test
     void evictingDeletesTheCell() {
         cache.put(CELL, null, List.of(offer(1L)));
 
@@ -137,7 +160,7 @@ class RedisCellCacheAdapterTest {
     }
 
     private static NearbyOfferCandidate offer(Long id) {
-        return new NearbyOfferCandidate(id, "Menú ejecutivo", new BigDecimal("15.00"), LocalDate.of(2026, 10, 15),
+        return new NearbyOfferCandidate(id, "Menú ejecutivo", new BigDecimal("15.00"), null, LocalDate.of(2026, 10, 15),
                 "Gastronomía", "Av. Larco 345, Miraflores", null, POINT, 84L, "Restaurante Don Pepe", true, 0,
                 new CampaignZone(ZoneType.RADIUS, POINT, 800, null));
     }

@@ -84,12 +84,13 @@ public record CreateCampaignRequest(
             @NotBlank @Size(max = TITLE_LENGTH) String title,
             @NotBlank String conditions,
             @NotNull @Positive BigDecimal price,
+            @Positive BigDecimal regularPrice,
             @NotNull LocalDate validTo,
             @NotBlank @Size(max = CATEGORY_LENGTH) String category,
             @Size(max = IMAGE_URL_LENGTH) String imageUrl) {
 
         CreateOfferCommand toCommand() {
-            return new CreateOfferCommand(title, conditions, price, validTo, category, imageUrl);
+            return new CreateOfferCommand(title, conditions, price, regularPrice, validTo, category, imageUrl);
         }
     }
 }
