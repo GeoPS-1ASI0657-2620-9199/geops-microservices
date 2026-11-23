@@ -70,7 +70,7 @@ public class SearchRadiusSteps {
         assertThat(events).hasSize(1);
         var payload = objectMapper.readTree(events.get(0).getPayload()).path("payload");
         assertThat(payload.path("consumerId").asLong()).isEqualTo(consumerId);
-        assertThat(payload.path("radiusMinutes").asInt()).isEqualTo(minutes);
+        assertThat(payload.path("searchRadiusMinutes").asInt()).isEqualTo(minutes);
     }
 
     @Then("the consumer keeps a radius of {int} minutes")

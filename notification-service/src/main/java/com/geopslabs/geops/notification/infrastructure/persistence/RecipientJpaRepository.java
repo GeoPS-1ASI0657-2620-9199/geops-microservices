@@ -20,4 +20,9 @@ public interface RecipientJpaRepository extends JpaRepository<RecipientJpaEntity
             nativeQuery = true)
     int upsert(@Param("userId") Long userId, @Param("email") String email,
                @Param("emailConfirmed") Boolean emailConfirmed, @Param("role") String role, @Param("businessId") Long businessId);
+
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE recipients SET email = :email, email_confirmed = true WHERE user_id = :userId", nativeQuery = true)
+    int confirmEmail(@Param("userId") Long userId, @Param("email") String email);
 }

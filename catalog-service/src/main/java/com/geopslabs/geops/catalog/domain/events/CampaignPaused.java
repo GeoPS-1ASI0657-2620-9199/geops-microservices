@@ -7,6 +7,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+/**
+ * The business paused a campaign (US10) and every offer in {@code offerIds} stopped being visible. Topic
+ * {@code catalog.events}, key {@code campaignId}, contract {@code platform/messaging/events/CampaignPaused.v1.json}.
+ * Engagement and Notification withdraw those offers; a reactivation arrives later as OfferPublished.
+ */
 public record CampaignPaused(UUID eventId, Instant occurredAt, Payload payload) implements DomainEvent {
     public static final String EVENT_TYPE = "CampaignPaused";
     public static final int VERSION = 1;

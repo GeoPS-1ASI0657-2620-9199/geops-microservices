@@ -54,11 +54,44 @@ geops:
   messaging:
     enabled: ${GEOPS_MESSAGING_ENABLED:true}
 
+# US34: cinco fallos de FCM o del servidor de correo en diez segundos abren su circuito 30 s. Con el de FCM abierto
+# el aviso pasa al resumen por correo; con el de correo abierto el resumen queda para la siguiente vuelta y el aviso
+# de un reporte se reintenta sin descartar el evento. Un bulkhead lleno es saturación propia, no una caída.
+resilience4j:
+  circuitbreaker:
+    configs:
+      provider:
+        sliding-window-type: TIME_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 100
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 1
+        ignore-exceptions:
+          - io.github.resilience4j.bulkhead.BulkheadFullException
+    instances:
+      fcm:
+        base-config: provider
+      smtp:
+        base-config: provider
+  # Llamadas en vuelo por proveedor; la siguiente se corta al instante en vez de esperar un hueco.
+  bulkhead:
+    instances:
+      fcm:
+        max-concurrent-calls: 10
+        max-wait-duration: 0
+      smtp:
+        max-concurrent-calls: 5
+        max-wait-duration: 0
+
 management:
+  # Actuator en su propio puerto, que compose no publica y el gateway no enruta (igual que Catalog).
+  server:
+    port: ${MANAGEMENT_PORT:9085}
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics,circuitbreakers
 
 springdoc:
   swagger-ui:

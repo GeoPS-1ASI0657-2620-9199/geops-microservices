@@ -9,7 +9,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 public class RecipientSteps {
     private static final String CLEAN_TABLES = """
             TRUNCATE TABLE last_known_locations, push_subscriptions, email_unsubscriptions, notification_preferences,
-                notifications, email_digests, followed_businesses, recipients RESTART IDENTITY CASCADE""";
+                notifications, email_digests, followed_businesses, confirmation_emails, recipients RESTART IDENTITY CASCADE""";
 
     private final JdbcTemplate jdbcTemplate;
     private final RecipientRepositoryPort recipients;

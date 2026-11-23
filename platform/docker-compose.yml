@@ -183,7 +183,8 @@ services:
         condition: service_healthy
     healthcheck:
       <<: *health
-      test: ["CMD", "curl", "-fs", "http://localhost:8083/actuator/health"]
+      # Actuator listens on the management port 9083, not published nor routed by the gateway.
+      test: ["CMD", "curl", "-fs", "http://localhost:9083/actuator/health"]
 
   engagement-service:
     <<: *service
@@ -234,7 +235,8 @@ services:
         condition: service_healthy
     healthcheck:
       <<: *health
-      test: ["CMD", "curl", "-fs", "http://localhost:8085/actuator/health"]
+      # Actuator listens on the management port 9085, not published nor routed by the gateway.
+      test: ["CMD", "curl", "-fs", "http://localhost:9085/actuator/health"]
 
   # Correo local de desarrollo: Notification envía aquí y la bandeja se ve en http://localhost:8025.
   mailpit:

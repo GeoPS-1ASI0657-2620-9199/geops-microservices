@@ -8,6 +8,7 @@ import com.geopslabs.geops.identity.domain.models.BusinessProfile;
 import com.geopslabs.geops.identity.domain.models.BusinessProfileNotAllowedException;
 import com.geopslabs.geops.identity.domain.models.BusinessProfileRequiredException;
 import com.geopslabs.geops.identity.domain.models.ConsumerProfile;
+import com.geopslabs.geops.identity.domain.models.EmailConfirmation;
 import com.geopslabs.geops.identity.domain.models.EmailAlreadyRegisteredException;
 import com.geopslabs.geops.identity.domain.models.InvalidLocationException;
 import com.geopslabs.geops.identity.domain.models.InvalidRucException;
@@ -20,6 +21,7 @@ import com.geopslabs.geops.identity.domain.models.User;
 import com.geopslabs.geops.identity.domain.models.VerificationStatus;
 import com.geopslabs.geops.identity.domain.ports.BusinessProfileRepositoryPort;
 import com.geopslabs.geops.identity.domain.ports.ConsumerProfileRepositoryPort;
+import com.geopslabs.geops.identity.domain.ports.EmailConfirmationRepositoryPort;
 import com.geopslabs.geops.identity.domain.ports.OutboxPort;
 import com.geopslabs.geops.identity.domain.ports.PasswordHasherPort;
 import com.geopslabs.geops.identity.domain.ports.UserRepositoryPort;
@@ -66,6 +68,7 @@ class UserCommandServiceTest {
     private static final double LATITUDE = -12.0681;
     private static final double LONGITUDE = -77.0350;
     private static final double OUT_OF_RANGE_LATITUDE = 95.0;
+    private static final String CONFIRMATION_TOKEN = "q3Zt8b1xV0mWc9yRkP2sLhN4dF6gJ7aE5uT0iO3pQ1w";
 
     @Mock
     private UserRepositoryPort userRepository;
@@ -77,13 +80,16 @@ class UserCommandServiceTest {
     private PasswordHasherPort passwordHasher;
     @Mock
     private OutboxPort outbox;
+    @Mock
+    private EmailConfirmationRepositoryPort emailConfirmations;
 
     private UserCommandService service;
 
     @BeforeEach
     void setUp() {
         service = new UserCommandService(userRepository, consumerProfileRepository, businessProfileRepository,
-                passwordHasher, outbox, Clock.fixed(REGISTERED_AT, ZoneOffset.UTC), () -> EVENT_ID);
+                passwordHasher, outbox, Clock.fixed(REGISTERED_AT, ZoneOffset.UTC), () -> EVENT_ID,
+                emailConfirmations, () -> CONFIRMATION_TOKEN);
     }
 
     @Test
@@ -124,6 +130,35 @@ class UserCommandServiceTest {
         verify(outbox).append(event.capture());
         assertThat(event.getValue().payload().role()).isEqualTo("BUSINESS_OWNER");
         assertThat(event.getValue().payload().businessId()).isEqualTo(BUSINESS_PROFILE_ID);
+    }
+
+    @Test
+    void theRegistrationKeepsOnlyTheHashOfTheConfirmationLinkAndSendsTheLinkInTheEvent() {
+        givenSavesSucceed();
+        var confirmation = ArgumentCaptor.forClass(EmailConfirmation.class);
+        var event = ArgumentCaptor.forClass(UserRegistered.class);
+
+        service.register(command(Role.CONSUMER, EMAIL));
+
+        verify(emailConfirmations).save(confirmation.capture());
+        verify(outbox).append(event.capture());
+        assertThat(confirmation.getValue().userId()).isEqualTo(USER_ID);
+        assertThat(confirmation.getValue().tokenHash()).isEqualTo(EmailConfirmation.hashOf(CONFIRMATION_TOKEN))
+                .isNotEqualTo(CONFIRMATION_TOKEN);
+        assertThat(confirmation.getValue().expiresAt()).isEqualTo(REGISTERED_AT.plus(EmailConfirmation.VALIDITY));
+        assertThat(event.getValue().payload().confirmationToken()).isEqualTo(CONFIRMATION_TOKEN);
+        assertThat(event.getValue().payload().confirmationExpiresAt())
+                .isEqualTo(confirmation.getValue().expiresAt());
+    }
+
+    @Test
+    void aRejectedRegistrationIssuesNoConfirmationLink() {
+        when(userRepository.existsByEmail(EMAIL)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.register(command(Role.CONSUMER, EMAIL)))
+                .isInstanceOf(EmailAlreadyRegisteredException.class);
+        verify(emailConfirmations, never()).save(any());
+        verify(outbox, never()).append(any());
     }
 
     @Test

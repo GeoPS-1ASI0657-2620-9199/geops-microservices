@@ -116,6 +116,37 @@ class CachedProximitySearchTest {
                 .containsExactly(1L);
     }
 
+    @Test
+    void aTextSearchFiltersTheCachedCellsWithoutReadingTheDatabase() {
+        var coffee = candidate(1L, 200, TODAY, "Cafetería y panadería");
+        var food = candidate(2L, 250, TODAY, "Gastronomía");
+        when(cache.lookup(anySet())).thenReturn(cachedEverywhere(coffee, food));
+
+        var result = search.search(ORIGIN, RADIUS, null, SearchText.parseOrNull("CAFETERIA"));
+
+        assertThat(result).extracting(ranked -> ranked.offer().offerId()).containsExactly(1L);
+        verify(offers, never()).findPublishedInCells(any(), any());
+        verify(cache, never()).put(any(), any(), any());
+    }
+
+    @Test
+    void aTextSearchStoresTheMissingCellWholeNotOnlyTheMatches() {
+        var coffee = candidate(1L, 200, TODAY, "Cafetería y panadería");
+        var food = candidate(2L, 210, TODAY, "Gastronomía");
+        var missingCell = GeoCell.containing(coffee.location()).geohash();
+        assertThat(GeoCell.containing(food.location()).geohash()).isEqualTo(missingCell);
+        var hits = new HashMap<String, List<NearbyOfferCandidate>>();
+        cells.stream().filter(cell -> !cell.equals(missingCell)).forEach(cell -> hits.put(cell, List.of()));
+        when(cache.lookup(anySet())).thenReturn(new CellCachePort.Lookup(hits, Map.of()));
+        when(offers.findPublishedInCells(Set.of(new GeoCell(missingCell)), TODAY))
+                .thenReturn(Map.of(missingCell, List.of(coffee, food)));
+
+        var result = search.search(ORIGIN, RADIUS, null, SearchText.parseOrNull("cafe"));
+
+        assertThat(result).extracting(ranked -> ranked.offer().offerId()).containsExactly(1L);
+        verify(cache).put(missingCell, null, List.of(coffee, food));
+    }
+
     private CellCachePort.Lookup cachedEverywhere(NearbyOfferCandidate... candidates) {
         var hits = new HashMap<String, List<NearbyOfferCandidate>>();
         cells.forEach(cell -> hits.put(cell, List.of()));
@@ -130,7 +161,7 @@ class CachedProximitySearchTest {
 
     private static NearbyOfferCandidate candidate(Long id, int metersNorth, LocalDate validTo, String category) {
         var location = new GeoPoint(ORIGIN.latitude() + metersNorth / METERS_PER_DEGREE, ORIGIN.longitude());
-        return new NearbyOfferCandidate(id, "Oferta " + id, BigDecimal.TEN, validTo, category, "Av. Larco 345",
+        return new NearbyOfferCandidate(id, "Oferta " + id, BigDecimal.TEN, null, validTo, category, "Av. Larco 345",
                 null, location, 84L, "Comercio", false, 0, new CampaignZone(ZoneType.RADIUS, null, null, null));
     }
 }

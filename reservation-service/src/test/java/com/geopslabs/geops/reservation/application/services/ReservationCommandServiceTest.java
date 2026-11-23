@@ -1,5 +1,6 @@
 package com.geopslabs.geops.reservation.application.services;
 
+import com.geopslabs.geops.reservation.domain.events.ReservationCreated;
 import com.geopslabs.geops.reservation.domain.events.ReservationRedeemed;
 import com.geopslabs.geops.reservation.domain.models.OfferSnapshot;
 import com.geopslabs.geops.reservation.domain.models.Reservation;
@@ -29,6 +30,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -217,6 +219,33 @@ class ReservationCommandServiceTest {
 
         assertThat(result.created()).isFalse();
         assertThat(result.reservation()).isSameAs(concurrent);
+        verify(outbox, never()).append(any());
+    }
+
+    @Test
+    void storesReservationCreatedWithTheOfferForTheMetricsOfTheCampaign() {
+        givenOfferValidTo(VALID_TO);
+        when(reservationRepository.save(any())).thenAnswer(invocation -> withId(invocation.getArgument(0)));
+
+        service.create(COMMAND);
+
+        var event = ArgumentCaptor.forClass(ReservationCreated.class);
+        verify(outbox).append(event.capture());
+        assertThat(event.getValue().eventType()).isEqualTo("ReservationCreated");
+        assertThat(event.getValue().aggregateId()).isEqualTo(RESERVATION_ID);
+        assertThat(event.getValue().occurredAt()).isEqualTo(NOW);
+        assertThat(event.getValue().payload()).isEqualTo(new ReservationCreated.Payload(RESERVATION_ID, CONSUMER_ID,
+                BUSINESS_ID, OFFER_ID, NOW, END_OF_VALID_TO_IN_LIMA.toInstant(ZoneOffset.UTC)));
+    }
+
+    @Test
+    void aReusedReservationPublishesNothing() {
+        when(reservationRepository.findActiveByConsumerAndOffer(CONSUMER_ID, OFFER_ID))
+                .thenReturn(Optional.of(storedReservation()));
+
+        service.create(COMMAND);
+
+        verify(outbox, never()).append(any());
     }
 
     @Test
@@ -310,7 +339,7 @@ class ReservationCommandServiceTest {
     private ReservationCommandService serviceAt(Instant instant) {
         return new ReservationCommandService(reservationRepository, offerCatalog, outbox,
                 Clock.fixed(instant, ZoneOffset.UTC),
-                new Random(SEED));
+                new Random(SEED), TransactionOperations.withoutTransaction());
     }
 
     private void givenOfferValidTo(LocalDate validTo) {

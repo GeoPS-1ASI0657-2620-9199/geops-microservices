@@ -15,6 +15,7 @@ public interface OfferJpaRepository extends JpaRepository<OfferJpaEntity, Long> 
             SELECT o.id                       AS "offerId",
                    o.title                    AS "title",
                    o.price                    AS "price",
+                   o.regular_price            AS "regularPrice",
                    o.valid_to                 AS "validTo",
                    o.category                 AS "category",
                    o.address                  AS "address",
