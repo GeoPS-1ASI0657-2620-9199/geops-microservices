@@ -1,12 +1,13 @@
 #!/bin/bash
-# Pasos de US16, US17, US25 y US33 contra la plataforma levantada con Docker Compose, en local (C2-01).
+# Pasos de US16, US17, US25, US27 y US33 contra la plataforma levantada con Docker Compose, en local (C2-01).
 # Uso, desde platform/:
 #   docker compose --profile app --profile messaging up -d --build
-#   ./acceptance/run.sh [us16|us17|us25|us33|all]
+#   ./acceptance/run.sh [us16|us17|us25|us27|us33|all]
 # Variables opcionales:
 #   COMPOSE_ARGS  archivos de compose (por defecto "-f docker-compose.yml")
 #   GATEWAY_URL   puerta de entrada (por defecto http://localhost:8080)
 #   SKIP_MAVEN=1  no corre las pruebas de ArchUnit (si ya pasaron en CI)
+#   US27_SAMPLES  peticiones por medición del sobrecosto de US27 (por defecto 200)
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
@@ -147,11 +148,12 @@ us17() {
   if [ "${SKIP_MAVEN:-0}" = "1" ]; then echo "SKIP"; elif archunit_passes catalog; then ok; else ko; fi
 
   echo " Scenario: Identity keeps working while the catalog restarts"
-  local suffix email phone password login_code
-  suffix=$(date +%s)
-  email="us17.${suffix}@ejemplo.pe"
-  phone="9$(printf '%08d' $((suffix % 100000000)))"
-  password="Us17#${suffix}"
+  # Cuenta fija, como en US33: si ya existe el registro responde 409 y el login sirve igual, así
+  # cada corrida no deja un consumidor nuevo en la base de la demo.
+  local email phone password login_code
+  email="us17.consumidor@ejemplo.pe"
+  phone="987000017"
+  password="Us17#Consumidor2026"
   curl -s -o /dev/null -X POST "${GATEWAY_URL}/api/v1/auth/register" -H 'Content-Type: application/json' \
     -d "{\"role\":\"CONSUMER\",\"fullName\":\"Prueba US17\",\"email\":\"${email}\",\"phone\":\"${phone}\",\"password\":\"${password}\"}"
   "${COMPOSE[@]}" restart catalog-service > /dev/null 2>&1 &
@@ -226,7 +228,7 @@ lag_is_zero() { [ "$(topic_lag "$1" "$US33_TOPIC")" = "0" ]; }
 # Deja un canje listo: crea (o reutiliza) comercio y consumidor, publica una oferta y reserva.
 # Deja en variables globales US33_OWNER_TOKEN, US33_RESERVATION_ID y US33_CODE.
 us33_prepare_reservation() {
-  local start end body offer_id business_id reservation
+  local start end body offer_id business_id campaign_id reservation
   if [ -z "${US33_OWNER_TOKEN:-}" ]; then
     US33_OWNER_TOKEN=$(login_token "$US33_OWNER_EMAIL" "$US33_OWNER_PASSWORD")
     if [ -z "$US33_OWNER_TOKEN" ]; then
@@ -245,12 +247,23 @@ us33_prepare_reservation() {
   start=$(date -u +%Y-%m-%d); end=$(date -u -d '+30 days' +%Y-%m-%d)
   body=$(http_json POST /api/v1/campaigns "$US33_OWNER_TOKEN" "{\"businessName\":\"Bodega US33\",\"name\":\"Prueba US33 $(date +%s)\",\"description\":\"Oferta para la prueba de eventos\",\"period\":{\"start\":\"${start}\",\"end\":\"${end}\"},\"storeLocation\":{\"address\":\"Jr. Huanuco 1250, La Victoria\",\"latitude\":-12.067,\"longitude\":-77.024},\"zone\":{\"type\":\"RADIUS\",\"center\":{\"latitude\":-12.067,\"longitude\":-77.024},\"radiusMeters\":800},\"offers\":[{\"title\":\"Almuerzo US33\",\"conditions\":\"Solo para la prueba.\",\"price\":15,\"validTo\":\"${end}\",\"category\":\"Gastronomia\"}]}")
   business_id=$(printf '%s' "$body" | json_field businessId)
+  campaign_id=$(printf '%s' "$body" | json_field campaignId)
+  [ -n "$campaign_id" ] && US33_CAMPAIGNS+=("$campaign_id")
   offer_id=$(psql_db catalog_db "SELECT id FROM offers WHERE business_id = ${business_id:-0} ORDER BY id DESC LIMIT 1" | tr -d '[:space:]')
   [ -n "$offer_id" ] || return 1
   reservation=$(http_json POST /api/v1/reservations "$US33_CONSUMER_TOKEN" "{\"offerId\":${offer_id}}" | head -1)
   US33_RESERVATION_ID=$(printf '%s' "$reservation" | json_field reservationId)
   US33_CODE=$(printf '%s' "$reservation" | json_field code)
   [ -n "$US33_RESERVATION_ID" ] && [ -n "$US33_CODE" ]
+}
+# Al terminar se pausan las campañas de la prueba: la búsqueda por cercanía solo muestra campañas
+# ACTIVE, así que no quedan ofertas "Almuerzo US33" visibles en la demo.
+us33_pause_campaigns() {
+  local id
+  for id in "${US33_CAMPAIGNS[@]}"; do
+    http_json PATCH "/api/v1/campaigns/${id}/status" "$US33_OWNER_TOKEN" '{"status":"PAUSED"}' > /dev/null
+  done
+  US33_CAMPAIGNS=()
 }
 us33_redeem() {
   http_json POST /api/v1/reservations/redeem "$US33_OWNER_TOKEN" "{\"code\":\"${US33_CODE}\"}" | tail -1
@@ -259,6 +272,7 @@ us33_redeem() {
 us33() {
   echo "Feature: US33 Communicate the services asynchronously"
   US33_OWNER_TOKEN=""
+  US33_CAMPAIGNS=()
   local code lag marker
   # US17 deja a Catalog reiniciando; sin Catalog sano no se puede publicar la oferta del escenario.
   step "Catalog is healthy before the scenarios"
@@ -266,7 +280,7 @@ us33() {
 
   echo " Scenario: The redemption completes while the consumer service is down"
   step "Background: a business owner has an ACTIVE reservation code"
-  if us33_prepare_reservation; then ok "reservation ${US33_RESERVATION_ID}"; else ko; return; fi
+  if us33_prepare_reservation; then ok "reservation ${US33_RESERVATION_ID}"; else ko; us33_pause_campaigns; return; fi
   "${COMPOSE[@]}" stop engagement-service > /dev/null 2>&1
   step "engagement-service is stopped"
   [ -z "$("${COMPOSE[@]}" ps -q --status running engagement-service)" ] && ok || ko
@@ -301,6 +315,126 @@ us33() {
   else
     ko
   fi
+  us33_pause_campaigns
+}
+
+# Rutas de US27, "método ruta". Las públicas son las que la web pide sin sesión; las protegidas cubren
+# cada bloque de rutas del gateway, también la escritura en la ruta pública de ofertas.
+US27_PUBLIC_ROUTES=(
+  "GET ${NEARBY_PATH}"
+  "GET /api/v1/offers/categories"
+  "GET /.well-known/jwks.json"
+  "GET /docs/identity/v3/api-docs"
+  "GET /"
+)
+US27_PROTECTED_ROUTES=(
+  "GET /api/v1/consumer-profiles/me"
+  "GET /api/v1/business-profiles/1"
+  "POST /api/v1/campaigns"
+  "POST /api/v1/admin/public-offers"
+  "POST /api/v1/offers/1"
+  "GET /api/v1/reservations"
+  "GET /api/v1/reports"
+  "GET /api/v1/saved-offers"
+  "GET /api/v1/reviews"
+  "GET /api/v1/follows"
+  "GET /api/v1/notification-preferences"
+  "PUT /api/v1/locations/last"
+  "POST /api/v1/push-subscriptions"
+  "POST /api/v1/auth/logout"
+)
+US27_CACHE_SECONDS=5
+US27_MAX_OVERHEAD_MS=50
+US27_SAMPLES=${US27_SAMPLES:-200}
+US27_PROFILE_PATH="/api/v1/consumer-profiles/me"
+
+# método ruta [token] -> código HTTP
+status_of() {
+  curl -s -o /dev/null -w '%{http_code}' -X "$1" "${GATEWAY_URL}$2" ${3:+-H "Authorization: Bearer $3"}
+}
+# url token -> p95 en milisegundos de US27_SAMPLES peticiones seguidas, medidas desde el contenedor del gateway
+p95_ms() {
+  "${COMPOSE[@]}" exec -T gateway sh -c "for i in \$(seq 1 ${US27_SAMPLES}); do \
+      curl -s -o /dev/null -w '%{time_total}\n' -H 'Authorization: Bearer $2' '$1'; done" \
+    | sort -n | awk '{ t[NR] = $1 } END { i = int(NR * 0.95); if (i < 1) i = 1; printf "%.1f", t[i] * 1000 }'
+}
+# Registra un consumidor con datos únicos y deja su token en US27_TOKEN.
+us27_consumer_token() {
+  local suffix email password
+  suffix=$(date +%s%N | cut -c6-14)
+  email="us27.${suffix}@ejemplo.pe"
+  password="Us27#${suffix}"
+  http_json POST /api/v1/auth/register "" "{\"role\":\"CONSUMER\",\"fullName\":\"Prueba US27\",\"email\":\"${email}\",\"phone\":\"9${suffix: -8}\",\"password\":\"${password}\"}" > /dev/null
+  US27_TOKEN=$(login_token "$email" "$password")
+  [ -n "$US27_TOKEN" ]
+}
+
+us27() {
+  echo "Feature: US27 Require a valid token in the API gateway"
+  local route method path code body since rejected token gateway_p95 direct_p95 overhead
+
+  echo " Scenario: The public routes answer without a token"
+  for route in "${US27_PUBLIC_ROUTES[@]}"; do
+    read -r method path <<< "$route"
+    step "${method} ${path%%\?*} answers without a token"
+    code=$(status_of "$method" "$path")
+    [ "$code" = "200" ] && ok "HTTP $code" || ko "HTTP $code"
+  done
+  step "POST /api/v1/auth/login reaches identity without a token"
+  body=$(http_json POST /api/v1/auth/login "" '{"email":"nadie.us27@ejemplo.pe","password":"Otra#2026"}')
+  [ "$(printf '%s' "$body" | head -1 | json_field code)" = "INVALID_CREDENTIALS" ] && ok || ko "$(printf '%s' "$body" | tr '\n' ' ')"
+  step "POST /api/v1/email-unsubscriptions reaches notification without a token"
+  code=$(http_json POST /api/v1/email-unsubscriptions "" '{"token":"enlace-de-prueba"}' | tail -1)
+  [ "$code" != "401" ] && ok "HTTP $code" || ko "HTTP $code"
+
+  echo " Scenario: Every protected route rejects a request without a token"
+  since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  for route in "${US27_PROTECTED_ROUTES[@]}"; do
+    read -r method path <<< "$route"
+    step "${method} ${path} without a token"
+    body=$(http_json "$method" "$path" "")
+    code=$(printf '%s' "$body" | tail -1)
+    [ "$code" = "401" ] && [ "$(printf '%s' "$body" | head -1 | json_field code)" = "UNAUTHORIZED" ] \
+      && ok "HTTP $code" || ko "HTTP $code"
+  done
+  step "None of them reached a service (upstream=- in the gateway log)"
+  rejected=$("${COMPOSE[@]}" logs --no-log-prefix --since "$since" gateway 2> /dev/null | grep -c '" 401 .* upstream=- ')
+  [ "$rejected" -ge "${#US27_PROTECTED_ROUTES[@]}" ] && ok "$rejected rejected by the gateway" || ko "$rejected rejected by the gateway"
+
+  echo " Scenario: A malformed token is rejected by the gateway"
+  step "GET /api/v1/reservations with a malformed token"
+  code=$(status_of GET /api/v1/reservations "esto-no-es-un-token")
+  [ "$code" = "401" ] && ok "HTTP $code" || ko "HTTP $code"
+
+  echo " Scenario: A valid token reaches the service"
+  step "Background: a consumer logs in"
+  if us27_consumer_token; then ok; else ko; return; fi
+  token=$US27_TOKEN
+  step "GET ${US27_PROFILE_PATH} with the token"
+  code=$(status_of GET "$US27_PROFILE_PATH" "$token")
+  [ "$code" = "200" ] && ok "HTTP $code" || ko "HTTP $code"
+
+  echo " Scenario: The validation adds at most ${US27_MAX_OVERHEAD_MS} ms to the p95"
+  step "p95 of ${US27_SAMPLES} requests through the gateway minus straight to identity"
+  gateway_p95=$(p95_ms "http://localhost${US27_PROFILE_PATH}" "$token")
+  direct_p95=$(p95_ms "http://identity-service:8081${US27_PROFILE_PATH}" "$token")
+  overhead=$(awk -v g="$gateway_p95" -v d="$direct_p95" 'BEGIN { printf "%.1f", g - d }')
+  awk -v o="$overhead" -v m="$US27_MAX_OVERHEAD_MS" 'BEGIN { exit !(o <= m) }' \
+    && ok "gateway ${gateway_p95} ms, direct ${direct_p95} ms, +${overhead} ms" \
+    || ko "gateway ${gateway_p95} ms, direct ${direct_p95} ms, +${overhead} ms"
+
+  echo " Scenario: A closed session stops passing the gateway"
+  step "POST /api/v1/auth/logout with the token"
+  code=$(status_of POST /api/v1/auth/logout "$token")
+  [ "$code" = "204" ] && ok "HTTP $code" || ko "HTTP $code"
+  step "Within $((US27_CACHE_SECONDS + 1)) seconds the token is rejected"
+  closed_token_rejected() { [ "$(status_of GET "$US27_PROFILE_PATH" "$token")" = "401" ]; }
+  wait_until $((US27_CACHE_SECONDS + 1)) closed_token_rejected && ok || ko
+
+  echo " Scenario: The token validation is not published"
+  step "POST /api/v1/auth/introspect through the gateway"
+  code=$(status_of POST /api/v1/auth/introspect "$token")
+  [ "$code" = "404" ] && ok "HTTP $code" || ko "HTTP $code"
 }
 
 us25() {
@@ -368,9 +502,10 @@ case "${1:-all}" in
   us16) us16 ;;
   us17) us17 ;;
   us25) us25 ;;
+  us27) us27 ;;
   us33) us33 ;;
-  all) us16; us17; us25; us33 ;;
-  *) echo "Uso: $0 [us16|us17|us25|us33|all]" >&2; exit 2 ;;
+  all) us16; us17; us25; us27; us33 ;;
+  *) echo "Uso: $0 [us16|us17|us25|us27|us33|all]" >&2; exit 2 ;;
 esac
 
 echo "== ${passed} passed, ${failed} failed"

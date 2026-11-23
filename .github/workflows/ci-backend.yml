@@ -6,31 +6,50 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-backend-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  changes:
+  contracts:
+    name: contract copies
     runs-on: ubuntu-latest
-    outputs:
-      services: ${{ steps.filter.outputs.changes }}
     steps:
       - uses: actions/checkout@v4
-      - id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            identity-service: identity-service/**
-            catalog-service: catalog-service/**
-            reservation-service: reservation-service/**
-            engagement-service: engagement-service/**
-            notification-service: notification-service/**
+      - name: Every copy of a contract is identical to the one in platform
+        run: |
+          shopt -s nullglob
+          status=0
+          check() {
+            if ! cmp -s "$1" "$2"; then
+              echo "::error file=$1::$1 differs from $2 or $2 does not exist"
+              status=1
+            fi
+          }
+          for copy in */src/test/resources/events/*.json; do
+            check "$copy" "platform/messaging/events/$(basename "$copy")"
+          done
+          for copy in */src/test/resources/contracts/*.json; do
+            check "$copy" "platform/contracts/http/$(basename "$copy")"
+          done
+          exit "$status"
 
   verify:
-    needs: changes
-    if: needs.changes.outputs.services != '[]'
+    name: verify (${{ matrix.service }})
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        service: ${{ fromJSON(needs.changes.outputs.services) }}
+        service:
+          - identity-service
+          - catalog-service
+          - reservation-service
+          - engagement-service
+          - notification-service
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     defaults:
@@ -43,14 +62,30 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
+          cache-dependency-path: ${{ matrix.service }}/pom.xml
       - run: chmod +x mvnw
-      - run: ./mvnw -B verify
+      - name: Build and run unit, contract and BDD tests
+        run: ./mvnw -B -ntp verify
+      - name: Test summary
+        if: always()
+        working-directory: .
+        run: python3 .github/scripts/test-summary.py "${{ matrix.service }}"
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ matrix.service }}
+          path: |
+            ${{ matrix.service }}/target/surefire-reports/
+            ${{ matrix.service }}/target/cucumber-reports/
+          if-no-files-found: warn
+          retention-days: 14
       - name: SonarCloud
         if: ${{ env.SONAR_TOKEN != '' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: >
-          ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          ./mvnw -B -ntp org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
           -Dsonar.host.url=https://sonarcloud.io
           -Dsonar.organization=geops-1asi0657-2620-9199
           -Dsonar.projectKey=geops-${{ matrix.service }}

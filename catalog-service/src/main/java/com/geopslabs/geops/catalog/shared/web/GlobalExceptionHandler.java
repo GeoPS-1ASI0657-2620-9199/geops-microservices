@@ -17,6 +17,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.stream.Collectors;
 
@@ -31,6 +32,8 @@ public class GlobalExceptionHandler {
     private static final String MESSAGE_SEPARATOR = "; ";
     private static final String REQUEST_NOT_SUPPORTED = "REQUEST_NOT_SUPPORTED";
     private static final String REQUEST_NOT_SUPPORTED_MESSAGE = "This operation is not available";
+    private static final String IMAGE_TOO_LARGE = "IMAGE_TOO_LARGE";
+    private static final String IMAGE_TOO_LARGE_MESSAGE = "La foto pesa más de 2 MB. Usa una más liviana.";
     private static final String INTERNAL_ERROR = "INTERNAL_ERROR";
     private static final String INTERNAL_ERROR_MESSAGE = "The operation could not be completed. Try again later";
 
@@ -80,6 +83,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUnreadableBody(HttpMessageNotReadableException exception) {
         LOGGER.info("request.rejected code={} reason=unreadable-body", INVALID_REQUEST);
         return respond(HttpStatus.BAD_REQUEST, INVALID_REQUEST, UNREADABLE_BODY_MESSAGE);
+    }
+
+    /** Raised while reading the multipart body, before any controller: it cannot be handled per controller. */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleTooLargeUpload(MaxUploadSizeExceededException exception) {
+        LOGGER.info("request.rejected code={}", IMAGE_TOO_LARGE);
+        return respond(HttpStatus.PAYLOAD_TOO_LARGE, IMAGE_TOO_LARGE, IMAGE_TOO_LARGE_MESSAGE);
     }
 
     @ExceptionHandler(ServletException.class)

@@ -39,6 +39,6 @@ public record ConsumerPreferencesChanged(UUID eventId, Instant occurredAt, Paylo
         return payload.consumerId();
     }
 
-    public record Payload(Long consumerId, int radiusMinutes) {
+    public record Payload(Long consumerId, int searchRadiusMinutes) {
     }
 }

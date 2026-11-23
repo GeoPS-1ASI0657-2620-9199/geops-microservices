@@ -1,10 +1,14 @@
 package com.geopslabs.geops.identity.infrastructure.web;
 
 import com.geopslabs.geops.identity.application.usecases.ConfirmEmailUseCase;
+import com.geopslabs.geops.identity.application.usecases.IntrospectTokenUseCase;
 import com.geopslabs.geops.identity.application.usecases.LogInUseCase;
+import com.geopslabs.geops.identity.application.usecases.LogOutUseCase;
 import com.geopslabs.geops.identity.application.usecases.RegisterUserUseCase;
 import com.geopslabs.geops.identity.shared.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -12,27 +16,36 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
-@Tag(name = "Authentication", description = "User registration and login")
+@Tag(name = "Authentication", description = "User registration, login, logout and token validation")
 @RestController
 @RequestMapping(value = "/api/v1/auth", produces = APPLICATION_JSON_VALUE)
 public class AuthenticationController {
+    private static final String BEARER_PREFIX = "Bearer ";
+
     private final RegisterUserUseCase registerUserUseCase;
     private final LogInUseCase logInUseCase;
+    private final LogOutUseCase logOutUseCase;
+    private final IntrospectTokenUseCase introspectTokenUseCase;
     private final ConfirmEmailUseCase confirmEmailUseCase;
 
     public AuthenticationController(RegisterUserUseCase registerUserUseCase, LogInUseCase logInUseCase,
+                                    LogOutUseCase logOutUseCase, IntrospectTokenUseCase introspectTokenUseCase,
                                     ConfirmEmailUseCase confirmEmailUseCase) {
         this.registerUserUseCase = registerUserUseCase;
         this.logInUseCase = logInUseCase;
+        this.logOutUseCase = logOutUseCase;
+        this.introspectTokenUseCase = introspectTokenUseCase;
         this.confirmEmailUseCase = confirmEmailUseCase;
     }
 
@@ -140,6 +153,64 @@ public class AuthenticationController {
     @PostMapping(value = "/login", consumes = APPLICATION_JSON_VALUE)
     public TokenResponse logIn(@Valid @RequestBody LogInRequest request) {
         return TokenResponse.from(logInUseCase.logIn(request.toCommand()));
+    }
+
+    @Operation(summary = "Close the session of the token sent",
+            description = "Revokes the Bearer token: from then on the token validation reports it inactive and the "
+                    + "gateway rejects it, although its signature is still good. Closing it again answers 204 too.")
+    @Parameter(name = HttpHeaders.AUTHORIZATION, in = ParameterIn.HEADER, required = true,
+            description = "Token to close", example = "Bearer eyJraWQiOiJpZGVudGl0eS0yMDI2LTEwIn0.eyJzdWIiOiI0MSJ9.c2ln")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Session closed"),
+            @ApiResponse(responseCode = "401", description = "Missing, malformed, altered or expired token",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(name = "invalidToken", value = """
+                                    {"code": "INVALID_TOKEN",
+                                     "message": "Tu sesión no es válida o ya terminó. Inicia sesión de nuevo."}""")))
+    })
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logOut(
+            @Parameter(hidden = true) @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false)
+            String authorization) {
+        logOutUseCase.logOut(bearerToken(authorization));
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Validate a token (US26)",
+            description = "Internal operation for the API gateway and the services: checks the signature, issuer, "
+                    + "audience, expiry and that the session was not closed. An active token answers 200 with who "
+                    + "sent it and until when it is valid; any other answers 401 with active=false and no reason. "
+                    + "The gateway does not publish it.")
+    @Parameter(name = HttpHeaders.AUTHORIZATION, in = ParameterIn.HEADER, required = true,
+            description = "Token to validate", example = "Bearer eyJraWQiOiJpZGVudGl0eS0yMDI2LTEwIn0.eyJzdWIiOiI0MSJ9.c2ln")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Active token",
+                    content = @Content(schema = @Schema(implementation = IntrospectionResponse.class), examples = {
+                            @ExampleObject(name = "consumer", value = """
+                                    {"active": true, "userId": 41, "role": "CONSUMER",
+                                     "issuedAt": "2026-11-22T15:00:00Z", "expiresAt": "2026-11-22T16:00:00Z"}"""),
+                            @ExampleObject(name = "businessOwner", value = """
+                                    {"active": true, "userId": 42, "role": "BUSINESS_OWNER", "businessId": 7,
+                                     "issuedAt": "2026-11-22T15:00:00Z", "expiresAt": "2026-11-22T16:00:00Z"}""")})),
+            @ApiResponse(responseCode = "401", description = "Missing, malformed, altered, expired or revoked token",
+                    content = @Content(schema = @Schema(implementation = IntrospectionResponse.class),
+                            examples = @ExampleObject(name = "inactive", value = """
+                                    {"active": false}""")))
+    })
+    @PostMapping("/introspect")
+    public ResponseEntity<IntrospectionResponse> introspect(
+            @Parameter(hidden = true) @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false)
+            String authorization) {
+        var introspection = introspectTokenUseCase.introspect(bearerToken(authorization));
+        var status = introspection.active() ? HttpStatus.OK : HttpStatus.UNAUTHORIZED;
+        return ResponseEntity.status(status).body(IntrospectionResponse.from(introspection));
+    }
+
+    private static String bearerToken(String authorization) {
+        if (authorization == null || !authorization.regionMatches(true, 0, BEARER_PREFIX, 0, BEARER_PREFIX.length())) {
+            return null;
+        }
+        return authorization.substring(BEARER_PREFIX.length()).trim();
     }
 
     @Operation(summary = "Confirm the email with the token of the link sent by email",

@@ -55,6 +55,12 @@ public class CucumberSpringConfiguration {
         registry.add("geops.outbox.relay-delay-ms", () -> RELAY_DELAY_MS);
     }
 
+    /** The real Catalog client points to a local stub, never to a Catalog that may be running on the machine. */
+    @DynamicPropertySource
+    static void catalog(DynamicPropertyRegistry registry) {
+        registry.add("geops.catalog.base-url", StubCatalogServer::baseUrl);
+    }
+
     private static void createTopic() {
         try (var admin = AdminClient.create(Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG,
                 KAFKA.getBootstrapServers()))) {

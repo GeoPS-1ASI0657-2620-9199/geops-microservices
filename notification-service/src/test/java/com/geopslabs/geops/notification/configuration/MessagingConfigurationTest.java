@@ -1,5 +1,6 @@
 package com.geopslabs.geops.notification.configuration;
 
+import com.geopslabs.geops.notification.application.exceptions.ProviderUnavailableException;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DuplicateKeyException;
@@ -17,6 +18,14 @@ class MessagingConfigurationTest {
 
         assertThat(MessagingConfiguration.isInfrastructure(wrapped)).isTrue();
         assertThat(MessagingConfiguration.isInfrastructure(new DataAccessResourceFailureException("down"))).isTrue();
+    }
+
+    @Test
+    void anOpenCircuitOfADeliveryProviderIsRetriedWithoutLimitInsteadOfGoingToTheDeadLetterTopic() {
+        var wrapped = new ListenerExecutionFailedException("listener",
+                new ProviderUnavailableException("smtp", "circuit-open"));
+
+        assertThat(MessagingConfiguration.isInfrastructure(wrapped)).isTrue();
     }
 
     @Test

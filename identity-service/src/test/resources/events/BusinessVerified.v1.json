@@ -1,0 +1,15 @@
+{
+  "eventId": "6a2e4c8d-1b3f-4e5a-9c7d-2f4b6d8e0a13",
+  "eventType": "BusinessVerified",
+  "version": 1,
+  "occurredAt": "2026-10-21T15:04:00Z",
+  "aggregateId": 84,
+  "payload": {
+    "businessId": 84,
+    "businessName": "Restaurante Don Pepe",
+    "verified": true,
+    "result": "APPROVED",
+    "reason": null,
+    "verifiedAt": "2026-10-21T15:04:00Z"
+  }
+}

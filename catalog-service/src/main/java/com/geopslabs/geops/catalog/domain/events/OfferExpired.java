@@ -7,6 +7,11 @@ import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
 
+/**
+ * An offer reached the end of its validity in Lima and stopped being visible; written by the expiration task. Topic
+ * {@code catalog.events}, key {@code campaignId}, contract {@code platform/messaging/events/OfferExpired.v1.json}.
+ * Engagement marks the saved offer as expired and Notification cancels the notices still pending for it.
+ */
 public record OfferExpired(UUID eventId, Instant occurredAt, Payload payload) implements DomainEvent {
     public static final String EVENT_TYPE = "OfferExpired";
     public static final int VERSION = 1;

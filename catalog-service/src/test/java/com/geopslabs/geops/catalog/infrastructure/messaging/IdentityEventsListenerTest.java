@@ -94,6 +94,19 @@ class IdentityEventsListenerTest {
         verify(acknowledgment, never()).acknowledge();
     }
 
+    /** Consumer side of the contract: the example Identity is tested against is read and applied as is. */
+    @Test
+    void readsTheExampleOfTheContractThatIdentityPublishes() {
+        listener.onIdentityEvent(record(EventContract.example("BusinessVerified").toString()), acknowledgment);
+
+        var event = ArgumentCaptor.forClass(BusinessVerifiedEvent.class);
+        verify(useCase).apply(event.capture());
+        verify(acknowledgment).acknowledge();
+        assertThat(event.getValue().businessId()).isEqualTo(84L);
+        assertThat(event.getValue().verified()).isTrue();
+        assertThat(event.getValue().occurredAt()).isEqualTo(Instant.parse("2026-10-21T15:04:00Z"));
+    }
+
     private static ConsumerRecord<String, String> record(String value) {
         return new ConsumerRecord<>("identity.events", 0, 0L, "84", value);
     }

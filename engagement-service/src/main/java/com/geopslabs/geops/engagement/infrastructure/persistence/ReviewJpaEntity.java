@@ -1,5 +1,6 @@
 package com.geopslabs.geops.engagement.infrastructure.persistence;
 
+import com.geopslabs.geops.engagement.domain.models.AuthorName;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -45,4 +46,7 @@ public class ReviewJpaEntity {
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+
+    @Column(name = "author_name", length = AuthorName.MAX_LENGTH)
+    private String authorName;
 }
