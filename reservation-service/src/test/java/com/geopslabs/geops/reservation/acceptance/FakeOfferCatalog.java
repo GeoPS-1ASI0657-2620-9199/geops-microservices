@@ -15,11 +15,18 @@ public class FakeOfferCatalog implements OfferCatalogPort {
     private final Map<Long, OfferSnapshot> offers = new ConcurrentHashMap<>();
     private final Set<Long> unavailableOffers = ConcurrentHashMap.newKeySet();
     private volatile boolean down;
+    private volatile OfferCatalogPort realClient;
 
     public void reset() {
         offers.clear();
         unavailableOffers.clear();
         down = false;
+        realClient = null;
+    }
+
+    /** From here on the reservation asks Catalog through the real client, with its circuit breaker (US34). */
+    public void useRealClient(OfferCatalogPort client) {
+        realClient = client;
     }
 
     public void publish(OfferSnapshot offer) {
@@ -36,6 +43,10 @@ public class FakeOfferCatalog implements OfferCatalogPort {
 
     @Override
     public OfferSnapshot findValidOffer(Long offerId) {
+        var client = realClient;
+        if (client != null) {
+            return client.findValidOffer(offerId);
+        }
         if (down) {
             throw new CatalogUnavailableException();
         }

@@ -57,6 +57,20 @@ Feature: Review a business after a verified redemption
     Then the response has status 200
     And the reviews come in this order: "Segundo, Primero"
 
+  Scenario: The business sees the first name and the initial of the surname of the author
+    Given consumer 1 redeemed reservation 1 at business 1
+    And consumer 1 named "Lucía Fernández Ríos" reviews business 1 with 5 stars
+    When consumer 3 lists the reviews of business 1
+    Then the response has status 200
+    And the first review shows the author "Lucía F."
+
+  Scenario: A token without a name leaves the review without author name
+    Given consumer 1 redeemed reservation 1 at business 1
+    And consumer 1 reviews business 1 with 5 stars and the text "Respetaron el precio"
+    When consumer 3 lists the reviews of business 1
+    Then the response has status 200
+    And the first review has no author name
+
   Scenario Outline: Only a consumer can publish a review
     Given consumer 1 redeemed reservation 1 at business 1
     When business 1 is reviewed <token> with 5 stars

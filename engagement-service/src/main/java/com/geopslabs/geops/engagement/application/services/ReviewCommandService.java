@@ -34,9 +34,11 @@ public class ReviewCommandService implements CreateReviewUseCase {
     public Review create(CreateReviewCommand command) {
         var redemption = redeemedReservationRepository.findUnreviewed(command.consumerId(), command.businessId())
                 .orElseThrow(() -> missingRedemption(command));
-        var review = Review.of(redemption, new Rating(command.rating()), command.text(), now());
+        var review = Review.of(redemption, command.authorFullName(), new Rating(command.rating()), command.text(),
+                now());
         var saved = reviewRepository.save(review);
-        LOGGER.info("review.created reviewId={} businessId={}", saved.getId(), saved.getBusinessId());
+        LOGGER.info("review.created reviewId={} businessId={} hasAuthorName={}", saved.getId(), saved.getBusinessId(),
+                saved.getAuthorName() != null);
         return saved;
     }
 

@@ -2,6 +2,7 @@ package com.geopslabs.geops.catalog.infrastructure.web;
 
 import com.geopslabs.geops.catalog.application.usecases.OfferDetail;
 import com.geopslabs.geops.catalog.domain.models.GeoPoint;
+import com.geopslabs.geops.catalog.domain.models.Money;
 
 import java.util.Optional;
 
@@ -14,7 +15,8 @@ public final class OfferDetailResponseAssembler {
         var offer = detail.offer();
         var location = Optional.ofNullable(offer.getLocation());
         return new OfferDetailResponse(offer.getId(), offer.getTitle(), offer.getConditions(),
-                offer.getPrice().amount(), offer.getValidTo(), offer.getCategory(), offer.getAddress(),
+                offer.getPrice().amount(), Optional.ofNullable(offer.getRegularPrice()).map(Money::amount).orElse(null),
+                offer.getValidTo(), offer.getCategory(), offer.getAddress(),
                 location.map(GeoPoint::latitude).orElse(null), location.map(GeoPoint::longitude).orElse(null),
                 offer.getImageUrl(), offer.getSource().name(), offer.getBusinessId(), detail.businessName(),
                 detail.verifiedSeal(), detail.available());

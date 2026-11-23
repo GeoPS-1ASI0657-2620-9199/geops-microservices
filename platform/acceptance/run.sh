@@ -1,12 +1,13 @@
 #!/bin/bash
-# Pasos de US16, US17 y US33 contra la plataforma levantada con Docker Compose, en local (C2-01).
+# Pasos de US16, US17, US27 y US33 contra la plataforma levantada con Docker Compose, en local (C2-01).
 # Uso, desde platform/:
 #   docker compose --profile app --profile messaging up -d --build
-#   ./acceptance/run.sh [us16|us17|us33|all]
+#   ./acceptance/run.sh [us16|us17|us27|us33|all]
 # Variables opcionales:
 #   COMPOSE_ARGS  archivos de compose (por defecto "-f docker-compose.yml")
 #   GATEWAY_URL   puerta de entrada (por defecto http://localhost:8080)
 #   SKIP_MAVEN=1  no corre las pruebas de ArchUnit (si ya pasaron en CI)
+#   US27_SAMPLES  peticiones por medición del sobrecosto de US27 (por defecto 200)
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
@@ -312,12 +313,132 @@ us33() {
   us33_pause_campaigns
 }
 
+# Rutas de US27, "método ruta". Las públicas son las que la web pide sin sesión; las protegidas cubren
+# cada bloque de rutas del gateway, también la escritura en la ruta pública de ofertas.
+US27_PUBLIC_ROUTES=(
+  "GET ${NEARBY_PATH}"
+  "GET /api/v1/offers/categories"
+  "GET /.well-known/jwks.json"
+  "GET /docs/identity/v3/api-docs"
+  "GET /"
+)
+US27_PROTECTED_ROUTES=(
+  "GET /api/v1/consumer-profiles/me"
+  "GET /api/v1/business-profiles/1"
+  "POST /api/v1/campaigns"
+  "POST /api/v1/admin/public-offers"
+  "POST /api/v1/offers/1"
+  "GET /api/v1/reservations"
+  "GET /api/v1/reports"
+  "GET /api/v1/saved-offers"
+  "GET /api/v1/reviews"
+  "GET /api/v1/follows"
+  "GET /api/v1/notification-preferences"
+  "PUT /api/v1/locations/last"
+  "POST /api/v1/push-subscriptions"
+  "POST /api/v1/auth/logout"
+)
+US27_CACHE_SECONDS=5
+US27_MAX_OVERHEAD_MS=50
+US27_SAMPLES=${US27_SAMPLES:-200}
+US27_PROFILE_PATH="/api/v1/consumer-profiles/me"
+
+# método ruta [token] -> código HTTP
+status_of() {
+  curl -s -o /dev/null -w '%{http_code}' -X "$1" "${GATEWAY_URL}$2" ${3:+-H "Authorization: Bearer $3"}
+}
+# url token -> p95 en milisegundos de US27_SAMPLES peticiones seguidas, medidas desde el contenedor del gateway
+p95_ms() {
+  "${COMPOSE[@]}" exec -T gateway sh -c "for i in \$(seq 1 ${US27_SAMPLES}); do \
+      curl -s -o /dev/null -w '%{time_total}\n' -H 'Authorization: Bearer $2' '$1'; done" \
+    | sort -n | awk '{ t[NR] = $1 } END { i = int(NR * 0.95); if (i < 1) i = 1; printf "%.1f", t[i] * 1000 }'
+}
+# Registra un consumidor con datos únicos y deja su token en US27_TOKEN.
+us27_consumer_token() {
+  local suffix email password
+  suffix=$(date +%s%N | cut -c6-14)
+  email="us27.${suffix}@ejemplo.pe"
+  password="Us27#${suffix}"
+  http_json POST /api/v1/auth/register "" "{\"role\":\"CONSUMER\",\"fullName\":\"Prueba US27\",\"email\":\"${email}\",\"phone\":\"9${suffix: -8}\",\"password\":\"${password}\"}" > /dev/null
+  US27_TOKEN=$(login_token "$email" "$password")
+  [ -n "$US27_TOKEN" ]
+}
+
+us27() {
+  echo "Feature: US27 Require a valid token in the API gateway"
+  local route method path code body since rejected token gateway_p95 direct_p95 overhead
+
+  echo " Scenario: The public routes answer without a token"
+  for route in "${US27_PUBLIC_ROUTES[@]}"; do
+    read -r method path <<< "$route"
+    step "${method} ${path%%\?*} answers without a token"
+    code=$(status_of "$method" "$path")
+    [ "$code" = "200" ] && ok "HTTP $code" || ko "HTTP $code"
+  done
+  step "POST /api/v1/auth/login reaches identity without a token"
+  body=$(http_json POST /api/v1/auth/login "" '{"email":"nadie.us27@ejemplo.pe","password":"Otra#2026"}')
+  [ "$(printf '%s' "$body" | head -1 | json_field code)" = "INVALID_CREDENTIALS" ] && ok || ko "$(printf '%s' "$body" | tr '\n' ' ')"
+  step "POST /api/v1/email-unsubscriptions reaches notification without a token"
+  code=$(http_json POST /api/v1/email-unsubscriptions "" '{"token":"enlace-de-prueba"}' | tail -1)
+  [ "$code" != "401" ] && ok "HTTP $code" || ko "HTTP $code"
+
+  echo " Scenario: Every protected route rejects a request without a token"
+  since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  for route in "${US27_PROTECTED_ROUTES[@]}"; do
+    read -r method path <<< "$route"
+    step "${method} ${path} without a token"
+    body=$(http_json "$method" "$path" "")
+    code=$(printf '%s' "$body" | tail -1)
+    [ "$code" = "401" ] && [ "$(printf '%s' "$body" | head -1 | json_field code)" = "UNAUTHORIZED" ] \
+      && ok "HTTP $code" || ko "HTTP $code"
+  done
+  step "None of them reached a service (upstream=- in the gateway log)"
+  rejected=$("${COMPOSE[@]}" logs --no-log-prefix --since "$since" gateway 2> /dev/null | grep -c '" 401 .* upstream=- ')
+  [ "$rejected" -ge "${#US27_PROTECTED_ROUTES[@]}" ] && ok "$rejected rejected by the gateway" || ko "$rejected rejected by the gateway"
+
+  echo " Scenario: A malformed token is rejected by the gateway"
+  step "GET /api/v1/reservations with a malformed token"
+  code=$(status_of GET /api/v1/reservations "esto-no-es-un-token")
+  [ "$code" = "401" ] && ok "HTTP $code" || ko "HTTP $code"
+
+  echo " Scenario: A valid token reaches the service"
+  step "Background: a consumer logs in"
+  if us27_consumer_token; then ok; else ko; return; fi
+  token=$US27_TOKEN
+  step "GET ${US27_PROFILE_PATH} with the token"
+  code=$(status_of GET "$US27_PROFILE_PATH" "$token")
+  [ "$code" = "200" ] && ok "HTTP $code" || ko "HTTP $code"
+
+  echo " Scenario: The validation adds at most ${US27_MAX_OVERHEAD_MS} ms to the p95"
+  step "p95 of ${US27_SAMPLES} requests through the gateway minus straight to identity"
+  gateway_p95=$(p95_ms "http://localhost${US27_PROFILE_PATH}" "$token")
+  direct_p95=$(p95_ms "http://identity-service:8081${US27_PROFILE_PATH}" "$token")
+  overhead=$(awk -v g="$gateway_p95" -v d="$direct_p95" 'BEGIN { printf "%.1f", g - d }')
+  awk -v o="$overhead" -v m="$US27_MAX_OVERHEAD_MS" 'BEGIN { exit !(o <= m) }' \
+    && ok "gateway ${gateway_p95} ms, direct ${direct_p95} ms, +${overhead} ms" \
+    || ko "gateway ${gateway_p95} ms, direct ${direct_p95} ms, +${overhead} ms"
+
+  echo " Scenario: A closed session stops passing the gateway"
+  step "POST /api/v1/auth/logout with the token"
+  code=$(status_of POST /api/v1/auth/logout "$token")
+  [ "$code" = "204" ] && ok "HTTP $code" || ko "HTTP $code"
+  step "Within $((US27_CACHE_SECONDS + 1)) seconds the token is rejected"
+  closed_token_rejected() { [ "$(status_of GET "$US27_PROFILE_PATH" "$token")" = "401" ]; }
+  wait_until $((US27_CACHE_SECONDS + 1)) closed_token_rejected && ok || ko
+
+  echo " Scenario: The token validation is not published"
+  step "POST /api/v1/auth/introspect through the gateway"
+  code=$(status_of POST /api/v1/auth/introspect "$token")
+  [ "$code" = "404" ] && ok "HTTP $code" || ko "HTTP $code"
+}
+
 case "${1:-all}" in
   us16) us16 ;;
   us17) us17 ;;
+  us27) us27 ;;
   us33) us33 ;;
-  all) us16; us17; us33 ;;
-  *) echo "Uso: $0 [us16|us17|us33|all]" >&2; exit 2 ;;
+  all) us16; us17; us27; us33 ;;
+  *) echo "Uso: $0 [us16|us17|us27|us33|all]" >&2; exit 2 ;;
 esac
 
 echo "== ${passed} passed, ${failed} failed"

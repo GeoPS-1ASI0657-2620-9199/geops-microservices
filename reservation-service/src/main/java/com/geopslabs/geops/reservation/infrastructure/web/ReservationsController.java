@@ -139,9 +139,10 @@ public class ReservationsController {
     @ApiResponse(responseCode = "409", description = "Offer is no longer valid",
             content = @Content(examples = @ExampleObject(value = """
                     {"code": "OFFER_NOT_AVAILABLE", "message": "Offer 1053 is no longer valid"}""")))
-    @ApiResponse(responseCode = "503", description = "Catalog did not answer",
+    @ApiResponse(responseCode = "503", description = "Catalog did not answer or its circuit breaker is open",
             content = @Content(examples = @ExampleObject(value = """
-                    {"code": "CATALOG_UNAVAILABLE", "message": "Catalog is not available"}""")))
+                    {"code": "CATALOG_UNAVAILABLE",
+                     "message": "El catálogo no responde en este momento. Intenta reservar de nuevo en unos minutos."}""")))
     @PostMapping(consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<CreatedReservationResponse> createReservation(@AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateReservationRequest request) {
