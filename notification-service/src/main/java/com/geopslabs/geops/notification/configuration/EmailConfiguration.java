@@ -4,6 +4,8 @@ import com.geopslabs.geops.notification.application.services.*;
 import com.geopslabs.geops.notification.application.ports.*;
 import com.geopslabs.geops.notification.domain.ports.*;
 import com.geopslabs.geops.notification.infrastructure.channels.SmtpEmailChannel;
+import io.github.resilience4j.bulkhead.BulkheadRegistry;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.core.io.ClassPathResource;
@@ -18,8 +20,13 @@ import java.util.List;
 @Configuration
 @EnableScheduling
 public class EmailConfiguration {
+    public static final String SMTP = "smtp";
     @Bean
-    SmtpEmailChannel smtpEmailChannel(JavaMailSender mail, @Value("${geops.notifications.email-from:avisos@geops.local}") String from) { return new SmtpEmailChannel(mail, from); }
+    SmtpEmailChannel smtpEmailChannel(JavaMailSender mail, @Value("${geops.notifications.email-from:avisos@geops.local}") String from,
+                                      CircuitBreakerRegistry circuitBreakers, BulkheadRegistry bulkheads) {
+        // US34: circuit breaker and bulkhead "smtp" from resilience4j.*.instances.smtp in application.yml.
+        return new SmtpEmailChannel(mail, from, circuitBreakers.circuitBreaker(SMTP), bulkheads.bulkhead(SMTP));
+    }
     @Bean
     EmailDigestService emailDigestService(EmailDigestRepositoryPort digests, @Value("${geops.notifications.email-window:60m}") String window) { return new EmailDigestService(digests, org.springframework.boot.convert.DurationStyle.detectAndParse(window)); }
     @Bean

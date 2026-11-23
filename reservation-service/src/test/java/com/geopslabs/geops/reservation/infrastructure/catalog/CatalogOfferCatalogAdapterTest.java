@@ -5,6 +5,11 @@ import com.geopslabs.geops.reservation.domain.models.exceptions.CatalogUnavailab
 import com.geopslabs.geops.reservation.domain.models.exceptions.OfferNotAvailableException;
 import com.geopslabs.geops.reservation.domain.models.exceptions.OfferNotFoundException;
 import com.sun.net.httpserver.HttpServer;
+import io.github.resilience4j.bulkhead.Bulkhead;
+import io.github.resilience4j.bulkhead.BulkheadConfig;
+import io.github.resilience4j.bulkhead.BulkheadFullException;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,7 +18,9 @@ import org.springframework.web.client.RestClient;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,7 +47,12 @@ class CatalogOfferCatalogAdapterTest {
     private static final String NOT_FOUND_BODY = """
             {"code": "OFFER_NOT_FOUND", "message": "Offer 1052 was not found"}""";
 
+    private static final int FAILURES_THAT_OPEN = 5;
+
     private final AtomicReference<String> requestedPath = new AtomicReference<>();
+    private final AtomicInteger requests = new AtomicInteger();
+    private final CircuitBreaker circuitBreaker = circuitBreaker();
+    private final Bulkhead bulkhead = bulkhead();
     private final AtomicReference<Integer> status = new AtomicReference<>(HTTP_OK);
     private final AtomicReference<String> body = new AtomicReference<>(AVAILABLE_OFFER);
     private HttpServer catalog;
@@ -49,6 +61,7 @@ class CatalogOfferCatalogAdapterTest {
     void startCatalogStub() throws IOException {
         catalog = HttpServer.create(new InetSocketAddress(LOOPBACK, ANY_FREE_PORT), NO_BACKLOG);
         catalog.createContext("/", exchange -> {
+            requests.incrementAndGet();
             requestedPath.set(exchange.getRequestURI().getPath());
             var bytes = body.get().getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", "application/json");
@@ -111,7 +124,101 @@ class CatalogOfferCatalogAdapterTest {
         assertThatThrownBy(() -> adapter.findValidOffer(OFFER_ID)).isInstanceOf(CatalogUnavailableException.class);
     }
 
+    @Test
+    void fiveFailuresOpenTheCircuitAndTheNextCallIsRejectedWithoutAskingCatalog() {
+        status.set(HTTP_SERVER_ERROR);
+        var adapter = adapter();
+        for (int attempt = 0; attempt < FAILURES_THAT_OPEN; attempt++) {
+            assertThatThrownBy(() -> adapter.findValidOffer(OFFER_ID)).isInstanceOf(CatalogUnavailableException.class);
+        }
+
+        assertThat(circuitBreaker.getState()).isEqualTo(CircuitBreaker.State.OPEN);
+        assertThatThrownBy(() -> adapter.findValidOffer(OFFER_ID)).isInstanceOf(CatalogUnavailableException.class);
+        assertThat(requests.get()).isEqualTo(FAILURES_THAT_OPEN);
+    }
+
+    @Test
+    void fourFailuresDoNotOpenTheCircuit() {
+        status.set(HTTP_SERVER_ERROR);
+        var adapter = adapter();
+        for (int attempt = 0; attempt < FAILURES_THAT_OPEN - 1; attempt++) {
+            assertThatThrownBy(() -> adapter.findValidOffer(OFFER_ID)).isInstanceOf(CatalogUnavailableException.class);
+        }
+
+        assertThat(circuitBreaker.getState()).isEqualTo(CircuitBreaker.State.CLOSED);
+    }
+
+    @Test
+    void anUnknownOrExpiredOfferIsAnAnswerAndDoesNotOpenTheCircuit() {
+        var adapter = adapter();
+        status.set(HTTP_NOT_FOUND);
+        body.set(NOT_FOUND_BODY);
+        for (int attempt = 0; attempt < FAILURES_THAT_OPEN; attempt++) {
+            assertThatThrownBy(() -> adapter.findValidOffer(OFFER_ID)).isInstanceOf(OfferNotFoundException.class);
+        }
+        status.set(HTTP_OK);
+        body.set(UNAVAILABLE_OFFER);
+        for (int attempt = 0; attempt < FAILURES_THAT_OPEN; attempt++) {
+            assertThatThrownBy(() -> adapter.findValidOffer(OFFER_ID)).isInstanceOf(OfferNotAvailableException.class);
+        }
+
+        assertThat(circuitBreaker.getState()).isEqualTo(CircuitBreaker.State.CLOSED);
+        assertThat(circuitBreaker.getMetrics().getNumberOfFailedCalls()).isZero();
+    }
+
+    @Test
+    void aSuccessfulProbeAfterTheWaitClosesTheCircuitAgain() {
+        circuitBreaker.transitionToOpenState();
+        circuitBreaker.transitionToHalfOpenState();
+
+        assertThat(adapter().findValidOffer(OFFER_ID).offerId()).isEqualTo(OFFER_ID);
+        assertThat(circuitBreaker.getState()).isEqualTo(CircuitBreaker.State.CLOSED);
+    }
+
+    @Test
+    void aFailedProbeOpensTheCircuitAgain() {
+        status.set(HTTP_SERVER_ERROR);
+        circuitBreaker.transitionToOpenState();
+        circuitBreaker.transitionToHalfOpenState();
+
+        assertThatThrownBy(() -> adapter().findValidOffer(OFFER_ID)).isInstanceOf(CatalogUnavailableException.class);
+        assertThat(circuitBreaker.getState()).isEqualTo(CircuitBreaker.State.OPEN);
+    }
+
+    @Test
+    void aFullBulkheadAnswersCatalogUnavailableAtOnceWithoutOpeningTheCircuit() {
+        var adapter = adapter();
+        assertThat(bulkhead.tryAcquirePermission()).isTrue();
+
+        assertThatThrownBy(() -> adapter.findValidOffer(OFFER_ID)).isInstanceOf(CatalogUnavailableException.class);
+        assertThat(requests.get()).isZero();
+        assertThat(circuitBreaker.getMetrics().getNumberOfFailedCalls()).isZero();
+    }
+
     private CatalogOfferCatalogAdapter adapter() {
-        return new CatalogOfferCatalogAdapter(RestClient.builder(), BASE_URL + catalog.getAddress().getPort());
+        return new CatalogOfferCatalogAdapter(RestClient.builder(), BASE_URL + catalog.getAddress().getPort(),
+                circuitBreaker, bulkhead);
+    }
+
+    /** Same values as resilience4j.circuitbreaker.instances.catalog in application.yml. */
+    private static CircuitBreaker circuitBreaker() {
+        return CircuitBreaker.of("catalog", CircuitBreakerConfig.custom()
+                .slidingWindowType(CircuitBreakerConfig.SlidingWindowType.TIME_BASED)
+                .slidingWindowSize(10)
+                .minimumNumberOfCalls(5)
+                .failureRateThreshold(100)
+                .waitDurationInOpenState(Duration.ofSeconds(15))
+                .permittedNumberOfCallsInHalfOpenState(1)
+                .ignoreExceptions(OfferNotFoundException.class, OfferNotAvailableException.class,
+                        BulkheadFullException.class)
+                .build());
+    }
+
+    /** One place only, so the test can fill it; the service allows 25 (resilience4j.bulkhead.instances.catalog). */
+    private static Bulkhead bulkhead() {
+        return Bulkhead.of("catalog", BulkheadConfig.custom()
+                .maxConcurrentCalls(1)
+                .maxWaitDuration(Duration.ZERO)
+                .build());
     }
 }
