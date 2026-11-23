@@ -1,0 +1,15 @@
+{
+  "eventId": "3c2a7d4e-91b0-4f6e-8d25-6a1f0b9c4e72",
+  "eventType": "ReservationCreated",
+  "version": 1,
+  "occurredAt": "2026-10-20T15:05:00Z",
+  "aggregateId": 5012,
+  "payload": {
+    "reservationId": 5012,
+    "consumerId": 2001,
+    "businessId": 84,
+    "offerId": 1052,
+    "reservedAt": "2026-10-20T15:05:00Z",
+    "expiresAt": "2026-10-21T04:59:59Z"
+  }
+}

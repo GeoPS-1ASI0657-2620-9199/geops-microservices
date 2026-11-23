@@ -10,7 +10,7 @@ public final class ReviewResponseAssembler {
     }
 
     public static ReviewResponse toResponse(Review review) {
-        return new ReviewResponse(review.getId(), review.getBusinessId(), review.getRating().stars(), review.getText(),
-                review.getVerifiedRedemption(), review.getCreatedAt().toInstant(ZoneOffset.UTC), review.getReply());
+        return new ReviewResponse(review.getId(), review.getBusinessId(), review.getAuthorName(),
+                review.getRating().stars(), review.getText(), review.getVerifiedRedemption(), review.getCreatedAt().toInstant(ZoneOffset.UTC), review.getReply());
     }
 }

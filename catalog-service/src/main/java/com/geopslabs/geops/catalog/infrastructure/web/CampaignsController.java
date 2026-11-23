@@ -53,8 +53,8 @@ public class CampaignsController {
              "zone": {"type": "RADIUS", "center": {"latitude": -12.1211, "longitude": -77.0297}, "radiusMeters": 800},
              "offers": [{"title": "2x1 en almuerzos ejecutivos",
                          "conditions": "Válido de lunes a viernes de 12:00 a 15:00. Un cupón por mesa.",
-                         "price": 15.00, "validTo": "2026-10-15", "category": "Gastronomía",
-                         "imageUrl": "https://images.geops.pe/offers/1052.jpg"}]}""";
+                         "price": 15.00, "regularPrice": 30.00, "validTo": "2026-10-15",
+                         "category": "Gastronomía", "imageUrl": "https://images.geops.pe/offers/1052.jpg"}]}""";
     private static final String CREATE_DISTRICT_CAMPAIGN_EXAMPLE = """
             {"businessName": "Restaurante Don Pepe", "name": "Ceviches en Miraflores",
              "description": "Ceviche 2x1 para quienes están en el distrito",
@@ -74,7 +74,7 @@ public class CampaignsController {
     private static final String OFFER_EXAMPLE = """
             {"offerId": 1052, "campaignId": 14, "businessId": 1, "title": "Menú ejecutivo a mitad de precio",
              "conditions": "De lunes a viernes de 12:00 a 15:00. No acumulable.", "price": 12.50,
-             "validTo": "2026-10-31", "category": "Gastronomía", "address": "Jr. Huánuco 1250, La Victoria",
+             "regularPrice": 25.00, "validTo": "2026-10-31", "category": "Gastronomía", "address": "Jr. Huánuco 1250, La Victoria",
              "imageUrl": null, "source": "AFFILIATED", "sourceName": null, "status": "PUBLISHED"}""";
     private static final String INVALID_ID_EXAMPLE = """
             {"code": "INVALID_REQUEST", "message": "campaignId has an invalid value"}""";
@@ -123,8 +123,8 @@ public class CampaignsController {
             @ExampleObject(name = "districtZone", value = CREATE_DISTRICT_CAMPAIGN_EXAMPLE)}))
     @ApiResponse(responseCode = "201", description = "Campaign published with its offers",
             content = @Content(examples = @ExampleObject(value = PUBLISHED_CAMPAIGN_EXAMPLE)))
-    @ApiResponse(responseCode = "400", description = "Invalid request, ended period, invalid zone or offer outside "
-            + "the campaign", content = @Content(examples = {
+    @ApiResponse(responseCode = "400", description = "Invalid request, ended period, invalid zone, offer outside "
+            + "the campaign or regular price not above the price", content = @Content(examples = {
                     @ExampleObject(name = "campaignAlreadyEnded", value = """
                             {"code": "CAMPAIGN_ALREADY_ENDED", "message": "La vigencia de la campaña terminó el 2026-09-30. Elige una fecha de fin desde hoy."}"""),
                     @ExampleObject(name = "invalidPeriod", value = """
@@ -135,6 +135,8 @@ public class CampaignsController {
                             {"code": "INVALID_CAMPAIGN_ZONE", "message": "La zona por distrito necesita el nombre del distrito y su centro."}"""),
                     @ExampleObject(name = "offerOutsideCampaign", value = """
                             {"code": "OFFER_VALIDITY_OUTSIDE_CAMPAIGN", "message": "La vigencia de la oferta «Desayuno 2x1» debe estar dentro del periodo de la campaña."}"""),
+                    @ExampleObject(name = "invalidRegularPrice", value = """
+                            {"code": "INVALID_REGULAR_PRICE", "message": "El precio normal de la oferta «Desayuno 2x1» debe ser mayor que su precio."}"""),
                     @ExampleObject(name = "invalidRequest", value = """
                             {"code": "INVALID_REQUEST", "message": "offers must not be empty"}""")}))
     @ApiResponse(responseCode = "401", description = "Missing or invalid token",

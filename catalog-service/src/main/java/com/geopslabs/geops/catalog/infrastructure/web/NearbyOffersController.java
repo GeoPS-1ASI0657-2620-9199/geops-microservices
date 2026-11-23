@@ -36,7 +36,8 @@ public class NearbyOffersController {
 
     @Operation(summary = "List valid offers within a walking radius, ordered by proximity",
             description = "Public. The radius is given in walking minutes (5 to 20) and converted at 80 m per minute. "
-                    + "The optional category is applied on the server before paging.")
+                    + "The optional category and the optional text q are applied on the server before paging, so "
+                    + "totalElements counts only the matching offers.")
     @SecurityRequirements
     @ApiResponse(responseCode = "200", description = "Page of valid offers inside the radius",
             content = @Content(examples = @ExampleObject(value = """
@@ -44,11 +45,11 @@ public class NearbyOffersController {
                       "businessName": "Restaurante Don Pepe", "verifiedSeal": true, "distanceMeters": 350,
                       "walkMinutes": 5, "category": "Gastronomía", "address": "Av. Larco 345, Miraflores",
                       "imageUrl": "https://images.geops.pe/offers/1052.jpg", "latitude": -12.1211,
-                      "longitude": -77.0297, "price": 15.00, "validTo": "2026-10-15"}],
+                      "longitude": -77.0297, "price": 15.00, "regularPrice": 30.00, "validTo": "2026-10-15"}],
                      "page": 0, "totalElements": 1, "totalPages": 1}""")))
     @ApiResponse(responseCode = "400",
             description = "Radius out of range, unknown category, invalid coordinates, missing or invalid parameter, "
-                    + "or invalid page",
+                    + "search text shorter than 2 or longer than 60 characters, or invalid page",
             content = @Content(examples = {
                     @ExampleObject(name = "Unknown category", value = """
                             {"code": "INVALID_CATEGORY", "message": "La categoría no existe. Las categorías válidas son: Gastronomía, Cafetería y panadería, Bodega y minimarket, Salud y farmacia, Belleza y cuidado personal, Deporte, Mascotas, Hogar y ferretería, Librería y útiles, Servicios, Cultura y entretenimiento"}"""),
@@ -61,7 +62,9 @@ public class NearbyOffersController {
                     @ExampleObject(name = "Invalid parameter", value = """
                             {"code": "INVALID_PARAMETER", "message": "El parámetro lat no tiene un valor válido"}"""),
                     @ExampleObject(name = "Invalid page", value = """
-                            {"code": "INVALID_PAGE", "message": "page debe ser 0 o mayor y size estar entre 1 y 20"}""")}))
+                            {"code": "INVALID_PAGE", "message": "page debe ser 0 o mayor y size estar entre 1 y 20"}"""),
+                    @ExampleObject(name = "Invalid search text", value = """
+                            {"code": "INVALID_REQUEST", "message": "La búsqueda debe tener entre 2 y 60 caracteres"}""")}))
     @GetMapping("/nearby")
     public NearbyOffersResponse searchNearby(
             @Parameter(description = "Latitude of the search origin", example = "-12.1211") @RequestParam double lat,
@@ -71,12 +74,16 @@ public class NearbyOffersController {
             @Parameter(description = "Optional category from GET /api/v1/offers/categories; filters before paging",
                     example = "Gastronomía")
             @RequestParam(required = false) String category,
+            @Parameter(description = "Optional text, 2 to 60 characters once trimmed. Matches the offer title, the "
+                    + "business name or the category, ignoring case and accents; filters before paging",
+                    example = "cafe")
+            @RequestParam(required = false) String q,
             @Parameter(description = "Zero-based page number", example = "0")
             @RequestParam(defaultValue = DEFAULT_PAGE) int page,
             @Parameter(description = "Page size, from 1 to 20", example = "20")
             @RequestParam(defaultValue = DEFAULT_PAGE_SIZE) int size) {
         return NearbyOffersResponseAssembler.toResponse(searchNearbyOffers.searchNearbyOffers(
-                new SearchNearbyOffersQuery(lat, lng, radiusMinutes, category, page, size)));
+                new SearchNearbyOffersQuery(lat, lng, radiusMinutes, category, q, page, size)));
     }
 
     @Operation(summary = "List public source offers within a walking radius, apart from the affiliated ones",

@@ -3,6 +3,8 @@ package com.geopslabs.geops.catalog.infrastructure.persistence;
 import com.geopslabs.geops.catalog.domain.models.Money;
 import com.geopslabs.geops.catalog.domain.models.Offer;
 
+import java.util.Optional;
+
 final class OfferPersistenceMapper {
 
     private OfferPersistenceMapper() {
@@ -10,7 +12,9 @@ final class OfferPersistenceMapper {
 
     static Offer toDomain(OfferJpaEntity entity) {
         return new Offer(entity.getId(), entity.getCampaignId(), entity.getBusinessId(), entity.getTitle(),
-                entity.getConditions(), Money.soles(entity.getPrice()), entity.getValidTo(), entity.getCategory(),
+                entity.getConditions(), Money.soles(entity.getPrice()),
+                Optional.ofNullable(entity.getRegularPrice()).map(Money::soles).orElse(null), entity.getValidTo(),
+                entity.getCategory(),
                 entity.getGeocodingStatus(), entity.getAddress(), entity.getImageUrl(), entity.getSource(),
                 entity.getSourceName(), entity.getStatus(), GeographyPoints.toGeoPoint(entity.getLocation()));
     }
@@ -23,6 +27,7 @@ final class OfferPersistenceMapper {
         entity.setTitle(offer.getTitle());
         entity.setConditions(offer.getConditions());
         entity.setPrice(offer.getPrice().amount());
+        entity.setRegularPrice(Optional.ofNullable(offer.getRegularPrice()).map(Money::amount).orElse(null));
         entity.setValidTo(offer.getValidTo());
         entity.setCategory(offer.getCategory());
         entity.setGeocodingStatus(offer.getGeocodingStatus());

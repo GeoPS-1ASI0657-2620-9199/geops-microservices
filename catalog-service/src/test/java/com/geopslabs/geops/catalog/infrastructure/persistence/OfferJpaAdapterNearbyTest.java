@@ -98,6 +98,27 @@ class OfferJpaAdapterNearbyTest extends CucumberSpringConfiguration {
     }
 
     @Test
+    void readsTheRegularPriceInTheSearchAndInTheDetail() {
+        var regularPrice = new BigDecimal("30.00");
+        var saved = offers.save(new Offer(null, activeCampaignId, BUSINESS_ID, "Con precio normal", "Un cupón por mesa",
+                Money.soles(PRICE), Money.soles(regularPrice), VALID_TO, "Gastronomía", GeocodingStatus.GEOCODED,
+                "Av. Larco 345, Miraflores", null, OfferSource.AFFILIATED, null, OfferStatus.PUBLISHED, north(300)));
+        offer("Sin precio normal", activeCampaignId, VALID_TO, north(400));
+
+        var candidates = offers.findPublishedWithin(ORIGIN, RADIUS_METERS, TODAY);
+        var byCell = offers.findPublishedInCells(java.util.Set.of(GeoCell.containing(north(300))), TODAY);
+
+        assertThat(candidates).extracting(NearbyOfferCandidate::title, NearbyOfferCandidate::regularPrice)
+                .containsExactlyInAnyOrder(org.assertj.core.groups.Tuple.tuple("Con precio normal", regularPrice),
+                        org.assertj.core.groups.Tuple.tuple("Sin precio normal", null));
+        assertThat(byCell.values().stream().flatMap(java.util.List::stream))
+                .filteredOn(candidate -> candidate.offerId().equals(saved.getId()))
+                .singleElement().extracting(NearbyOfferCandidate::regularPrice).isEqualTo(regularPrice);
+        assertThat(offers.findById(saved.getId())).get()
+                .extracting(found -> found.getRegularPrice().amount()).isEqualTo(regularPrice);
+    }
+
+    @Test
     void keepsLongitudeAndLatitudeInTheirPlaces() {
         offer("Vigente a 300 m al este", activeCampaignId, VALID_TO, east(300));
 

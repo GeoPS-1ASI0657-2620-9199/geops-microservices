@@ -8,6 +8,7 @@ public record OfferDetailResponse(
         String title,
         String conditions,
         BigDecimal price,
+        BigDecimal regularPrice,
         LocalDate validTo,
         String category,
         String address,

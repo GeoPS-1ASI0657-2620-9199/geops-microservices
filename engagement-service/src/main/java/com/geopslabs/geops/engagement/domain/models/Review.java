@@ -12,10 +12,11 @@ public class Review {
     private final String text;
     private final Boolean verifiedRedemption;
     private final LocalDateTime createdAt;
+    private final String authorName;
 
     @SuppressWarnings("java:S107")
     public Review(Long id, Long consumerId, Long businessId, Long reservationId, Rating rating, String text,
-                  Boolean verifiedRedemption, LocalDateTime createdAt) {
+                  Boolean verifiedRedemption, LocalDateTime createdAt, String authorName) {
         this.id = id;
         this.consumerId = consumerId;
         this.businessId = businessId;
@@ -24,11 +25,14 @@ public class Review {
         this.text = text;
         this.verifiedRedemption = verifiedRedemption;
         this.createdAt = createdAt;
+        this.authorName = authorName;
     }
 
-    public static Review of(RedeemedReservation redemption, Rating rating, String text, LocalDateTime createdAt) {
+    /** {@code authorFullName} comes from the token of the consumer and is kept only as "Lucía F.". */
+    public static Review of(RedeemedReservation redemption, String authorFullName, Rating rating, String text,
+                            LocalDateTime createdAt) {
         return new Review(null, redemption.consumerId(), redemption.businessId(), redemption.reservationId(), rating,
-                text, Boolean.TRUE, createdAt);
+                text, Boolean.TRUE, createdAt, AuthorName.shorten(authorFullName));
     }
 
     public ReviewReply getReply() { return reply; }
@@ -71,5 +75,9 @@ public class Review {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public String getAuthorName() {
+        return authorName;
     }
 }

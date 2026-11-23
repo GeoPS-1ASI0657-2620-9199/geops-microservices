@@ -16,7 +16,7 @@ public record CreateReviewRequest(
     static final long MAX_RATING = 5;
     static final int MAX_TEXT_LENGTH = 2000;
 
-    public CreateReviewCommand toCommand(Long consumerId) {
-        return new CreateReviewCommand(consumerId, businessId, rating, text);
+    public CreateReviewCommand toCommand(Long consumerId, String authorFullName) {
+        return new CreateReviewCommand(consumerId, authorFullName, businessId, rating, text);
     }
 }

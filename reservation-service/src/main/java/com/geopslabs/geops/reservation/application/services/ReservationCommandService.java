@@ -3,6 +3,7 @@ package com.geopslabs.geops.reservation.application.services;
 import com.geopslabs.geops.reservation.application.usecases.CreateReservationUseCase;
 import com.geopslabs.geops.reservation.application.usecases.RedeemReservationUseCase;
 import com.geopslabs.geops.reservation.application.usecases.ReservationResult;
+import com.geopslabs.geops.reservation.domain.events.ReservationCreated;
 import com.geopslabs.geops.reservation.domain.events.ReservationRedeemed;
 import com.geopslabs.geops.reservation.domain.models.OfferSnapshot;
 import com.geopslabs.geops.reservation.domain.models.RedeemRejection;
@@ -19,6 +20,7 @@ import com.geopslabs.geops.reservation.domain.ports.ReservationRepositoryPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
 import java.time.LocalDate;
@@ -45,14 +47,17 @@ public class ReservationCommandService implements CreateReservationUseCase, Rede
     private final OutboxPort outbox;
     private final Clock clock;
     private final RandomGenerator random;
+    private final TransactionOperations transactions;
 
     public ReservationCommandService(ReservationRepositoryPort reservationRepository, OfferCatalogPort offerCatalog,
-                                     OutboxPort outbox, Clock clock, RandomGenerator random) {
+                                     OutboxPort outbox, Clock clock, RandomGenerator random,
+                                     TransactionOperations transactions) {
         this.reservationRepository = reservationRepository;
         this.offerCatalog = offerCatalog;
         this.outbox = outbox;
         this.clock = clock;
         this.random = random;
+        this.transactions = transactions;
     }
 
     @Override
@@ -107,10 +112,18 @@ public class ReservationCommandService implements CreateReservationUseCase, Rede
                 code.substring(code.length() - CODE_SUFFIX_LENGTH));
     }
 
+    /**
+     * The insert and ReservationCreated share one transaction, so Catalog never counts a reservation that was not
+     * stored. A concurrent insert of the same reservation rolls that transaction back and the active one is answered.
+     */
     private ReservationResult insert(CreateReservationCommand command, OfferSnapshot offer) {
         var reservation = Reservation.create(offer, command.consumerId(), newCode(), now(), endOfValidity(offer));
         try {
-            var saved = reservationRepository.save(reservation);
+            var saved = transactions.execute(status -> {
+                var stored = reservationRepository.save(reservation);
+                outbox.append(ReservationCreated.of(stored, UUID.randomUUID()));
+                return stored;
+            });
             LOGGER.info("reservation.created reservationId={} offerId={}", saved.getId(), offer.offerId());
             return ReservationResult.created(saved);
         } catch (ActiveReservationAlreadyExistsException concurrentInsert) {
