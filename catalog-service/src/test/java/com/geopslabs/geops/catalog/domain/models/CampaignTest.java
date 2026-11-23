@@ -2,6 +2,7 @@ package com.geopslabs.geops.catalog.domain.models;
 
 import com.geopslabs.geops.catalog.domain.models.exceptions.CampaignAlreadyEndedException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.CampaignEndedException;
+import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidRegularPriceException;
 import com.geopslabs.geops.catalog.domain.models.exceptions.OfferValidityOutsideCampaignException;
 import org.junit.jupiter.api.Test;
 
@@ -74,7 +75,8 @@ class CampaignTest {
     @Test
     void offerIsPublishedForTheCampaignBusinessAtTheStore() {
         var offer = Offer.publishFor(publish(OCTOBER), "2x1 en almuerzos", "Lunes a viernes",
-                Money.soles(BigDecimal.TEN), LocalDate.parse("2026-10-15"), "Gastronomía", null, ADDRESS, STORE);
+                Money.soles(BigDecimal.TEN), null, LocalDate.parse("2026-10-15"), "Gastronomía", null, ADDRESS,
+                STORE);
 
         assertThat(offer.getBusinessId()).isEqualTo(BUSINESS_ID);
         assertThat(offer.getStatus()).isEqualTo(OfferStatus.PUBLISHED);
@@ -82,6 +84,38 @@ class CampaignTest {
         assertThat(offer.getGeocodingStatus()).isEqualTo(GeocodingStatus.GEOCODED);
         assertThat(offer.getAddress()).isEqualTo(ADDRESS);
         assertThat(offer.getLocation()).isEqualTo(STORE);
+        assertThat(offer.getRegularPrice()).isNull();
+    }
+
+    @Test
+    void offerKeepsARegularPriceAboveItsPrice() {
+        var offer = Offer.publishFor(publish(OCTOBER), "2x1 en almuerzos", "Lunes a viernes",
+                Money.soles(BigDecimal.TEN), Money.soles(new BigDecimal("20.00")), LocalDate.parse("2026-10-15"),
+                "Gastronomía", null, ADDRESS, STORE);
+
+        assertThat(offer.getRegularPrice()).isEqualTo(Money.soles(new BigDecimal("20.00")));
+        assertThat(offer.inCampaign(31L).getRegularPrice()).isEqualTo(offer.getRegularPrice());
+    }
+
+    @Test
+    void offerWithARegularPriceEqualToItsPriceIsRejected() {
+        var campaign = publish(OCTOBER);
+
+        assertThatThrownBy(() -> Offer.publishFor(campaign, "Desayuno 2x1", "Sin condiciones",
+                Money.soles(BigDecimal.TEN), Money.soles(new BigDecimal("10.00")), LocalDate.parse("2026-10-15"),
+                "Gastronomía", null, ADDRESS, STORE))
+                .isInstanceOf(InvalidRegularPriceException.class)
+                .hasMessage("El precio normal de la oferta «Desayuno 2x1» debe ser mayor que su precio.");
+    }
+
+    @Test
+    void offerWithARegularPriceBelowItsPriceIsRejected() {
+        var campaign = publish(OCTOBER);
+
+        assertThatThrownBy(() -> Offer.publishFor(campaign, "Desayuno 2x1", "Sin condiciones",
+                Money.soles(BigDecimal.TEN), Money.soles(new BigDecimal("8.00")), LocalDate.parse("2026-10-15"),
+                "Gastronomía", null, ADDRESS, STORE))
+                .isInstanceOf(InvalidRegularPriceException.class);
     }
 
     @Test
@@ -90,7 +124,7 @@ class CampaignTest {
         var november = LocalDate.parse("2026-11-15");
 
         assertThatThrownBy(() -> Offer.publishFor(campaign, "Noviembre", "Sin condiciones",
-                Money.soles(BigDecimal.TEN), november, "Gastronomía", null, ADDRESS, STORE))
+                Money.soles(BigDecimal.TEN), null, november, "Gastronomía", null, ADDRESS, STORE))
                 .isInstanceOf(OfferValidityOutsideCampaignException.class);
     }
 

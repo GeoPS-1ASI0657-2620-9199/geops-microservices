@@ -32,8 +32,9 @@ public class ReviewsController {
     static final String REVIEWS_PATH = "/api/v1/reviews";
 
     private static final String REVIEW_EXAMPLE = """
-            {"reviewId": 3, "businessId": 1, "rating": 5, "text": "Respetaron el precio y me atendieron rápido.",
-             "verifiedRedemption": true, "createdAt": "2026-10-08T13:05:00Z"}""";
+            {"reviewId": 3, "businessId": 1, "authorName": "Lucía F.", "rating": 5,
+             "text": "Respetaron el precio y me atendieron rápido.", "verifiedRedemption": true,
+             "createdAt": "2026-10-08T13:05:00Z", "reply": null}""";
     private static final String UNAUTHORIZED_EXAMPLE = """
             {"code": "UNAUTHORIZED", "message": "A valid token is required"}""";
 
@@ -71,12 +72,14 @@ public class ReviewsController {
     @PostMapping(consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<ReviewResponse> createReview(@AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateReviewRequest request) {
-        var consumerId = AuthenticatedUser.from(jwt).consumerId();
-        var review = createReview.create(request.toCommand(consumerId));
+        var user = AuthenticatedUser.from(jwt);
+        var review = createReview.create(request.toCommand(user.consumerId(), user.fullName()));
         return ResponseEntity.status(HttpStatus.CREATED).body(ReviewResponseAssembler.toResponse(review));
     }
 
-    @Operation(summary = "List the reviews of a business, newest first")
+    @Operation(summary = "List the reviews of a business, newest first",
+            description = "authorName is the first name and the initial of the surname of the consumer, taken from "
+                    + "the token when the review was published; it is null for older reviews.")
     @ApiResponse(responseCode = "200", description = "Reviews of the business",
             content = @Content(examples = @ExampleObject(value = "[" + REVIEW_EXAMPLE + "]")))
     @ApiResponse(responseCode = "400", description = "Missing or invalid businessId",

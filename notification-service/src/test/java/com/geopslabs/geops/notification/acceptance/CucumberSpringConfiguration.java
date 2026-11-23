@@ -11,7 +11,9 @@ import org.testcontainers.utility.DockerImageName;
 
 @CucumberContextConfiguration
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"geops.messaging.enabled=false", "geops.notifications.email-window=2m"})
+        // No FCM credentials even if ../platform/.env names them: push goes through the recording channel.
+        properties = {"geops.messaging.enabled=false", "geops.notifications.email-window=2m",
+                "geops.notifications.fcm-credentials-path="})
 @Import(AcceptanceTestConfiguration.class)
 public class CucumberSpringConfiguration {
     private static final DockerImageName POSTGIS_IMAGE =

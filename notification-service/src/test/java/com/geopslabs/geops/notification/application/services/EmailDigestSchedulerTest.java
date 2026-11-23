@@ -28,7 +28,7 @@ class EmailDigestSchedulerTest {
             var pending = new ArrayList<Notification>();
             for (long id : digest.offerIds()) pending.add(new Notification(id, 2001L, NotificationType.NEARBY_OFFER, Channel.EMAIL, "Oferta", "Offer " + id + " <script>, a 300 m, válida hasta el 15/11.", Long.toString(id), DeliveryStatus.PENDING, LocalDateTime.now(clock)));
             when(digests.notices(digest)).thenReturn(pending);
-            new EmailDigestScheduler(digests, notices, unsubscriptions, new SmtpEmailChannel(mail, "avisos@geops.local"), new TestTransactions(), clock, "test-key", "http://localhost:4200", "<ul>{{offers}}</ul>{{unsubscribeLinks}}").sendDue();
+            new EmailDigestScheduler(digests, notices, unsubscriptions, new SmtpEmailChannel(mail, "avisos@geops.local", io.github.resilience4j.circuitbreaker.CircuitBreaker.ofDefaults("smtp"), io.github.resilience4j.bulkhead.Bulkhead.ofDefaults("smtp")), new TestTransactions(), clock, "test-key", "http://localhost:4200", "<ul>{{offers}}</ul>{{unsubscribeLinks}}").sendDue();
             assertThat(greenmail.waitForIncomingEmail(5000, 1)).isTrue();
             assertThat(greenmail.getReceivedMessages()).hasSize(1);
             var html = greenmail.getReceivedMessages()[0].getContent().toString();

@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.security.SecureRandom;
 import java.time.Clock;
@@ -37,8 +38,10 @@ public class BeanConfiguration {
     @Bean
     public ReservationCommandService reservationCommandService(ReservationRepositoryPort reservationRepository,
                                                                OfferCatalogPort offerCatalog, OutboxPort outbox,
-                                                               Clock clock, RandomGenerator codeRandom) {
-        return new ReservationCommandService(reservationRepository, offerCatalog, outbox, clock, codeRandom);
+                                                               Clock clock, RandomGenerator codeRandom,
+                                                               PlatformTransactionManager transactionManager) {
+        return new ReservationCommandService(reservationRepository, offerCatalog, outbox, clock, codeRandom,
+                new TransactionTemplate(transactionManager));
     }
 
     @Bean

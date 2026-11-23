@@ -127,7 +127,7 @@ class ProximitySearchServiceTest {
 
     private static NearbyOfferCandidate candidate(Long id, double metersNorth, boolean verified, int openReports,
                                                   CampaignZone zone) {
-        return new NearbyOfferCandidate(id, "Oferta " + id, new BigDecimal("15.00"), LocalDate.of(2026, 10, 15),
+        return new NearbyOfferCandidate(id, "Oferta " + id, new BigDecimal("15.00"), null, LocalDate.of(2026, 10, 15),
                 "Gastronomía", "Av. Larco 345, Miraflores", null, north(metersNorth), 84L, "Cevichería Doña Rosa", verified, openReports, zone);
     }
 

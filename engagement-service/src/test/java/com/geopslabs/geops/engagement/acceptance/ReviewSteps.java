@@ -40,6 +40,11 @@ public class ReviewSteps {
         review(TestIdentity.consumerToken(consumerId), businessId, stars, text);
     }
 
+    @When("consumer {long} named {string} reviews business {long} with {int} stars")
+    public void namedConsumerReviews(Long consumerId, String fullName, Long businessId, int stars) {
+        review(TestIdentity.namedConsumerToken(consumerId, fullName), businessId, stars, PREVIOUS_REVIEW_TEXT);
+    }
+
     @When("business {long} is reviewed {} with {int} stars")
     public void businessIsReviewedWithToken(Long businessId, String tokenKind, int stars) {
         review(SavedOfferSteps.tokenOfKind(tokenKind), businessId, stars, PREVIOUS_REVIEW_TEXT);
@@ -57,6 +62,16 @@ public class ReviewSteps {
             texts.add(item.path("text").asText());
         }
         assertThat(texts).containsExactlyElementsOf(List.of(expectedTexts.split(", ")));
+    }
+
+    @Then("the first review shows the author {string}")
+    public void firstReviewShowsAuthor(String expected) throws JsonProcessingException {
+        assertThat(http.json(http.last()).path(0).path("authorName").asText()).isEqualTo(expected);
+    }
+
+    @Then("the first review has no author name")
+    public void firstReviewHasNoAuthorName() throws JsonProcessingException {
+        assertThat(http.json(http.last()).path(0).path("authorName").isNull()).isTrue();
     }
 
     @And("no review was stored")

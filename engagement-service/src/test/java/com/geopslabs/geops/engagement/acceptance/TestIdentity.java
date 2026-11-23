@@ -27,6 +27,7 @@ public final class TestIdentity {
     private static final String OTHER_AUDIENCE = "other-api";
     private static final String ROLES_CLAIM = "roles";
     private static final String BUSINESS_ID_CLAIM = "businessId";
+    private static final String NAME_CLAIM = "name";
     private static final String KEY_ID = "acceptance-key";
     private static final String OTHER_KEY_ID = "unknown-key";
     private static final int KEY_SIZE = 2048;
@@ -49,6 +50,11 @@ public final class TestIdentity {
 
     public static String consumerToken(Long userId) {
         return sign(SIGNING_KEY, claims(userId, ISSUER, AUDIENCE, List.of("ROLE_CONSUMER")).build());
+    }
+
+    public static String namedConsumerToken(Long userId, String fullName) {
+        return sign(SIGNING_KEY, claims(userId, ISSUER, AUDIENCE, List.of("ROLE_CONSUMER"))
+                .claim(NAME_CLAIM, fullName).build());
     }
 
     public static String businessOwnerToken(Long userId, Long businessId) {
