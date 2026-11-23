@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -35,6 +37,25 @@ class NotificationInboxJdbcAdapterIntegrationTest {
     private void insert(Long recipient, String type, String status, String title, String related, int minutes) {
         jdbc.update("INSERT INTO notifications (recipient_id, notification_type, channel, title, message, related_entity_id, delivery_status, sent_at) VALUES (?, ?, 'WEB_PUSH', ?, 'msg', ?, ?, ?)",
                 recipient, type, title, related, status, Timestamp.from(BASE.plusSeconds(minutes * 60L)));
+    }
+
+    @Test
+    void theRepairMigrationGivesBackTheAccentsOfReportNoticesStoredBeforeTheFix() throws Exception {
+        jdbc.update("INSERT INTO notifications (recipient_id, notification_type, channel, title, message, related_entity_id, delivery_status, sent_at) VALUES (?, ?, 'EMAIL', ?, ?, 'report-9', 'SENT', ?)",
+                2001L, "REPORT_RESOLVED", "Novedades de tu reporte", "El reporte de la reserva JX (Arroz) se cerr? a favor del cliente.", Timestamp.from(BASE));
+        jdbc.update("INSERT INTO notifications (recipient_id, notification_type, channel, title, message, related_entity_id, delivery_status, sent_at) VALUES (?, ?, 'EMAIL', ?, ?, 'report-9', 'SENT', ?)",
+                2002L, "REPORT_RECEIVED", "Novedades de tu reporte", "Un consumidor report? la reserva JX (Arroz). Responde dentro del plazo.", Timestamp.from(BASE));
+        jdbc.update("INSERT INTO notifications (recipient_id, notification_type, channel, title, message, related_entity_id, delivery_status, sent_at) VALUES (?, ?, 'WEB_PUSH', ?, ?, '1', 'SENT', ?)",
+                2001L, "NEARBY_OFFER", "Oferta cerca de ti", "Don Pepe: ¿Promo? 2x1, a 300 m.", Timestamp.from(BASE));
+
+        try (var connection = jdbc.getDataSource().getConnection()) {
+            ScriptUtils.executeSqlScript(connection, new ClassPathResource("db/migration/V5__repair_report_notice_accents.sql"));
+        }
+
+        assertThat(jdbc.queryForList("SELECT message FROM notifications ORDER BY id", String.class)).containsExactly(
+                "El reporte de la reserva JX (Arroz) se cerró a favor del cliente.",
+                "Un consumidor reportó la reserva JX (Arroz). Responde dentro del plazo.",
+                "Don Pepe: ¿Promo? 2x1, a 300 m.");
     }
 
     @Test
