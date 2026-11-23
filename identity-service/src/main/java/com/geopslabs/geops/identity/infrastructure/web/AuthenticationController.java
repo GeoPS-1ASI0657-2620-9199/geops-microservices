@@ -1,5 +1,6 @@
 package com.geopslabs.geops.identity.infrastructure.web;
 
+import com.geopslabs.geops.identity.application.usecases.ConfirmEmailUseCase;
 import com.geopslabs.geops.identity.application.usecases.IntrospectTokenUseCase;
 import com.geopslabs.geops.identity.application.usecases.LogInUseCase;
 import com.geopslabs.geops.identity.application.usecases.LogOutUseCase;
@@ -36,13 +37,16 @@ public class AuthenticationController {
     private final LogInUseCase logInUseCase;
     private final LogOutUseCase logOutUseCase;
     private final IntrospectTokenUseCase introspectTokenUseCase;
+    private final ConfirmEmailUseCase confirmEmailUseCase;
 
     public AuthenticationController(RegisterUserUseCase registerUserUseCase, LogInUseCase logInUseCase,
-                                    LogOutUseCase logOutUseCase, IntrospectTokenUseCase introspectTokenUseCase) {
+                                    LogOutUseCase logOutUseCase, IntrospectTokenUseCase introspectTokenUseCase,
+                                    ConfirmEmailUseCase confirmEmailUseCase) {
         this.registerUserUseCase = registerUserUseCase;
         this.logInUseCase = logInUseCase;
         this.logOutUseCase = logOutUseCase;
         this.introspectTokenUseCase = introspectTokenUseCase;
+        this.confirmEmailUseCase = confirmEmailUseCase;
     }
 
     @Operation(summary = "Register a consumer or a business owner with its profile",
@@ -207,5 +211,28 @@ public class AuthenticationController {
             return null;
         }
         return authorization.substring(BEARER_PREFIX.length()).trim();
+    }
+
+    @Operation(summary = "Confirm the email with the token of the link sent by email",
+            description = "Marks the email as confirmed and publishes EmailConfirmed in identity.events. The link "
+                    + "is valid for 24 hours and only once. Notification sends the email from UserRegistered; "
+                    + "Identity never calls it.")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @Content(
+            mediaType = APPLICATION_JSON_VALUE,
+            schema = @Schema(implementation = EmailConfirmationRequest.class),
+            examples = @ExampleObject(name = "token", value = """
+                    {"token": "q3Zt8b1xV0mWc9yRkP2sLhN4dF6gJ7aE5uT0iO3pQ1w"}""")))
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Email confirmed"),
+            @ApiResponse(responseCode = "400", description = "Unknown, used or expired link, or missing token",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(name = "invalidConfirmationLink", value = """
+                                    {"code": "INVALID_CONFIRMATION_LINK",
+                                     "message": "El enlace de confirmación no es válido o ya venció."}""")))
+    })
+    @PostMapping(value = "/email-confirmations", consumes = APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> confirmEmail(@Valid @RequestBody EmailConfirmationRequest request) {
+        confirmEmailUseCase.confirm(request.token());
+        return ResponseEntity.noContent().build();
     }
 }

@@ -10,6 +10,7 @@ import com.geopslabs.geops.identity.domain.models.BusinessProfileNotAllowedExcep
 import com.geopslabs.geops.identity.domain.models.BusinessProfileRequiredException;
 import com.geopslabs.geops.identity.domain.models.ConsumerProfile;
 import com.geopslabs.geops.identity.domain.models.Email;
+import com.geopslabs.geops.identity.domain.models.EmailConfirmation;
 import com.geopslabs.geops.identity.domain.models.EmailAlreadyRegisteredException;
 import com.geopslabs.geops.identity.domain.models.GeoPoint;
 import com.geopslabs.geops.identity.domain.models.PhoneAlreadyRegisteredException;
@@ -20,6 +21,7 @@ import com.geopslabs.geops.identity.domain.models.RucAlreadyRegisteredException;
 import com.geopslabs.geops.identity.domain.models.User;
 import com.geopslabs.geops.identity.domain.ports.BusinessProfileRepositoryPort;
 import com.geopslabs.geops.identity.domain.ports.ConsumerProfileRepositoryPort;
+import com.geopslabs.geops.identity.domain.ports.EmailConfirmationRepositoryPort;
 import com.geopslabs.geops.identity.domain.ports.OutboxPort;
 import com.geopslabs.geops.identity.domain.ports.PasswordHasherPort;
 import com.geopslabs.geops.identity.domain.ports.UserRepositoryPort;
@@ -31,6 +33,11 @@ import java.time.Clock;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+/**
+ * Registers the account and, in the same transaction, the pending confirmation of its email and the UserRegistered
+ * event that carries the link token. Notification sends the confirmation email from that event (US28), so the
+ * registration never waits for Notification and succeeds while it is down.
+ */
 @Transactional
 public class UserCommandService implements RegisterUserUseCase {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserCommandService.class);
@@ -42,12 +49,15 @@ public class UserCommandService implements RegisterUserUseCase {
     private final OutboxPort outbox;
     private final Clock clock;
     private final Supplier<UUID> eventIds;
+    private final EmailConfirmationRepositoryPort emailConfirmations;
+    private final Supplier<String> confirmationTokens;
 
     public UserCommandService(UserRepositoryPort userRepository,
                               ConsumerProfileRepositoryPort consumerProfileRepository,
                               BusinessProfileRepositoryPort businessProfileRepository,
                               PasswordHasherPort passwordHasher, OutboxPort outbox, Clock clock,
-                              Supplier<UUID> eventIds) {
+                              Supplier<UUID> eventIds, EmailConfirmationRepositoryPort emailConfirmations,
+                              Supplier<String> confirmationTokens) {
         this.userRepository = userRepository;
         this.consumerProfileRepository = consumerProfileRepository;
         this.businessProfileRepository = businessProfileRepository;
@@ -55,6 +65,8 @@ public class UserCommandService implements RegisterUserUseCase {
         this.outbox = outbox;
         this.clock = clock;
         this.eventIds = eventIds;
+        this.emailConfirmations = emailConfirmations;
+        this.confirmationTokens = confirmationTokens;
     }
 
     @Override
@@ -71,7 +83,7 @@ public class UserCommandService implements RegisterUserUseCase {
         ensureAccountIsAvailable(email, command.phone());
         var user = saveUser(command, email);
         var profile = consumerProfileRepository.save(ConsumerProfile.createFor(user.getId()));
-        outbox.append(UserRegistered.of(user, null, eventIds.get(), clock.instant()));
+        publishRegistration(user, null);
         LOGGER.info("user.registered userId={} role={}", user.getId(), user.getRole());
         return RegisteredUser.consumer(user, profile);
     }
@@ -83,10 +95,18 @@ public class UserCommandService implements RegisterUserUseCase {
         ensureRucIsAvailable(draft.getRuc());
         var user = saveUser(command, email);
         var profile = businessProfileRepository.save(draft.ownedBy(user.getId()));
-        outbox.append(UserRegistered.of(user, profile, eventIds.get(), clock.instant()));
+        publishRegistration(user, profile);
         LOGGER.info("user.registered userId={} role={} businessProfileId={}", user.getId(), user.getRole(),
                 profile.getId());
         return RegisteredUser.businessOwner(user, profile);
+    }
+
+    private void publishRegistration(User user, BusinessProfile businessProfile) {
+        var now = clock.instant();
+        var token = confirmationTokens.get();
+        var confirmation = EmailConfirmation.issue(user.getId(), token, now);
+        emailConfirmations.save(confirmation);
+        outbox.append(UserRegistered.of(user, businessProfile, token, confirmation.expiresAt(), eventIds.get(), now));
     }
 
     private User saveUser(RegisterUserCommand command, Email email) {

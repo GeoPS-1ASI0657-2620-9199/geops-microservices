@@ -21,4 +21,9 @@ public class RecipientJpaAdapter implements RecipientRepositoryPort {
     public void upsert(Recipient recipient) {
         repository.upsert(recipient.userId(), recipient.email(), recipient.emailConfirmed(), recipient.role(), recipient.businessId());
     }
+
+    @Override
+    public boolean confirmEmail(Long userId, String email) {
+        return repository.confirmEmail(userId, email) == 1;
+    }
 }

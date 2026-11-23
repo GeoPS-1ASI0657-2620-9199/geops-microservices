@@ -27,6 +27,13 @@ class RecipientProjectorServiceTest {
         verifyNoInteractions(preferences);
     }
     @Test
+    void emailConfirmedMarksTheCopyAndWaitsForAMissingRecipient() {
+        when(recipients.confirmEmail(2001L, "local@example.test")).thenReturn(true, false);
+        service.emailConfirmed(2001L, "local@example.test");
+        verify(recipients).confirmEmail(2001L, "local@example.test");
+        assertThatThrownBy(() -> service.emailConfirmed(2001L, "local@example.test")).isInstanceOf(MissingLocalCopyException.class);
+    }
+    @Test
     void followWithoutRecipientIsRetriedAndRadiusUsesWalkingSpeed() {
         assertThatThrownBy(() -> service.businessFollowed(2001L, 84L)).isInstanceOf(MissingLocalCopyException.class);
         verifyNoInteractions(projections);

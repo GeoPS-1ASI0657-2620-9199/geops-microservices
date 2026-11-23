@@ -3,15 +3,18 @@ package com.geopslabs.geops.identity.configuration;
 import com.geopslabs.geops.identity.application.services.BusinessProfileQueryService;
 import com.geopslabs.geops.identity.application.services.BusinessVerificationService;
 import com.geopslabs.geops.identity.application.services.ConsumerProfileService;
+import com.geopslabs.geops.identity.application.services.EmailConfirmationService;
 import com.geopslabs.geops.identity.application.services.PublicKeyQueryService;
 import com.geopslabs.geops.identity.application.services.TokenIntrospectionService;
 import com.geopslabs.geops.identity.application.services.UserCommandService;
 import com.geopslabs.geops.identity.application.services.UserAuthenticationService;
+import com.geopslabs.geops.identity.application.usecases.ConfirmEmailUseCase;
 import com.geopslabs.geops.identity.application.usecases.GetPublicKeysUseCase;
 import com.geopslabs.geops.identity.application.usecases.LogInUseCase;
 import com.geopslabs.geops.identity.application.usecases.RegisterUserUseCase;
 import com.geopslabs.geops.identity.domain.ports.BusinessProfileRepositoryPort;
 import com.geopslabs.geops.identity.domain.ports.ConsumerProfileRepositoryPort;
+import com.geopslabs.geops.identity.domain.ports.EmailConfirmationRepositoryPort;
 import com.geopslabs.geops.identity.domain.ports.GeocodingPort;
 import com.geopslabs.geops.identity.domain.ports.OutboxPort;
 import com.geopslabs.geops.identity.domain.ports.PasswordHasherPort;
@@ -21,6 +24,7 @@ import com.geopslabs.geops.identity.domain.ports.TaxpayerRegistryPort;
 import com.geopslabs.geops.identity.domain.ports.TokenIssuerPort;
 import com.geopslabs.geops.identity.domain.ports.TokenVerifierPort;
 import com.geopslabs.geops.identity.domain.ports.UserRepositoryPort;
+import com.geopslabs.geops.identity.infrastructure.tokens.ConfirmationTokenGenerator;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -45,9 +49,18 @@ public class BeanConfiguration {
                                                    ConsumerProfileRepositoryPort consumerProfileRepository,
                                                    BusinessProfileRepositoryPort businessProfileRepository,
                                                    PasswordHasherPort passwordHasher, OutboxPort outbox,
-                                                   Clock clock) {
+                                                   Clock clock,
+                                                   EmailConfirmationRepositoryPort emailConfirmations) {
         return new UserCommandService(userRepository, consumerProfileRepository, businessProfileRepository,
-                passwordHasher, outbox, clock, UUID::randomUUID);
+                passwordHasher, outbox, clock, UUID::randomUUID, emailConfirmations,
+                new ConfirmationTokenGenerator());
+    }
+
+    @Bean
+    public ConfirmEmailUseCase confirmEmailUseCase(EmailConfirmationRepositoryPort emailConfirmations,
+                                                   UserRepositoryPort userRepository, OutboxPort outbox,
+                                                   Clock clock) {
+        return new EmailConfirmationService(emailConfirmations, userRepository, outbox, clock, UUID::randomUUID);
     }
 
     @Bean

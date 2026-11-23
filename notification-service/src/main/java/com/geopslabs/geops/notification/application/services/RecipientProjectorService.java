@@ -23,6 +23,13 @@ public class RecipientProjectorService implements ApplyIdentityEventsUseCase, Ap
         if (Recipient.CONSUMER.equals(recipient.role())) preferences.createIfAbsent(NotificationPreference.initialFor(recipient.userId(), LocalDateTime.ofInstant(occurredAt, ZoneOffset.UTC)));
     }
 
+    /** EmailConfirmed travels after UserRegistered with the same key; a missing copy is retried until it arrives. */
+    @Override
+    @Transactional
+    public void emailConfirmed(Long userId, String email) {
+        if (!recipients.confirmEmail(userId, email)) throw new MissingLocalCopyException("recipient", userId);
+    }
+
     @Override
     @Transactional
     public void consumerPreferencesChanged(Long consumerId, int searchRadiusMinutes) { projections.updateRadius(consumerId, Math.multiplyExact(searchRadiusMinutes, METERS_PER_MINUTE)); }

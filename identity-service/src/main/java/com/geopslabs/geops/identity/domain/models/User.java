@@ -43,6 +43,15 @@ public class User {
         return new User(fullName, email.value(), phone, passwordHash, role);
     }
 
+    /** Records the first confirmation; a second one changes nothing and answers false. */
+    public boolean confirmEmail(Instant now) {
+        if (emailConfirmedAt != null) {
+            return false;
+        }
+        emailConfirmedAt = now;
+        return true;
+    }
+
     public boolean isLockedAt(Instant now) {
         return lockedUntil != null && now.isBefore(lockedUntil);
     }

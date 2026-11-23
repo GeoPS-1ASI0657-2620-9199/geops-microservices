@@ -1,8 +1,8 @@
 #!/bin/bash
-# Pasos de US16, US17, US27 y US33 contra la plataforma levantada con Docker Compose, en local (C2-01).
+# Pasos de US16, US17, US25, US27 y US33 contra la plataforma levantada con Docker Compose, en local (C2-01).
 # Uso, desde platform/:
 #   docker compose --profile app --profile messaging up -d --build
-#   ./acceptance/run.sh [us16|us17|us27|us33|all]
+#   ./acceptance/run.sh [us16|us17|us25|us27|us33|all]
 # Variables opcionales:
 #   COMPOSE_ARGS  archivos de compose (por defecto "-f docker-compose.yml")
 #   GATEWAY_URL   puerta de entrada (por defecto http://localhost:8080)
@@ -28,6 +28,13 @@ ko() { echo "FAIL${1:+  ($1)}"; failed=$((failed + 1)); }
 psql_db() { "${COMPOSE[@]}" exec -T postgres psql -X -A -t -U postgres -d "$1" -c "$2"; }
 started_at() { docker inspect -f '{{.State.StartedAt}}' "$1"; }
 catalog_ids() { "${COMPOSE[@]}" ps -q catalog-service; }
+identity_health() { docker inspect -f '{{.State.Health.Status}}' $("${COMPOSE[@]}" ps -q identity-service) 2>/dev/null; }
+identity_healthy() { [ "$(identity_health)" = "healthy" ]; }
+# Maven no arranca con MSYS_NO_PATHCONV=1 (lo exportan los pasos de US33), así que se quita para él.
+archunit_passes() {
+  (cd "../$1-service" && env -u MSYS_NO_PATHCONV ./mvnw -q test -Dtest=ContextBoundariesArchTest \
+    -Dsurefire.failIfNoSpecifiedTests=false > /dev/null 2>&1)
+}
 
 wait_catalog_healthy() {
   local expected=$1 healthy=0
@@ -51,8 +58,7 @@ us16() {
   else
     for service in "${SERVICES[@]}"; do
       step "ContextBoundariesArchTest in ${service}-service"
-      if (cd "../${service}-service" && ./mvnw -q test -Dtest=ContextBoundariesArchTest \
-            -Dsurefire.failIfNoSpecifiedTests=false > /dev/null 2>&1); then ok; else ko; fi
+      if archunit_passes "$service"; then ok; else ko; fi
     done
   fi
 
@@ -139,8 +145,7 @@ us17() {
 
   echo " Scenario: The catalog answers with its own data only"
   step "ContextBoundariesArchTest in catalog-service"
-  if [ "${SKIP_MAVEN:-0}" = "1" ]; then echo "SKIP"; elif (cd ../catalog-service && ./mvnw -q test \
-      -Dtest=ContextBoundariesArchTest -Dsurefire.failIfNoSpecifiedTests=false > /dev/null 2>&1); then ok; else ko; fi
+  if [ "${SKIP_MAVEN:-0}" = "1" ]; then echo "SKIP"; elif archunit_passes catalog; then ok; else ko; fi
 
   echo " Scenario: Identity keeps working while the catalog restarts"
   # Cuenta fija, como en US33: si ya existe el registro responde 409 y el login sirve igual, así
@@ -432,13 +437,75 @@ us27() {
   [ "$code" = "404" ] && ok "HTTP $code" || ko "HTTP $code"
 }
 
+us25() {
+  echo "Feature: US25 Give the identity service its own schema"
+
+  echo " Scenario: The identity tables declare no foreign key to tables of other contexts"
+  step "verificar-independencia.sh (identity_db only references its own tables)"
+  local report identity_line
+  if report=$(./scripts/verificar-independencia.sh ${COMPOSE_ARGS:--f docker-compose.yml}); then
+    identity_line=$(printf '%s\n' "$report" | grep -E '^  identity_db:' | tr -s ' ')
+    ok "${identity_line# }; $(printf '%s\n' "$report" | grep -E 'cruzadas:' | tr -s ' ')"
+  else
+    ko; printf '%s\n' "$report" | sed 's/^/    /'
+  fi
+
+  echo " Scenario: Other contexts refer to the user by identifier"
+  if [ "${SKIP_MAVEN:-0}" = "1" ]; then
+    echo "  (SKIP_MAVEN=1: ArchUnit no se ejecuta)"
+  else
+    for service in catalog reservation engagement notification; do
+      step "ContextBoundariesArchTest in ${service}-service"
+      if archunit_passes "$service"; then ok; else ko; fi
+    done
+  fi
+
+  echo " Scenario: The rest of the system keeps working while identity restarts"
+  local suffix email phone password code down=0
+  suffix=$(date +%s)
+  email="us25.${suffix}@ejemplo.pe"
+  phone="9$(printf '%08d' $(((suffix + 25) % 100000000)))"
+  password="Us25#${suffix}"
+  step "Background: a consumer registered before the restart"
+  code=$(http_json POST /api/v1/auth/register "" "{\"role\":\"CONSUMER\",\"fullName\":\"Prueba US25\",\"email\":\"${email}\",\"phone\":\"${phone}\",\"password\":\"${password}\"}" | tail -1)
+  [ "$code" = "201" ] && ok "HTTP $code" || ko "HTTP $code"
+
+  "${COMPOSE[@]}" restart identity-service > /dev/null 2>&1 &
+  local restart_pid=$!
+  # La búsqueda debe ocurrir con Identity caído de verdad: se espera a que deje de estar healthy.
+  for _ in $(seq 1 60); do
+    if [ "$(identity_health)" != "healthy" ]; then down=1; break; fi
+    sleep 0.5
+  done
+  step "The nearby search answers 200 while identity-service restarts"
+  code=$(curl -s -o /dev/null -w '%{http_code}' "${GATEWAY_URL}${NEARBY_PATH}")
+  local identity_state
+  identity_state=$(identity_health)
+  if [ "$down" -ne 1 ]; then
+    ko "identity-service never left healthy; search not measured during the restart"
+  elif [ "$code" = "200" ]; then
+    ok "identity:${identity_state:-stopped}"
+  else
+    ko "HTTP $code, identity:${identity_state:-stopped}"
+  fi
+  wait "$restart_pid"
+
+  step "identity-service is healthy again within 120 seconds"
+  wait_until 120 identity_healthy && ok || ko "$(identity_health)"
+
+  step "The consumer registered before the restart logs in"
+  code=$(http_json POST /api/v1/auth/login "" "{\"email\":\"${email}\",\"password\":\"${password}\"}" | tail -1)
+  [ "$code" = "200" ] && ok "HTTP $code" || ko "HTTP $code"
+}
+
 case "${1:-all}" in
   us16) us16 ;;
   us17) us17 ;;
+  us25) us25 ;;
   us27) us27 ;;
   us33) us33 ;;
-  all) us16; us17; us27; us33 ;;
-  *) echo "Uso: $0 [us16|us17|us27|us33|all]" >&2; exit 2 ;;
+  all) us16; us17; us25; us27; us33 ;;
+  *) echo "Uso: $0 [us16|us17|us25|us27|us33|all]" >&2; exit 2 ;;
 esac
 
 echo "== ${passed} passed, ${failed} failed"
