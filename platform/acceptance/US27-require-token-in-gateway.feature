@@ -35,3 +35,13 @@ Feature: Require a valid token in the API gateway
   Scenario: The token validation is not published
     When a request calls POST /api/v1/auth/introspect through the gateway
     Then the response has status 404
+
+  Scenario: Only the production web and the local web may call the API from a browser
+    When a browser preflight from "https://geops-web-app.vercel.app" and one from "http://localhost:4200" reach the gateway
+    Then both answers allow their own origin
+    And a preflight from "https://another-project.vercel.app" is not allowed
+
+  Scenario: The API docs are rate limited like the API
+    When an anonymous user requests the catalog API docs 80 times at once
+    Then at least one answer has status 429
+    And the catalog API docs answer 200 again after 2 seconds

@@ -435,6 +435,19 @@ us27() {
   step "POST /api/v1/auth/introspect through the gateway"
   code=$(status_of POST /api/v1/auth/introspect "$token")
   [ "$code" = "404" ] && ok "HTTP $code" || ko "HTTP $code"
+
+  echo " Scenario: Only the production web and the local web may call the API from a browser"
+  step "CORS: production and local origins allowed, another vercel.app rejected"
+  allowed() { curl -s -o /dev/null -D - -X OPTIONS "${GATEWAY_URL}${NEARBY_PATH}"       -H "Origin: $1" -H "Access-Control-Request-Method: GET" | grep -qi "access-control-allow-origin: $1"; }
+  if allowed "https://geops-web-app.vercel.app" && allowed "http://localhost:4200"      && ! allowed "https://another-project.vercel.app"; then ok; else ko; fi
+
+  echo " Scenario: The API docs are rate limited like the API"
+  step "API docs rate limited (429 under a burst)"
+  local codes
+  codes=$(seq 80 | xargs -P 40 -I{} curl -s -o /dev/null -w "%{http_code}
+" "${GATEWAY_URL}/docs/catalog/v3/api-docs")
+  sleep 2
+  if echo "$codes" | grep -q 429 && [ "$(status_of GET /docs/catalog/v3/api-docs)" = "200" ]; then ok; else ko; fi
 }
 
 us25() {
