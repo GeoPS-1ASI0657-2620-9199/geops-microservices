@@ -1,0 +1,3 @@
+28-11-2026 15:23:32 Container /geopsverif-catalog-service-1 (f5d941805cc3) found to be unhealthy - Restarting container now with 10s timeout
+28-11-2026 15:28:23 Container /geopsverif-catalog-service-1 (f5d941805cc3) found to be unhealthy - Restarting container now with 10s timeout
+28-11-2026 15:33:34 Container /geopsverif-catalog-service-1 (f5d941805cc3) found to be unhealthy - Restarting container now with 10s timeout

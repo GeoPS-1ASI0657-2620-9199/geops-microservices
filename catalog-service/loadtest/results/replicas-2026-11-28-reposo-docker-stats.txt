@@ -1,0 +1,13 @@
+autoheal-1;3.949MiB / 32MiB;12.34%;5.86%
+catalog-service-1;427.9MiB / 512MiB;83.58%;10.42%
+catalog-service-2;388.4MiB / 512MiB;75.86%;1.40%
+engagement-service-1;308.4MiB / 448MiB;68.85%;1.07%
+gateway-1;13.88MiB / 32MiB;43.37%;0.00%
+identity-service-1;343MiB / 448MiB;76.56%;0.39%
+kafka-1;344MiB / 512MiB;67.19%;12.60%
+mailpit-1;10.01MiB / 64MiB;15.64%;0.00%
+notification-service-1;338.9MiB / 448MiB;75.66%;0.43%
+postgres-1;203.3MiB / 512MiB;39.70%;0.28%
+redis-1;3.379MiB / 96MiB;3.52%;0.22%
+reservation-service-1;326.6MiB / 448MiB;72.90%;0.82%
+reservation-service-2;321.5MiB / 448MiB;71.76%;0.36%

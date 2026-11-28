@@ -1,0 +1,13 @@
+autoheal-1 oom=false restarts=0
+catalog-service-1 oom=false restarts=0
+catalog-service-2 oom=false restarts=0
+engagement-service-1 oom=false restarts=0
+gateway-1 oom=false restarts=0
+identity-service-1 oom=false restarts=0
+kafka-1 oom=false restarts=0
+mailpit-1 oom=false restarts=0
+notification-service-1 oom=false restarts=0
+postgres-1 oom=false restarts=0
+redis-1 oom=false restarts=0
+reservation-service-1 oom=false restarts=0
+reservation-service-2 oom=false restarts=0
