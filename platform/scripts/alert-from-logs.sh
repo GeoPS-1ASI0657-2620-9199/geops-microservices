@@ -29,14 +29,24 @@ if [ -f "$state_file" ] && [ -n "$(find "$state_file" -mmin -"$cooldown_minutes"
   echo "alert.suppressed"; exit 0
 fi
 
-message=$(mktemp)
-{
-  printf 'From: %s\r\nTo: %s\r\nSubject: [GeoPS] Alerta de seguridad\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n' "$from" "$to"
-  [ -n "$auth" ] && printf 'Respuestas 401/403 por IP en los últimos %s (umbral %s):\r\n%s\r\n\r\n' "$window" "$auth_threshold" "$auth"
-  [ -n "$redeem" ] && printf 'Canjes rechazados por comercio en los últimos %s (umbral %s):\r\n%s\r\n' "$window" "$redeem_threshold" "$redeem"
-} > "$message"
-curl_args=(-sS --url "$smtp_url" --mail-from "$from" --mail-rcpt "$to" --upload-file "$message")
+# El mensaje entra a curl por la entrada estandar: un archivo de mktemp (/tmp/...) no lo abre el curl nativo de Windows.
+curl_args=(-sS --url "$smtp_url" --mail-from "$from" --mail-rcpt "$to" --upload-file -)
 if [ -n "${ALERT_SMTP_USER:-}" ]; then curl_args+=(--ssl-reqd --user "$ALERT_SMTP_USER:${ALERT_SMTP_PASSWORD:?}"); fi
-curl "${curl_args[@]}"
-touch "$state_file"; rm -f "$message"
+{
+  printf 'From: %s
+To: %s
+Subject: [GeoPS] Alerta de seguridad
+Content-Type: text/plain; charset=UTF-8
+
+' "$from" "$to"
+  [ -n "$auth" ] && printf 'Respuestas 401/403 por IP en los últimos %s (umbral %s):
+%s
+
+' "$window" "$auth_threshold" "$auth"
+  [ -n "$redeem" ] && printf 'Canjes rechazados por comercio en los últimos %s (umbral %s):
+%s
+' "$window" "$redeem_threshold" "$redeem"
+  true
+} | curl "${curl_args[@]}"
+touch "$state_file"
 echo "alert.sent"
