@@ -1,0 +1,7 @@
+# Corridas locales cortas del 28/11/2026 (gateway de docker-compose.loadtest.yml, 10 000 ofertas del seed)
+# p95 externo: k6 a través del gateway. p95 de Catalog: cota superior del bucket de http.server.requests
+# de /api/v1/offers/nearby (diferencia antes/después de la corrida, todas las réplicas juntas).
+corrida;replicas;ritmo;duracion;peticiones;fallidas;p95_externo_ms;p95_catalog_ms_cota;media_catalog_ms
+QAS01;1;30 r/s sostenidas;1m + 3m + 10s;7349;0.00 %;8.1;5.59;4.60
+QAS02;1;30 a 300 r/s;2m + 3m en 300 + 15s;75825;0.00 %;8.6;5.59;3.34
+QAS02;2;30 a 300 r/s;2m + 3m en 300 + 15s;76049;0.00 %;6.8;5.59;2.23

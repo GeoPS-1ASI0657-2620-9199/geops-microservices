@@ -1,0 +1,11 @@
+catalog-service-1;495.2MiB / 512MiB;96.72%;9.26%
+engagement-service-1;316.3MiB / 448MiB;70.60%;0.40%
+gateway-1;8.125MiB / 32MiB;25.39%;1.58%
+identity-service-1;352.4MiB / 448MiB;78.66%;0.20%
+kafka-1;355.9MiB / 512MiB;69.50%;1.69%
+mailpit-1;10.03MiB / 64MiB;15.67%;0.00%
+notification-service-1;343.2MiB / 448MiB;76.62%;0.40%
+postgres-1;214.8MiB / 512MiB;41.95%;1.06%
+redis-1;9.293MiB / 96MiB;9.68%;0.78%
+reservation-service-1;339.2MiB / 448MiB;75.70%;0.25%
+reservation-service-2;331.8MiB / 448MiB;74.07%;0.23%
