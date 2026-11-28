@@ -30,10 +30,14 @@ services:
   catalog-service:
     depends_on: !override
       <<: *deps-identity
+    deploy:
+      replicas: 2
 
   reservation-service:
     depends_on: !override
       <<: *deps-identity
+    deploy:
+      replicas: 2
 
   engagement-service:
     depends_on: !override
@@ -42,6 +46,9 @@ services:
   notification-service:
     depends_on: !override
       <<: *deps-identity
+
+  autoheal:
+    profiles: !override [app]
 
   gateway:
     ports: !override
