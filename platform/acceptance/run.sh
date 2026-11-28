@@ -36,6 +36,10 @@ archunit_passes() {
     -Dsurefire.failIfNoSpecifiedTests=false > /dev/null 2>&1)
 }
 
+container_health() { docker inspect -f '{{.State.Health.Status}}' "$1" 2>/dev/null; }
+container_restarts() { docker inspect -f '{{.RestartCount}}' "$1" 2>/dev/null; }
+container_unhealthy() { [ "$(container_health "$1")" = "unhealthy" ]; }
+
 wait_catalog_healthy() {
   local expected=$1 healthy=0
   for _ in $(seq 1 60); do
@@ -182,6 +186,43 @@ us17() {
   wait "$restart_pid"
 
   "${COMPOSE[@]}" up -d --no-deps --scale catalog-service=1 catalog-service > /dev/null 2>&1
+
+  echo " Scenario: A catalog replica that stops answering its health check is restarted"
+  # Java es el PID 1 del contenedor: kill -STOP lo deja vivo pero sin responder, así que
+  # restart: unless-stopped no actúa y solo el autoheal lo reinicia (docker pause no sirve:
+  # Docker no corre healthchecks en un contenedor pausado).
+  COMPOSE_PROFILES="${COMPOSE_PROFILES},ha" "${COMPOSE[@]}" up -d --no-deps --scale catalog-service=2 catalog-service autoheal > /dev/null 2>&1
+  step "The platform is running with 2 catalog-service replicas and the autoheal container"
+  local autoheal_id replicas_healthy
+  autoheal_id=$(COMPOSE_PROFILES="${COMPOSE_PROFILES},ha" "${COMPOSE[@]}" ps -q autoheal)
+  replicas_healthy=$(wait_catalog_healthy 2)
+  [ "$replicas_healthy" -eq 2 ] && [ -n "$autoheal_id" ]     && [ "$(docker inspect -f '{{.State.Running}}' "$autoheal_id")" = "true" ]     && ok "$replicas_healthy healthy" || ko "$replicas_healthy healthy"
+
+  local hung other restarts_before other_restarts_before
+  read -r hung other <<< "$(catalog_ids | tr '
+' ' ')"
+  restarts_before=$(container_restarts "$hung")
+  other_restarts_before=$(container_restarts "$other")
+  step "One catalog-service replica stops answering its health check"
+  docker exec "$hung" kill -STOP 1 && wait_until 240 container_unhealthy "$hung" && ok || ko "$(container_health "$hung")"
+
+  step "Within 4 minutes that replica has been restarted and is healthy again"
+  local other_always_healthy=1 waited=0
+  while [ "$waited" -lt 240 ]; do
+    [ "$(container_health "$other")" = "healthy" ] || other_always_healthy=0
+    if [ "$(container_restarts "$hung")" -gt "$restarts_before" ] && [ "$(container_health "$hung")" = "healthy" ]; then
+      break
+    fi
+    sleep 2
+    waited=$((waited + 2))
+  done
+  [ "$(container_restarts "$hung")" -gt "$restarts_before" ] && [ "$(container_health "$hung")" = "healthy" ]     && ok "${waited}s" || ko "$(container_restarts "$hung") restarts, $(container_health "$hung")"
+
+  step "The other catalog-service replica stayed healthy the whole time"
+  [ "$other_always_healthy" -eq 1 ] && [ "$(container_restarts "$other")" -eq "$other_restarts_before" ] && ok || ko "restarts $(container_restarts "$other"), healthy throughout: $other_always_healthy"
+
+  "${COMPOSE[@]}" up -d --no-deps --scale catalog-service=1 catalog-service > /dev/null 2>&1
+  COMPOSE_PROFILES="${COMPOSE_PROFILES},ha" "${COMPOSE[@]}" stop autoheal > /dev/null 2>&1
 }
 
 # Datos de la prueba de US33. Las cuentas son fijas para poder repetir la prueba: si ya existen,

@@ -19,3 +19,9 @@ Feature: Deploy the offer catalog as an independent service
     When I restart catalog-service
     And a consumer logs in during the restart
     Then the login answers 200
+
+  Scenario: A catalog replica that stops answering its health check is restarted
+    Given the platform is running with 2 catalog-service replicas and the autoheal container
+    When one catalog-service replica stops answering its health check
+    Then within 4 minutes that replica has been restarted and is healthy again
+    And the other catalog-service replica stayed healthy the whole time
