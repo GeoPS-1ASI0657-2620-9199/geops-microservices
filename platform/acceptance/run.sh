@@ -1,8 +1,8 @@
 #!/bin/bash
-# Pasos de US16, US17, US25, US27 y US33 contra la plataforma levantada con Docker Compose, en local (C2-01).
+# Pasos de US16, US17, US18, US25, US27 y US33 contra la plataforma levantada con Docker Compose, en local (C2-01).
 # Uso, desde platform/:
 #   docker compose --profile app --profile messaging up -d --build
-#   ./acceptance/run.sh [us16|us17|us25|us27|us33|all]
+#   ./acceptance/run.sh [us16|us17|us18|us25|us27|us33|all]
 # Variables opcionales:
 #   COMPOSE_ARGS  archivos de compose (por defecto "-f docker-compose.yml")
 #   GATEWAY_URL   puerta de entrada (por defecto http://localhost:8080)
@@ -498,14 +498,54 @@ us25() {
   [ "$code" = "200" ] && ok "HTTP $code" || ko "HTTP $code"
 }
 
+us18() {
+  echo "Feature: US18 Document the interfaces of the services"
+  local service code docs
+
+  echo " Scenario: The service publishes its OpenAPI through the gateway"
+  for service in "${SERVICES[@]}"; do
+    step "GET /docs/${service}/v3/api-docs has operations and responses"
+    docs=$(curl -s -w '
+%{http_code}' "${GATEWAY_URL}/docs/${service}/v3/api-docs")
+    code=$(printf '%s' "$docs" | tail -1)
+    if [ "$code" = "200" ] && printf '%s' "$docs" | grep -q '"paths"' && printf '%s' "$docs" | grep -q '"responses"'; then
+      ok "HTTP $code"
+    else
+      ko "HTTP $code"
+    fi
+  done
+
+  echo " Scenario: The Swagger UI of the service answers"
+  for service in "${SERVICES[@]}"; do
+    step "GET /docs/${service}/swagger-ui.html"
+    code=$(curl -s -L -o /dev/null -w '%{http_code}' "${GATEWAY_URL}/docs/${service}/swagger-ui.html")
+    [ "$code" = "200" ] && ok "HTTP $code" || ko "HTTP $code"
+  done
+
+  echo " Scenario: The document brings examples"
+  for service in "${SERVICES[@]}"; do
+    step "${service} document has at least one example"
+    docs=$(curl -s "${GATEWAY_URL}/docs/${service}/v3/api-docs")
+    printf '%s' "$docs" | grep -Eq '"examples?" *:' && ok || ko "no example in the document"
+  done
+
+  echo " Scenario: The documentation needs no token"
+  for service in "${SERVICES[@]}"; do
+    step "GET /docs/${service}/v3/api-docs without a token"
+    code=$(status_of GET "/docs/${service}/v3/api-docs")
+    [ "$code" = "200" ] && ok "HTTP $code" || ko "HTTP $code"
+  done
+}
+
 case "${1:-all}" in
   us16) us16 ;;
   us17) us17 ;;
+  us18) us18 ;;
   us25) us25 ;;
   us27) us27 ;;
   us33) us33 ;;
-  all) us16; us17; us25; us27; us33 ;;
-  *) echo "Uso: $0 [us16|us17|us25|us27|us33|all]" >&2; exit 2 ;;
+  all) us16; us17; us18; us25; us27; us33 ;;
+  *) echo "Uso: $0 [us16|us17|us18|us25|us27|us33|all]" >&2; exit 2 ;;
 esac
 
 echo "== ${passed} passed, ${failed} failed"
