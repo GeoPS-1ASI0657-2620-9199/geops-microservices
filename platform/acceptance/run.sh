@@ -438,7 +438,12 @@ us27() {
 
   echo " Scenario: Only the production web and the local web may call the API from a browser"
   step "CORS: production and local origins allowed, another vercel.app rejected"
-  allowed() { curl -s -o /dev/null -D - -X OPTIONS "${GATEWAY_URL}${NEARBY_PATH}"       -H "Origin: $1" -H "Access-Control-Request-Method: GET" | grep -qi "access-control-allow-origin: $1"; }
+  # Guarda las cabeceras antes de buscar: con pipefail, grep -q cierra la tuberia y curl sale con 141.
+  allowed() {
+    local headers
+    headers=$(curl -s -o /dev/null -D - -X OPTIONS "${GATEWAY_URL}${NEARBY_PATH}"       -H "Origin: $1" -H "Access-Control-Request-Method: GET")
+    grep -qi "access-control-allow-origin: $1" <<< "$headers"
+  }
   if allowed "https://geops-web-app.vercel.app" && allowed "http://localhost:4200"      && ! allowed "https://another-project.vercel.app"; then ok; else ko; fi
 
   echo " Scenario: The API docs are rate limited like the API"
