@@ -37,7 +37,6 @@ archunit_passes() {
 }
 
 container_health() { docker inspect -f '{{.State.Health.Status}}' "$1" 2>/dev/null; }
-container_restarts() { docker inspect -f '{{.RestartCount}}' "$1" 2>/dev/null; }
 container_unhealthy() { [ "$(container_health "$1")" = "unhealthy" ]; }
 
 wait_catalog_healthy() {
@@ -188,9 +187,12 @@ us17() {
   "${COMPOSE[@]}" up -d --no-deps --scale catalog-service=1 catalog-service > /dev/null 2>&1
 
   echo " Scenario: A catalog replica that stops answering its health check is restarted"
-  # Java es el PID 1 del contenedor: kill -STOP lo deja vivo pero sin responder, así que
+  # Java es el PID 1 del contenedor: SIGSTOP lo deja vivo pero sin responder, así que
   # restart: unless-stopped no actúa y solo el autoheal lo reinicia (docker pause no sirve:
-  # Docker no corre healthchecks en un contenedor pausado).
+  # Docker no corre healthchecks en un contenedor pausado). La señal se manda desde el anfitrión
+  # con docker kill: un kill -STOP 1 desde dentro del contenedor lo ignora el núcleo (PID 1).
+  # RestartCount solo cuenta los reinicios de la política restart; docker restart (el del autoheal)
+  # no lo suma, así que el reinicio se reconoce porque cambia StartedAt.
   COMPOSE_PROFILES="${COMPOSE_PROFILES},ha" "${COMPOSE[@]}" up -d --no-deps --scale catalog-service=2 catalog-service autoheal > /dev/null 2>&1
   step "The platform is running with 2 catalog-service replicas and the autoheal container"
   local autoheal_id replicas_healthy
@@ -198,28 +200,31 @@ us17() {
   replicas_healthy=$(wait_catalog_healthy 2)
   [ "$replicas_healthy" -eq 2 ] && [ -n "$autoheal_id" ]     && [ "$(docker inspect -f '{{.State.Running}}' "$autoheal_id")" = "true" ]     && ok "$replicas_healthy healthy" || ko "$replicas_healthy healthy"
 
-  local hung other restarts_before other_restarts_before
+  local hung other started_before other_started_before
   read -r hung other <<< "$(catalog_ids | tr '
 ' ' ')"
-  restarts_before=$(container_restarts "$hung")
-  other_restarts_before=$(container_restarts "$other")
+  started_before=$(started_at "$hung")
+  other_started_before=$(started_at "$other")
   step "One catalog-service replica stops answering its health check"
-  docker exec "$hung" kill -STOP 1 && wait_until 240 container_unhealthy "$hung" && ok || ko "$(container_health "$hung")"
+  # El autoheal reinicia a los 10 s de verla unhealthy, así que la ventana unhealthy es corta: se acepta
+  # también que el reinicio ya haya ocurrido.
+  stopped_answering() { container_unhealthy "$hung" || [ "$(started_at "$hung")" != "$started_before" ]; }
+  docker kill --signal=SIGSTOP "$hung" > /dev/null && wait_until 240 stopped_answering && ok || ko "$(container_health "$hung")"
 
   step "Within 4 minutes that replica has been restarted and is healthy again"
   local other_always_healthy=1 waited=0
   while [ "$waited" -lt 240 ]; do
     [ "$(container_health "$other")" = "healthy" ] || other_always_healthy=0
-    if [ "$(container_restarts "$hung")" -gt "$restarts_before" ] && [ "$(container_health "$hung")" = "healthy" ]; then
+    if [ "$(started_at "$hung")" != "$started_before" ] && [ "$(container_health "$hung")" = "healthy" ]; then
       break
     fi
     sleep 2
     waited=$((waited + 2))
   done
-  [ "$(container_restarts "$hung")" -gt "$restarts_before" ] && [ "$(container_health "$hung")" = "healthy" ]     && ok "${waited}s" || ko "$(container_restarts "$hung") restarts, $(container_health "$hung")"
+  [ "$(started_at "$hung")" != "$started_before" ] && [ "$(container_health "$hung")" = "healthy" ]     && ok "${waited}s" || ko "not restarted, $(container_health "$hung")"
 
   step "The other catalog-service replica stayed healthy the whole time"
-  [ "$other_always_healthy" -eq 1 ] && [ "$(container_restarts "$other")" -eq "$other_restarts_before" ] && ok || ko "restarts $(container_restarts "$other"), healthy throughout: $other_always_healthy"
+  [ "$other_always_healthy" -eq 1 ] && [ "$(started_at "$other")" = "$other_started_before" ] && ok || ko "restarted: $([ "$(started_at "$other")" != "$other_started_before" ] && echo yes || echo no), healthy throughout: $other_always_healthy"
 
   "${COMPOSE[@]}" up -d --no-deps --scale catalog-service=1 catalog-service > /dev/null 2>&1
   COMPOSE_PROFILES="${COMPOSE_PROFILES},ha" "${COMPOSE[@]}" stop autoheal > /dev/null 2>&1
