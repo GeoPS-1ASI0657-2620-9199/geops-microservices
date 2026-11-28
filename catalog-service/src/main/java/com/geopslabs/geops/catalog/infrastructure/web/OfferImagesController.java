@@ -4,6 +4,11 @@ import com.geopslabs.geops.catalog.application.usecases.UploadOfferImageUseCase;
 import com.geopslabs.geops.catalog.domain.models.exceptions.InvalidOfferImageException;
 import com.geopslabs.geops.catalog.shared.web.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
@@ -54,13 +59,31 @@ public class OfferImagesController {
     }
 
     @Operation(summary = "Upload the photo of an offer",
-            description = "Requires ROLE_BUSINESS_OWNER. JPEG, PNG or WebP up to 2 MB, detected from its bytes. "
+            description = "Requires ROLE_BUSINESS_OWNER. Multipart field 'file': JPEG, PNG or WebP up to 2 MB, "
+                    + "detected from its bytes. Example: curl -H 'Authorization: Bearer <token>' "
+                    + "-F 'file=@menu.jpg' https://<gateway>/api/v1/campaigns/images. "
                     + "The answer gives the path to put in imageUrl of the offer.")
-    @ApiResponse(responseCode = "201", description = "Stored")
-    @ApiResponse(responseCode = "400", description = "Empty file or format other than JPEG, PNG or WebP (INVALID_IMAGE)")
-    @ApiResponse(responseCode = "413", description = "Larger than 2 MB (IMAGE_TOO_LARGE)")
+    @ApiResponse(responseCode = "201", description = "Stored", content = @Content(examples = @ExampleObject(value = """
+            {"imageId": "3f6c2a9e-8d41-4b7a-9c0e-2b5d7e1f4a60",
+             "path": "/api/v1/offers/images/3f6c2a9e-8d41-4b7a-9c0e-2b5d7e1f4a60"}""")))
+    @ApiResponse(responseCode = "400", description = "Empty file or format other than JPEG, PNG or WebP (INVALID_IMAGE)",
+            content = @Content(examples = {
+                    @ExampleObject(name = "emptyFile", value = """
+                            {"code": "INVALID_IMAGE", "message": "Elige una foto para subir."}"""),
+                    @ExampleObject(name = "unsupportedFormat", value = """
+                            {"code": "INVALID_IMAGE", "message": "La foto debe ser JPG, PNG o WebP."}""")}))
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token",
+            content = @Content(examples = @ExampleObject(value = """
+                    {"code": "UNAUTHORIZED", "message": "A valid token is required"}""")))
+    @ApiResponse(responseCode = "403", description = "Token without ROLE_BUSINESS_OWNER or without businessId",
+            content = @Content(examples = @ExampleObject(value = """
+                    {"code": "FORBIDDEN", "message": "Your account is not allowed to perform this operation"}""")))
+    @ApiResponse(responseCode = "413", description = "Larger than 2 MB (IMAGE_TOO_LARGE)",
+            content = @Content(examples = @ExampleObject(value = """
+                    {"code": "IMAGE_TOO_LARGE", "message": "La foto pesa más de 2 MB. Usa una más liviana."}""")))
     @PostMapping(value = UPLOAD_PATH, consumes = MULTIPART_FORM_DATA_VALUE, produces = APPLICATION_JSON_VALUE)
     public ResponseEntity<UploadedImageResponse> upload(@AuthenticationPrincipal Jwt jwt,
+                                                        @Parameter(description = "The photo: JPEG, PNG or WebP up to 2 MB")
                                                         @RequestPart("file") MultipartFile file) throws IOException {
         var businessId = AuthenticatedUser.from(jwt).requireBusinessId();
         var image = images.upload(businessId, file.getBytes());
@@ -70,8 +93,13 @@ public class OfferImagesController {
 
     @Operation(summary = "Read the photo of an offer", description = "Public, like the offer card. Cached for a year: "
             + "a photo never changes, a new one gets a new id.")
-    @ApiResponse(responseCode = "200", description = "The image bytes")
-    @ApiResponse(responseCode = "404", description = "Unknown id")
+    @ApiResponse(responseCode = "200", description = "The image bytes, cached for a year",
+            headers = @Header(name = "Cache-Control", description = "max-age=31536000, public, immutable"),
+            content = {
+                    @Content(mediaType = "image/jpeg", schema = @Schema(type = "string", format = "binary")),
+                    @Content(mediaType = "image/png", schema = @Schema(type = "string", format = "binary")),
+                    @Content(mediaType = "image/webp", schema = @Schema(type = "string", format = "binary"))})
+    @ApiResponse(responseCode = "404", description = "Unknown id. Empty body", content = @Content)
     @GetMapping(READ_PATH)
     public ResponseEntity<byte[]> read(@PathVariable UUID imageId) {
         return images.find(imageId)
