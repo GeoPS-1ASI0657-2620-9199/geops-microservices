@@ -236,6 +236,25 @@ public class ProximitySearchSteps {
         assertThat(offer.path("walkMinutes").asInt()).isEqualTo(minutes);
     }
 
+    @Then("the offer {string} is pinned at the business location {int} meters north of the origin")
+    public void offerIsPinned(String title, int meters) throws JsonProcessingException {
+        var offer = contentStream().filter(node -> title.equals(node.path(TITLE).asText())).findFirst().orElseThrow();
+        var expected = north(String.valueOf(meters));
+        assertThat(offer.path("latitude").asDouble()).isCloseTo(expected.latitude(), within(SAME_COORDINATE * 1e3));
+        assertThat(offer.path("longitude").asDouble()).isCloseTo(expected.longitude(), within(SAME_COORDINATE * 1e3));
+        assertThat(offer.path("offerId").asLong()).isPositive();
+    }
+
+    @Then("every offer in the response carries latitude, longitude and distance")
+    public void everyOfferCarriesMapFields() throws JsonProcessingException {
+        var content = contentStream().toList();
+        assertThat(content).isNotEmpty().allSatisfy(node -> {
+            assertThat(node.has("latitude")).isTrue();
+            assertThat(node.has("longitude")).isTrue();
+            assertThat(node.path("distanceMeters").isNumber()).isTrue();
+        });
+    }
+
     @Then("the 95th percentile of the response time is under {int} milliseconds")
     public void percentileIsUnder(int millis) {
         var sorted = responseMillis.stream().sorted().toList();
