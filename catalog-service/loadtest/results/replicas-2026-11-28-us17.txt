@@ -1,0 +1,16 @@
+Feature: US17 Deploy the offer catalog as an independent service
+ Scenario: Raising the catalog capacity does not redeploy the other services
+  The platform is running with one catalog-service replica                PASS
+  2 catalog-service replicas are healthy                                  PASS  (2 healthy)
+  Every other container keeps its start time (11 containers)              PASS
+  20 nearby searches through the gateway are answered by both replicas    PASS  (20/20 answered, 2 upstreams)
+ Scenario: The catalog answers with its own data only
+  ContextBoundariesArchTest in catalog-service                            PASS
+ Scenario: Identity keeps working while the catalog restarts
+  The login answers 200 while catalog-service restarts                    PASS  (catalog: 2 starting)
+ Scenario: A catalog replica that stops answering its health check is restarted
+  The platform is running with 2 catalog-service replicas and the autoheal containerPASS  (2 healthy)
+  One catalog-service replica stops answering its health check            PASS
+  Within 4 minutes that replica has been restarted and is healthy again   PASS  (24s)
+  The other catalog-service replica stayed healthy the whole time         PASS
+== 10 passed, 0 failed
