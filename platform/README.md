@@ -45,6 +45,29 @@ cp .env.admin.example .env.admin && ./postgres/seed-admin.sh
 En una base ya creada (la VM), el retiro de `CONNECT` público se aplica una vez con
 `postgres/revoke-public-connect.sql`. En la VM: `./scripts/swap-2g.sh` antes del primer despliegue.
 
+## Copias
+
+Cada base se copia con `pg_dump -Fc`, más los roles (`globals.sql`), en una carpeta con fecha UTC. Se conservan 7
+días (`KEEP_DAYS`). La carpeta (`./backups`, o `BACKUP_DIR`) queda fuera de Git porque los roles llevan el hash de
+sus contraseñas.
+
+```bash
+./scripts/backup-postgres.sh                       # backup.completed dir=./backups/<fecha>; falla si un dump queda vacío
+./scripts/restore-postgres.sh --check              # restaura la última copia en <base>_restore_check, compara filas y la borra
+./scripts/restore-postgres.sh backups/<fecha> engagement_db --replace   # reemplaza esa base
+```
+
+`--check` compara contra las bases vivas: conviene detener los servicios antes para que las filas no cambien
+durante la comprobación. Sin `--replace` la restauración real no toca nada: solo avisa. Con `--replace` detiene el
+servicio dueño, recrea la base con su dueño y sus permisos de conexión, restaura y vuelve a levantar el servicio.
+
+En la VM, con `COMPOSE_ARGS="-f docker-compose.yml -f docker-compose.prod.yml"` y `BACKUP_DIR=/var/backups/geops`,
+la línea de cron es:
+
+```
+0 3 * * * cd <ruta del repo>/platform && COMPOSE_ARGS="-f docker-compose.yml -f docker-compose.prod.yml" BACKUP_DIR=/var/backups/geops ./scripts/backup-postgres.sh >> /var/log/geops-backup.log 2>&1
+```
+
 ## Proveedores de notificaciones
 
 Correo y push se configuran solo con variables de `.env`; el código no cambia entre local y la VM.
