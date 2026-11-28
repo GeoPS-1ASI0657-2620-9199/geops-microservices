@@ -30,8 +30,10 @@ services:
   catalog-service:
     depends_on: !override
       <<: *deps-identity
+    # Una réplica en la VM de 4 GB: con carga cada réplica llega al 98 % de su límite de 512 MB
+    # (catalog-service/loadtest/results/replicas-2026-11-28-*). La segunda se agrega con --scale cuando haya memoria.
     deploy:
-      replicas: 2
+      replicas: 1
 
   reservation-service:
     depends_on: !override
