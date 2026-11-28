@@ -56,3 +56,41 @@ Correo y push se configuran solo con variables de `.env`; el código no cambia e
 
 La clave SMTP y la cuenta de servicio nunca se suben a Git: `.env` y `platform/keys/` están ignorados.
 La configuración pública de Firebase y la clave VAPID van en los `environment*.ts` de la web.
+
+## Alerta
+
+`scripts/alert-from-logs.sh` cuenta, en los últimos `ALERT_WINDOW`, los 401 y 403 por IP en el gateway
+(`log_format upstream`, `gateway/http-common.conf`) y los canjes rechazados por comercio en Reservation
+(`reservation.redeem.rejected`). Si alguno pasa su umbral, manda un correo por SMTP; no repite el correo antes de
+`ALERT_COOLDOWN_MINUTES`. Se corre desde `platform/`.
+
+| Variable | Valor por omisión | Uso |
+|---|---|---|
+| `ALERT_TO` | obligatoria | Quien recibe la alerta |
+| `ALERT_FROM` | obligatoria | Remitente |
+| `ALERT_SMTP_URL` | obligatoria | `smtp://localhost:1025` en local; `smtp://smtp-relay.brevo.com:587` en la VM |
+| `ALERT_SMTP_USER`, `ALERT_SMTP_PASSWORD` | sin valor | Solo con SMTP autenticado; se leen de un archivo fuera del repo |
+| `ALERT_WINDOW` | `5m` | Ventana de logs |
+| `ALERT_AUTH_THRESHOLD` | `20` | 401/403 por IP |
+| `ALERT_REDEEM_THRESHOLD` | `10` | Canjes rechazados por comercio |
+| `ALERT_COOLDOWN_MINUTES` | `30` | Espera entre correos |
+| `ALERT_STATE_FILE` | `/tmp/geops-alert.last` | Marca de la última alerta enviada |
+| `COMPOSE_ARGS` | `-f docker-compose.yml` | Archivos de Compose; en la VM se suma `-f docker-compose.prod.yml` |
+
+En local el SMTP de Mailpit está publicado solo en `127.0.0.1:1025` y el correo se ve en `http://localhost:8025`:
+
+```bash
+docker compose --profile app --profile messaging up -d mailpit
+for i in $(seq 25); do curl -s -o /dev/null localhost:8080/api/v1/reservations/1; done
+ALERT_TO=equipo@ejemplo.test ALERT_FROM=alertas@geops.local ALERT_SMTP_URL=smtp://localhost:1025 ./scripts/alert-from-logs.sh
+```
+
+La primera corrida imprime `alert.sent`; una segunda dentro de 30 minutos imprime `alert.suppressed`.
+
+En la VM, el cron lee las variables de un archivo que solo existe allí (`/etc/geops/alert.env`):
+
+```
+*/5 * * * * cd <ruta del repo>/platform && set -a && . /etc/geops/alert.env && set +a && COMPOSE_ARGS="-f docker-compose.yml -f docker-compose.prod.yml" ./scripts/alert-from-logs.sh >> /var/log/geops-alert.log 2>&1
+```
+
+En Brevo, el remitente es el verificado que ya usa Notification (ver «Proveedores de notificaciones»).
