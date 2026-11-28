@@ -248,6 +248,7 @@ services:
     mem_limit: 64m
     ports:
       - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
 
   gateway:
     image: nginx:1.27
