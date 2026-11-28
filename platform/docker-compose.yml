@@ -24,6 +24,7 @@ x-service: &service
 
 x-health: &health
   interval: 15s
+  timeout: 5s
   start_period: 60s
   retries: 5
 
@@ -140,6 +141,8 @@ services:
   catalog-service:
     <<: *service
     build: ../catalog-service
+    labels:
+      autoheal: "true"
     # Catalog carga más clases que los demás (JPA espacial, Redis, Kafka, Resilience4j, OpenAPI): con 128 MB
     # de metaspace la VM terminó con OutOfMemoryError: Metaspace y el servicio dejó de responder (504 en el
     # gateway). Metaspace a 192 MB y 64 MB más de contenedor; el heap baja al 45 % para que la suma no cambie.
@@ -170,6 +173,8 @@ services:
   reservation-service:
     <<: *service
     build: ../reservation-service
+    labels:
+      autoheal: "true"
     environment:
       <<: *service-env
       SERVER_PORT: 8083
@@ -266,6 +271,18 @@ services:
       - reservation-service
       - engagement-service
       - notification-service
+
+  # Reinicia el contenedor con la etiqueta autoheal=true que el healthcheck marca unhealthy (ajuste 6).
+  autoheal:
+    image: willfarrell/autoheal:1.2.0
+    profiles: [ha]
+    restart: unless-stopped
+    mem_limit: 32m
+    environment:
+      AUTOHEAL_CONTAINER_LABEL: autoheal
+      AUTOHEAL_INTERVAL: 10
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
   postgres-data:
